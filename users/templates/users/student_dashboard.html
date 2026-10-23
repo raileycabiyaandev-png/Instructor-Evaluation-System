@@ -222,7 +222,7 @@
                                             <div class="side-avatar">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
                                             <div style="flex:1;min-width:0;">
                                                 <div class="t-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
-                                                <div class="t-dept">{{ item.teacher.department|upper|default:"—" }}</div>
+                                                <div class="t-dept">{{ item.teacher.department.code|default:"—" }}</div>
                                             </div>
                                         </div>
                                         <div class="side-row-status">

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    {% include 'academics/_messages.html' %}
+
+    <div class="card edit-card">
+        <div class="card-header-area">
+            <div>
+                <span class="table-badge">{{ title }}</span>
+                <p class="page-subtitle">{{ subtitle }}</p>
+            </div>
+        </div>
+
+        <form method="POST" data-single-submit>
+            {% csrf_token %}
+
+            <div class="modal-body-modern">
+
+                {% if form.non_field_errors %}
+                    <div class="alert error">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="form-grid">
+                    {% for field in form %}
+                        {% if field.field.widget.input_type == 'checkbox' %}
+                            <div class="form-group full-width check-row">
+                                {{ field }}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <span class="error">{{ field.errors }}</span>
+                            </div>
+                        {% else %}
+                            <div class="form-group full-width">
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<span class="help-text">{{ field.help_text }}</span>{% endif %}
+                                <span class="error">{{ field.errors }}</span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <div class="modal-footer-modern">
+                <a href="{% url back_url %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+{% endblock %}
+
+{% block page_title %}Teaching Assignments{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    {% include 'academics/_messages.html' %}
+
+
+    <div class="page-header">
+        <form method="GET" class="filter-bar">
+            <select name="semester" data-auto-submit aria-label="Semester">
+                <option value="all" {% if selected_semester == 'all' %}selected{% endif %}>All semesters</option>
+                {% for value, label in semester_filter %}
+                    <option value="{{ value }}" {% if value == selected_semester %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% if has_periods %}
+            <button type="button" class="btn-primary" data-open-modal="addModal">+ Assign Teacher</button>
+        {% endif %}
+    </div>
+
+    {% if not has_periods %}
+        <div class="alert warning">
+            No Evaluation Period exists yet. Create one first (Evaluation Period &gt; Evaluations),
+            because teaching assignments follow the school year and semester of the Evaluation Period.
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header-area">
+            <div><span class="table-badge">Records</span></div>
+            <input type="text" class="search-input" placeholder="Search teacher, subject, section..." data-table-search="assignmentTable">
+        </div>
+
+        <div class="table-wrapper">
+            <table class="custom-table" id="assignmentTable">
+                <thead>
+                    <tr>
+                        <th>Teacher</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Semester</th>
+                        <th class="actions-column wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for a in assignments %}
+                    <tr>
+                        <td>
+                            <div class="user-details">
+                                <div class="user-name">{{ a.teacher.get_full_name }}</div>
+                                <div class="user-subtext">{% if a.teacher.department %}{{ a.teacher.department.name }}{% else %}No department{% endif %}</div>
+                            </div>
+                        </td>
+                        <td><strong>{{ a.subject.code }}</strong><div class="user-subtext">{{ a.subject.name }}</div></td>
+                        <td>{{ a.section.name }}</td>
+                        <td>S.Y. {{ a.school_year }}<div class="user-subtext">{{ a.get_semester_display }}</div></td>
+                        <td class="actions-column wide">
+                            {% url 'assignment_update' a.pk as edit_url %}
+                            {% url 'assignment_delete' a.pk as delete_url %}
+                            {% include 'academics/_row_actions.html' with edit_url=edit_url delete_url=delete_url label='teaching assignment' %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="empty">No teaching assignments for this semester.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% include 'academics/_modal_form.html' with modal_id='addModal' title='Assign Teacher' subtitle='Choose the teacher, subject, section and semester' submit_label='Save Assignment' %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}

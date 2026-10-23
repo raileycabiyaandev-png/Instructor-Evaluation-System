@@ -18,6 +18,7 @@ from evaluation.models import Evaluation, EvaluationPeriod
 from django.http import JsonResponse
 from django.contrib.auth import update_session_auth_hash
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.contrib import messages
@@ -256,9 +257,10 @@ def create_student(request):
 
     if request.method == 'POST' and form.is_valid():
         form.save()
+        messages.success(request, "Student created successfully!")
         return redirect('create_student')
 
-    students = User.objects.filter(role='student')
+    students = User.objects.filter(role='student').select_related('section')
 
     return render(request, 'users/create_student.html', {
         'form': form,
@@ -283,7 +285,7 @@ def create_instructor(request):
         else:
             print(form.errors)  # DEBUG (REMOVE LATER)
 
-    instructors = User.objects.filter(role='instructor')
+    instructors = User.objects.filter(role='instructor').select_related('department')
 
     return render(request, 'users/create_instructor.html', {
         'form': form,
@@ -932,6 +934,7 @@ def instructor_update_profile(request):
     return redirect("instructor_dashboard")
 
 @login_required
+@require_POST
 def deactivate_student(request, pk):
 
     if request.user.role != "admin":
@@ -954,6 +957,7 @@ def deactivate_student(request, pk):
     return redirect("create_student")
 
 @login_required
+@require_POST
 def activate_student(request, pk):
 
     if request.user.role != "admin":
@@ -974,6 +978,39 @@ def activate_student(request, pk):
     )
 
     return redirect("create_student")
+
+@login_required
+@require_POST
+def deactivate_instructor(request, pk):
+
+    if request.user.role != "admin":
+        return redirect("login")
+
+    instructor = get_object_or_404(User, pk=pk, role="instructor")
+
+    instructor.is_active = False
+    instructor.save()
+
+    messages.success(request, "Instructor account has been deactivated.")
+
+    return redirect("create_instructor")
+
+
+@login_required
+@require_POST
+def activate_instructor(request, pk):
+
+    if request.user.role != "admin":
+        return redirect("login")
+
+    instructor = get_object_or_404(User, pk=pk, role="instructor")
+
+    instructor.is_active = True
+    instructor.save()
+
+    messages.success(request, "Instructor account has been activated.")
+
+    return redirect("create_instructor")
 
 # ─────────────────────────────────────────────────────────────
 # Put this in the SAME views.py where your instructor dashboard

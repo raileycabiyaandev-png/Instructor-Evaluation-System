@@ -10,11 +10,6 @@ class User(AbstractUser):
         ('instructor', 'Instructor'),
     )
 
-    DEPARTMENT_CHOICES = (
-        ('it', 'IT Department'),
-        ('gened', 'General Education Department'),
-    )
-
     PROGRAM_CHOICES = (
         ('it', 'BSIT'),
         ('cs', 'BSCS'),
@@ -29,7 +24,14 @@ class User(AbstractUser):
     middle_name = models.CharField(max_length=50, blank=True)
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES, blank=True, null=True)
+    # Teachers belong to a department (Academic Management > Departments)
+    department = models.ForeignKey(
+        'academics.Department',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='users',
+    )
 
     must_change_password = models.BooleanField(default=True)
 
@@ -38,7 +40,14 @@ class User(AbstractUser):
     choices=PROGRAM_CHOICES,
     blank=True
 )
-    section = models.CharField(max_length=50, blank=True)
+    # Students belong to a section such as "BSIT 2A" (Academic Management > Sections)
+    section = models.ForeignKey(
+        'academics.Section',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='students',
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

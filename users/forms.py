@@ -1,6 +1,8 @@
 import uuid
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.password_validation import validate_password
+from academics.models import Department, Section
 from .models import User
 
 # =========================
@@ -26,9 +28,67 @@ class LoginForm(forms.Form):
     )
 
 # =========================
+# SMALL SHARED HELPERS
+# =========================
+def active_departments(current=None):
+    """Active departments (plus the one already saved, when editing)."""
+    queryset = Department.objects.filter(is_active=True)
+    if current:
+        queryset = queryset | Department.objects.filter(pk=current)
+    return queryset.distinct()
+
+
+def active_sections(current=None):
+    """Active sections (plus the one already saved, when editing)."""
+    queryset = Section.objects.filter(is_active=True)
+    if current:
+        queryset = queryset | Section.objects.filter(pk=current)
+    return queryset.distinct()
+
+
+class StudentSectionMixin:
+    """Adds the Section dropdown to student forms and checks it matches the program."""
+
+    def setup_section_field(self):
+        self.fields['section'].queryset = active_sections(self.instance.section_id)
+        self.fields['section'].empty_label = '— No section yet —'
+        self.fields['section'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        section = cleaned_data.get('section')
+        program = cleaned_data.get('program')
+
+        if section and program != section.program:
+            raise forms.ValidationError(
+                f"{section.name} is a {section.get_program_display()} section. "
+                f"Set the student's program to {section.get_program_display()} first."
+            )
+
+        return cleaned_data
+
+
+class NewPasswordMixin:
+    """Rules for the NEW password chosen on first login."""
+
+    def clean_password(self):
+        password = self.cleaned_data['password']
+
+        # The saved (temporary) password must not be reused
+        if self.instance.pk and self.instance.check_password(password):
+            raise forms.ValidationError(
+                "Your new password must be different from the temporary password."
+            )
+
+        # Django's password rules (length, too common, only numbers, ...)
+        validate_password(password, self.instance)
+        return password
+
+
+# =========================
 # ADMIN CREATE STUDENT
 # =========================
-class StudentCreateForm(forms.ModelForm):
+class StudentCreateForm(StudentSectionMixin, forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
 
     class Meta:
@@ -40,9 +100,12 @@ class StudentCreateForm(forms.ModelForm):
             'email',
             'program',
             'section',
-            'department',
             'password'
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setup_section_field()
 
     def clean_email(self):
         email = self.cleaned_data['email']
@@ -77,6 +140,12 @@ class InstructorCreateForm(forms.ModelForm):
         model = User
         fields = ['first_name', 'middle_name', 'last_name', 'email', 'department', 'password']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['department'].queryset = active_departments()
+        self.fields['department'].empty_label = '— Select department —'
+        self.fields['department'].required = True   # every teacher needs a department
+
     def save(self, commit=True):
         user = super().save(commit=False)
 
@@ -95,7 +164,7 @@ class InstructorCreateForm(forms.ModelForm):
         return user
 
 
-class StudentFirstLoginForm(forms.ModelForm):
+class StudentFirstLoginForm(NewPasswordMixin, forms.ModelForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
             'placeholder': 'Enter new password'
@@ -166,7 +235,7 @@ class StudentFirstLoginForm(forms.ModelForm):
         return user
 
 
-class InstructorFirstLoginForm(forms.ModelForm):
+class InstructorFirstLoginForm(NewPasswordMixin, forms.ModelForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
             'placeholder': 'Enter new password'
@@ -186,7 +255,6 @@ class InstructorFirstLoginForm(forms.ModelForm):
             'middle_name',
             'last_name',
             'email',
-            'department',
             'password',
             'confirm_password'
         ]
@@ -206,10 +274,6 @@ class InstructorFirstLoginForm(forms.ModelForm):
 
             'email': forms.EmailInput(attrs={
                 'placeholder': 'Enter email'
-            }),
-
-            'department': forms.TextInput(attrs={
-                'placeholder': 'Enter department'
             }),
         }
 
@@ -241,7 +305,7 @@ class InstructorFirstLoginForm(forms.ModelForm):
 
         return user
     
-class StudentUpdateForm(forms.ModelForm):
+class StudentUpdateForm(StudentSectionMixin, forms.ModelForm):
     class Meta:
         model = User
         fields = [
@@ -250,9 +314,21 @@ class StudentUpdateForm(forms.ModelForm):
             'last_name',
             'email',
             'program',
+            'section',
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setup_section_field()
+
 
 class InstructorUpdateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['first_name', 'middle_name', 'last_name', 'email', 'department']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['department'].queryset = active_departments(self.instance.department_id)
+        self.fields['department'].empty_label = '— Select department —'
+        self.fields['department'].required = True

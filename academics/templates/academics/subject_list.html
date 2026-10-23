@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+{% endblock %}
+
+{% block page_title %}Subjects{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    {% include 'academics/_messages.html' %}
+
+
+    <div class="page-header">
+        <p class="page-subtitle">Subjects offered by each department.</p>
+        <button type="button" class="btn-primary" data-open-modal="addModal">+ Add Subject</button>
+    </div>
+
+    <div class="card">
+        <div class="card-header-area">
+            <div><span class="table-badge">Records</span></div>
+            <input type="text" class="search-input" placeholder="Search subject..." data-table-search="subjectTable">
+        </div>
+
+        <div class="table-wrapper">
+            <table class="custom-table" id="subjectTable">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Subject name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th class="actions-column wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in subjects %}
+                    <tr>
+                        <td><strong>{{ s.code }}</strong></td>
+                        <td>{{ s.name }}</td>
+                        <td><span class="department-badge">{{ s.department.code }}</span></td>
+                        <td>{% if s.is_active %}<span class="status-badge active">Active</span>{% else %}<span class="status-badge inactive">Inactive</span>{% endif %}</td>
+                        <td class="actions-column wide">
+                            {% url 'subject_update' s.pk as edit_url %}
+                            {% url 'subject_toggle' s.pk as toggle_url %}
+                            {% url 'subject_delete' s.pk as delete_url %}
+                            {% include 'academics/_row_actions.html' with edit_url=edit_url toggle_url=toggle_url delete_url=delete_url is_active=s.is_active label='subject' %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="empty">No subjects yet. Click "Add Subject".</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% include 'academics/_modal_form.html' with modal_id='addModal' title='Add Subject' subtitle='Every subject belongs to one department' submit_label='Save Subject' %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}

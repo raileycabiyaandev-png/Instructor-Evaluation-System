@@ -54,7 +54,7 @@
                     </h1>
 
                     <p>
-                        {{ teacher.department|upper|default:"INSTRUCTOR" }}
+                        {{ teacher.department.code|default:"INSTRUCTOR" }}
                         •
                         {{ period.name|default:"Evaluation Period" }}
                     </p>

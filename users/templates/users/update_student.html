@@ -51,7 +51,20 @@
                 <div class="form-group">
                     <label>Program</label>
                     {{ form.program }}
+                    {{ form.program.errors }}
                 </div>
+
+                <div class="form-group">
+                    <label>Section</label>
+                    {{ form.section }}
+                    {{ form.section.errors }}
+                </div>
+
+                {% if form.non_field_errors %}
+                <div class="form-group full-row">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
 
                 <!-- Action Buttons -->
                 <div class="form-actions full-row">

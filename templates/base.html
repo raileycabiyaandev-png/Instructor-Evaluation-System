@@ -434,6 +434,24 @@
                     </div>
                 </div>
 
+                <!-- ACADEMIC MANAGEMENT -->
+                <div class="nav-section">
+                    <span class="nav-label">Academic</span>
+                    <div class="nav-item {% if current == 'department_list' or current == 'department_update' or current == 'subject_list' or current == 'subject_update' or current == 'section_list' or current == 'section_update' or current == 'section_students' or current == 'assignment_list' or current == 'assignment_update' %}open{% endif %}" id="academicMenu">
+                        <button type="button" class="nav-link nav-toggle" aria-expanded="false">
+                            <i class="bi bi-mortarboard nav-icon" aria-hidden="true"></i>
+                            <span class="nav-text">Academics</span>
+                            <i class="bi bi-chevron-right nav-arrow" aria-hidden="true"></i>
+                        </button>
+                        <div class="submenu">
+                            <a href="{% url 'department_list' %}" class="nav-link {% if current == 'department_list' or current == 'department_update' %}active{% endif %}">Departments</a>
+                            <a href="{% url 'subject_list' %}" class="nav-link {% if current == 'subject_list' or current == 'subject_update' %}active{% endif %}">Subjects</a>
+                            <a href="{% url 'section_list' %}" class="nav-link {% if current == 'section_list' or current == 'section_update' or current == 'section_students' %}active{% endif %}">Sections</a>
+                            <a href="{% url 'assignment_list' %}" class="nav-link {% if current == 'assignment_list' or current == 'assignment_update' %}active{% endif %}">Teaching Assignments</a>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- QR SYSTEM -->
                 <div class="nav-section">
                     <span class="nav-label">QR System</span>

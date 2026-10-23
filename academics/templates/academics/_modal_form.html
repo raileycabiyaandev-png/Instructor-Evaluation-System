@@ -1,0 +1,50 @@
+{# Generic "Add ..." popup. Needs: form, modal_id, title, subtitle, submit_label #}
+<div id="{{ modal_id }}" class="modal" data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
+    <div class="modal-content modern-modal">
+
+        <div class="modal-header-modern">
+            <div>
+                <h3>{{ title }}</h3>
+                <p>{{ subtitle }}</p>
+            </div>
+            <button type="button" class="close-btn" data-close-modal>×</button>
+        </div>
+
+        <form method="POST" data-single-submit>
+            {% csrf_token %}
+
+            <div class="modal-body-modern">
+
+                {% if form.non_field_errors %}
+                    <div class="alert error">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="form-grid">
+                    {% for field in form %}
+                        {% if field.field.widget.input_type == 'checkbox' %}
+                            <div class="form-group full-width check-row">
+                                {{ field }}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <span class="error">{{ field.errors }}</span>
+                            </div>
+                        {% else %}
+                            <div class="form-group full-width">
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<span class="help-text">{{ field.help_text }}</span>{% endif %}
+                                <span class="error">{{ field.errors }}</span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <div class="modal-footer-modern">
+                <button type="button" class="btn-secondary" data-close-modal>Cancel</button>
+                <button type="submit" class="btn-primary">{{ submit_label }}</button>
+            </div>
+        </form>
+
+    </div>
+</div>

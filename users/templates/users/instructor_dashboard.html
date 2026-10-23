@@ -300,7 +300,7 @@
             </div>
             <dl class="detail-list">
                 <div class="detail"><dt><i class="bi bi-at" aria-hidden="true"></i> Username</dt><dd>{{ request.user.username }}</dd></div>
-                <div class="detail"><dt><i class="bi bi-building" aria-hidden="true"></i> Department</dt><dd>{{ request.user.department|upper|default:"—" }}</dd></div>
+                <div class="detail"><dt><i class="bi bi-building" aria-hidden="true"></i> Department</dt><dd>{{ request.user.department.name|default:"—" }}</dd></div>
                 <div class="detail"><dt><i class="bi bi-shield-check" aria-hidden="true"></i> Role</dt><dd>Faculty / Instructor</dd></div>
             </dl>
         </section>

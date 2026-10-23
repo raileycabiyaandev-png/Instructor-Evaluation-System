@@ -1,0 +1,31 @@
+{# Buttons for one table row. Needs: edit_url, delete_url, label. Optional: toggle_url + is_active, extra_url + extra_label #}
+<div class="action-group wrap">
+
+    {% if extra_url %}
+        <a href="{{ extra_url }}" class="btn-action btn-link-plain">
+            <i class="fas fa-users"></i> {{ extra_label }}
+        </a>
+    {% endif %}
+
+    <a href="{{ edit_url }}" class="btn-action btn-edit">
+        <i class="fas fa-pen"></i> Edit
+    </a>
+
+    {% if toggle_url %}
+        <form action="{{ toggle_url }}" method="POST" class="status-form"
+              data-confirm="{% if is_active %}Deactivate{% else %}Activate{% endif %} this {{ label }}?">
+            {% csrf_token %}
+            {% if is_active %}
+                <button type="submit" class="btn-action btn-deactivate"><i class="fas fa-ban"></i> Deactivate</button>
+            {% else %}
+                <button type="submit" class="btn-action btn-activate"><i class="fas fa-check"></i> Activate</button>
+            {% endif %}
+        </form>
+    {% endif %}
+
+    <form action="{{ delete_url }}" method="POST" class="delete-form" data-confirm="Delete this {{ label }}?">
+        {% csrf_token %}
+        <button type="submit" class="btn-action btn-delete"><i class="fas fa-trash-alt"></i> Delete</button>
+    </form>
+
+</div>

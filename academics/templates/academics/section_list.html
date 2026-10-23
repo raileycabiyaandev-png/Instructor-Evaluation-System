@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+{% endblock %}
+
+{% block page_title %}Sections{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+    {% include 'academics/_messages.html' %}
+
+
+    <div class="page-header">
+        <p class="page-subtitle">Class sections. Open "Students" to put students into a section.</p>
+        <button type="button" class="btn-primary" data-open-modal="addModal">+ Add Section</button>
+    </div>
+
+    <div class="card">
+        <div class="card-header-area">
+            <div><span class="table-badge">Records</span></div>
+            <input type="text" class="search-input" placeholder="Search section..." data-table-search="sectionTable">
+        </div>
+
+        <div class="table-wrapper">
+            <table class="custom-table" id="sectionTable">
+                <thead>
+                    <tr>
+                        <th>Section</th>
+                        <th>Program</th>
+                        <th>Department</th>
+                        <th>Students</th>
+                        <th>Status</th>
+                        <th class="actions-column wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in sections %}
+                    <tr>
+                        <td><strong>{{ s.name }}</strong></td>
+                        <td>{{ s.get_program_display }}</td>
+                        <td><span class="department-badge">{{ s.department.code }}</span></td>
+                        <td><span class="count-pill">{{ s.student_total }}</span></td>
+                        <td>{% if s.is_active %}<span class="status-badge active">Active</span>{% else %}<span class="status-badge inactive">Inactive</span>{% endif %}</td>
+                        <td class="actions-column wide">
+                            {% url 'section_students' s.pk as students_url %}
+                            {% url 'section_update' s.pk as edit_url %}
+                            {% url 'section_toggle' s.pk as toggle_url %}
+                            {% url 'section_delete' s.pk as delete_url %}
+                            {% include 'academics/_row_actions.html' with extra_url=students_url extra_label='Students' edit_url=edit_url toggle_url=toggle_url delete_url=delete_url is_active=s.is_active label='section' %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="empty">No sections yet. Click "Add Section".</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% include 'academics/_modal_form.html' with modal_id='addModal' title='Add Section' subtitle='Example: BSIT 2A, BSIT 2B' submit_label='Save Section' %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}

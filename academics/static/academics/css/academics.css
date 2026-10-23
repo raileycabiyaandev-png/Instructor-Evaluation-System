@@ -1,0 +1,108 @@
+/* academics.css
+   Extra styles for Academic Management pages and the Active/Inactive
+   buttons. It re-uses the colours/variables from users/css/create_user.css,
+   so always load create_user.css BEFORE this file. */
+
+/* ---------- messages ---------- */
+.alert.error   { background: var(--red-100); color: var(--red-700); }
+.alert.warning { background: #fef9c3; color: #854d0e; }
+.alert.info    { background: #e0f2fe; color: #075985; }
+
+/* ---------- Active / Inactive badge ---------- */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.status-badge.active   { background: var(--green-100); color: var(--green-700); }
+.status-badge.inactive { background: var(--red-100);   color: var(--red-700); }
+
+/* ---------- Activate / Deactivate buttons (next to Edit / Delete) ---------- */
+.status-form { margin: 0; }
+
+.btn-deactivate { background: rgba(133, 77, 14, 0.10); color: #854d0e; }
+.btn-deactivate:hover { background: rgba(133, 77, 14, 0.18); transform: translateY(-1px); }
+
+.btn-activate { background: rgba(22, 101, 52, 0.10); color: var(--green-700); }
+.btn-activate:hover { background: rgba(22, 101, 52, 0.18); transform: translateY(-1px); }
+
+.btn-action.btn-link-plain { background: rgba(30, 58, 95, 0.08); color: var(--navy-700); }
+
+/* wider action column because there are up to 4 buttons */
+.actions-column.wide { width: 440px; }
+.action-group.wrap { flex-wrap: wrap; }
+
+/* ---------- small helpers ---------- */
+.muted { color: var(--slate-500); font-size: 13px; }
+.count-pill {
+    display: inline-block;
+    min-width: 28px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--slate-100);
+    color: var(--slate-700);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+.stack { display: flex; flex-direction: column; gap: 22px; }
+.header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ---------- form controls inside modals / edit pages ---------- */
+.modal-body-modern input[type="checkbox"],
+.check-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    accent-color: var(--navy-700);
+}
+.check-row { flex-direction: row; align-items: center; gap: 10px; }
+.check-row .form-label { margin: 0; }
+
+.help-text { font-size: 12px; color: var(--slate-500); }
+
+/* ---------- filter bar (assignments) ---------- */
+.filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.filter-bar select {
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--slate-200);
+    background: var(--slate-50);
+    font-size: 14px;
+    font-family: var(--font-body);
+    color: var(--navy-900);
+}
+
+/* ---------- edit page ---------- */
+.edit-card { max-width: 640px; }
+.edit-card .modal-footer-modern { padding-left: 0; padding-right: 0; }
+
+/* ---------- students picker (section page) ---------- */
+.picker-list {
+    max-height: 320px;
+    overflow: auto;
+    border: 1.5px solid var(--slate-200);
+    border-radius: 12px;
+    background: var(--slate-50);
+}
+.picker-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--slate-100);
+    font-size: 14px;
+    cursor: pointer;
+}
+.picker-item:last-child { border-bottom: none; }
+.picker-item:hover { background: #fff; }
+.picker-item input { width: 18px; height: 18px; accent-color: var(--navy-700); }
+.card-body-pad { padding: 24px 28px; }
+
+@media (max-width: 768px) {
+    .actions-column.wide { width: auto; }
+}

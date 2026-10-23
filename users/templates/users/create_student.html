@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
 {% endblock %}
 
 {% block page_title %}Student Lists{% endblock %}
@@ -23,7 +24,7 @@
     <!-- SUCCESS MESSAGE -->
     {% if messages %}
         {% for message in messages %}
-            <div class="alert success">
+            <div class="alert {{ message.tags }}">
                 {{ message }}
             </div>
         {% endfor %}
@@ -57,6 +58,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Program</th>
+                        <th>Section</th>
                         <th>Status</th>
                         <th class="text-right">Actions</th>
                     </tr>
@@ -99,11 +101,20 @@
         </td>
 
         <td>
-            {% if student.status == 'active' %}
+            {% if student.section %}
+                {{ student.section.name }}
+            {% else %}
+                <span class="muted">No section</span>
+            {% endif %}
+        </td>
+
+        <td>
+            {% if student.is_active %}
                 <span class="status-badge active">Active</span>
             {% else %}
                 <span class="status-badge inactive">Inactive</span>
             {% endif %}
+        </td>
 
         <td class="actions-column">
 
@@ -130,6 +141,7 @@
                         <i class="fas fa-user-slash"></i>
                         Deactivate
                     </button>
+                </form>
             {% else %}
                 <form action="{% url 'activate_student' student.id %}"
                       method="POST"
@@ -144,6 +156,7 @@
                         <i class="fas fa-user-check"></i>
                         Activate
                     </button>
+                </form>
             {% endif %}
 
                 <form action="{% url 'delete_student' student.id %}"
@@ -171,7 +184,7 @@
     {% empty %}
 
     <tr>
-        <td colspan="3" class="empty">
+        <td colspan="5" class="empty">
             No students available.
         </td>
     </tr>
@@ -256,6 +269,20 @@
                         {{ form.program }}
                         <span class="error">{{ form.program.errors }}</span>
                     </div>
+
+                    <!-- SECTION -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Section (optional)</label>
+                        {{ form.section }}
+                        <span class="error">{{ form.section.errors }}</span>
+                    </div>
+
+                    <!-- FORM-LEVEL ERRORS (example: section does not match program) -->
+                    {% if form.non_field_errors %}
+                    <div class="form-group full-width">
+                        <span class="error">{{ form.non_field_errors }}</span>
+                    </div>
+                    {% endif %}
 
                     <!-- PASSWORD -->
                     <div class="form-group full-width">

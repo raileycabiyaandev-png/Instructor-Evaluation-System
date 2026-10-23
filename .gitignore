@@ -1,33 +1,37 @@
 
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual environments
-env/
-venv/
-.venv/
-
-# Secrets and environment variables
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# Local databases
+# Python virtual environments
+env/
+venv/
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django local database
 db.sqlite3
 db.sqlite3-journal
 
-# Generated QR codes and uploaded media
-qr_codes/
+# User-uploaded files and generated media
 media/
+
+# Generated QR codes (if they can be recreated)
+qr_codes/
+
+# Logs
+*.log
 
 # Test and coverage files
 .coverage
 htmlcov/
-.pytest_cache/
 
-# Editor and OS files
+# Editor and operating-system files
 .vscode/
 .idea/
 .DS_Store

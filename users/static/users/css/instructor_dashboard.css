@@ -1,0 +1,190 @@
+/* ============================================================
+   users/static/users/css/instructor_dashboard.css
+   Instructor Dashboard + Profile only.
+   Shared styles (cards, tabs, hero, controls) are in instructor_common.css.
+
+   1. Evaluation status bar     3. Messages and Profile
+   2. Trend chart extras
+   ============================================================ */
+
+
+/* ============================================================
+   1. EVALUATION STATUS BAR  (one slim row, saves space)
+   ============================================================ */
+.status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--navy-300);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.status-bar--active { border-left-color: var(--gold); }
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: var(--navy-100);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy-800);
+}
+.status-bar--active .status-pill { background: var(--gold-soft); color: var(--gold-ink); }
+
+.status-text { flex: 1 1 240px; min-width: 0; }
+.status-text strong { display: block; font-size: 17px; color: var(--navy-900); }
+.status-text span { font-size: 14px; color: var(--muted); }
+
+
+/* ============================================================
+   2. TREND CHART EXTRAS
+   ============================================================ */
+.pt-badge {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 340px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--navy-50);
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--navy-800);
+}
+.pt-badge strong { display: block; }
+.pt-badge.up   { background: var(--navy-100); }
+.pt-badge.down { background: var(--gold-soft); color: var(--gold-ink); }
+
+.chart-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, .95);
+    text-align: center;
+    color: var(--muted);
+}
+
+
+/* ============================================================
+   3. MESSAGES AND PROFILE
+   ============================================================ */
+.msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    border-left: 4px solid var(--navy-700);
+    border-radius: 10px;
+    background: var(--navy-100);
+    font-weight: 500;
+    color: var(--navy-900);
+}
+.msg-error { border-left-color: var(--gold); background: var(--gold-soft); color: var(--gold-ink); }
+
+.profile-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.profile-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    background: var(--navy-800);
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold-bright);
+}
+.profile-hero h3 { font-size: 20px; overflow-wrap: anywhere; }
+.profile-hero span { color: var(--muted); }
+
+.detail-list { margin: 0; }
+.detail {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 16px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+}
+.detail:last-child { border-bottom: 0; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 20px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 600; }
+.form-input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid #aab5d3;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 16px;                 /* 16px stops iPhone zoom */
+    color: var(--ink);
+}
+.form-input.input-changed { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
+.form-hint { display: block; margin-top: 4px; font-size: 14px; color: var(--muted); }
+
+.form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--line);
+}
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.changes-pill {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold-ink);
+}
+.changes-pill.visible { display: inline-flex; }
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 575.98px) {
+    .status-bar .btn { width: 100%; }
+    .form-grid { grid-template-columns: 1fr; padding: 14px 16px; }
+    .form-footer { flex-direction: column; align-items: stretch; padding: 14px 16px; }
+    .form-actions .btn { flex: 1; }
+    .detail { padding: 12px 16px; }
+    .profile-hero { padding: 16px; }
+}

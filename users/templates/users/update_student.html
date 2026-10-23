@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Update Student{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/student_update.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="student-update-wrapper container-fluid py-4 px-3 px-lg-5">
+
+    <!-- Main Card -->
+    <div class="update-card">
+
+        <!-- Card Header -->
+        <div class="update-card-header">
+            <div>
+                <span class="section-badge">Student Record</span>
+                <h2>Edit Student Information</h2>
+                <p>Maintain accurate student profiles for academic integrity.</p>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="update-card-body">
+            <form method="POST" class="student-form-grid" novalidate>
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label>First Name</label>
+                    {{ form.first_name }}
+                </div>
+
+                <div class="form-group">
+                    <label>Middle Name</label>
+                    {{ form.middle_name }}
+                </div>
+
+                <div class="form-group">
+                    <label>Last Name</label>
+                    {{ form.last_name }}
+                </div>
+
+                <div class="form-group">
+                    <label>Email</label>
+                    {{ form.email }}
+                </div>
+
+                <div class="form-group">
+                    <label>Program</label>
+                    {{ form.program }}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions full-row">
+                    <button type="submit" class="btn save-btn">
+                        <i class="fas fa-save me-2"></i> Save Changes
+                    </button>
+
+                    <a href="{% url 'create_student' %}" class="btn cancel-btn">
+                        Cancel
+                    </a>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

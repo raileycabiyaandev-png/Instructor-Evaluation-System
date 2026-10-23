@@ -1,0 +1,341 @@
+{% extends "instructor_base.html" %}
+{% load static %}
+
+{% block title %}Evaluation Results{% endblock %}
+{% block page_title %}Evaluation Results{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_evaluation_results.css' %}">
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+
+{% block content %}
+<div class="page">
+
+    <!-- Where am I? -->
+    <nav class="crumbs no-print" aria-label="Breadcrumb">
+        <a href="{% url 'instructor_dashboard' %}">Dashboard</a>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <span aria-current="page">Evaluation results</span>
+    </nav>
+
+    <!-- Page title + print button -->
+    <div class="page-intro page-intro-row">
+        {% if state == "released" %}
+        <button type="button" class="btn btn-ghost no-print" onclick="window.print()">
+            <i class="bi bi-printer" aria-hidden="true"></i> Print / Save as PDF
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Step 1: choose a period -->
+    <section class="card no-print" aria-labelledby="filterTitle">
+        <div class="card-head">
+            <div class="card-title">
+                <span class="card-icon"><i class="bi bi-funnel" aria-hidden="true"></i></span>
+                <div>
+                    <h3 id="filterTitle">Choose a period</h3>
+                    <p class="card-sub">Select a school year, a semester and a period, then press Show results.</p>
+                </div>
+            </div>
+        </div>
+
+        <form method="get" action="{% url 'instructor_evaluation_results' %}" class="filters">
+            <div class="field">
+                <label for="f_sy">School year</label>
+                <select id="f_sy" name="school_year" class="select">
+                    {% for sy in school_years %}
+                    <option value="{{ sy }}" {% if sy == selected.school_year %}selected{% endif %}>{{ sy }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="f_sem">Semester</label>
+                <select id="f_sem" name="semester" class="select">
+                    {% for value, label in semester_choices %}
+                    <option value="{{ value }}" {% if value == selected.semester %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="f_term">Evaluation period</label>
+                <select id="f_term" name="term" class="select">
+                    {% for value, label in term_choices %}
+                    <option value="{{ value }}" {% if value == selected.term %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search" aria-hidden="true"></i> Show results</button>
+                <a href="{% url 'instructor_evaluation_results' %}" class="btn btn-ghost"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset</a>
+            </div>
+        </form>
+
+        {% if period_label %}
+        <div class="filters-foot">
+            <i class="bi bi-eye" aria-hidden="true"></i> Now showing:
+            <span class="chip"><i class="bi bi-calendar3" aria-hidden="true"></i> {{ period_label }}</span>
+        </div>
+        {% endif %}
+    </section>
+
+
+    {% if state == "released" %}
+
+    <!-- Only shows on paper -->
+    <div class="print-only">
+        <h2>Faculty Evaluation Report</h2>
+        <p><strong>Instructor:</strong> {{ request.user.first_name }} {{ request.user.last_name }}</p>
+        <p><strong>Evaluation period:</strong> {{ period_label }}</p>
+        <p><strong>Date generated:</strong> {% now "F j, Y" %}</p>
+    </div>
+
+    <!-- Step 2: overview = big rating + quick facts -->
+    <div class="overview">
+        {% include "instructor_rating_hero.html" with score=current.overall title="Overall rating" period_text=period_label note="The average of all anonymous student ratings in this period." %}
+
+        <div class="side">
+            <div class="stat">
+                <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                <div class="stat-body">
+                    <div class="stat-label">Total evaluations</div>
+                    <div class="stat-value">{{ current.total }}</div>
+                    <div class="stat-note">Anonymous student responses</div>
+                </div>
+            </div>
+
+            <div class="stat">
+                <span class="stat-icon"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></span>
+                <div class="stat-body">
+                    <div class="stat-label">Compared with the last period</div>
+                    {% if overall_change %}
+                    <div style="margin-top:6px;">
+                        <span class="trend {{ overall_change.trend }}">
+                            {% if overall_change.trend == "up" %}<i class="bi bi-caret-up-fill" aria-hidden="true"></i>{% elif overall_change.trend == "down" %}<i class="bi bi-caret-down-fill" aria-hidden="true"></i>{% else %}<i class="bi bi-dash" aria-hidden="true"></i>{% endif %}
+                            {{ overall_change.text }}
+                        </span>
+                    </div>
+                    <div class="stat-note">Last period: {{ previous_label }}</div>
+                    {% else %}
+                    <div class="stat-na">Not available</div>
+                    <div class="stat-note">No earlier finished evaluation yet</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Filled in by JavaScript from the category table -->
+            <div class="stat" id="insightBest" hidden>
+                <span class="stat-icon"><i class="bi bi-arrow-up-circle-fill" aria-hidden="true"></i></span>
+                <div class="stat-body">
+                    <div class="stat-label">Your strongest area</div>
+                    <div class="stat-value stat-value--text" data-name></div>
+                    <div class="stat-note" data-score></div>
+                </div>
+            </div>
+
+            <div class="stat" id="insightLow" hidden>
+                <span class="stat-icon stat-icon--gold"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
+                <div class="stat-body">
+                    <div class="stat-label">Needs the most attention</div>
+                    <div class="stat-value stat-value--text" data-name></div>
+                    <div class="stat-note" data-score></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Step 3: category scores, as a chart or as a table -->
+    <section class="card tabbed" aria-label="Scores by category">
+
+        <div class="tabs" role="tablist" aria-label="Choose how to see the scores">
+            <button type="button" class="tab" role="tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="true">
+                <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Chart
+            </button>
+            <button type="button" class="tab" role="tab" id="tab-table" data-tab="table" aria-controls="panel-table" aria-selected="false">
+                <i class="bi bi-table" aria-hidden="true"></i> Table
+            </button>
+        </div>
+
+        <!-- TAB: chart -->
+        <div class="tab-panel" role="tabpanel" id="panel-chart" aria-labelledby="tab-chart">
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
+                    <div>
+                        <h3>Your score in each category</h3>
+                        <p class="card-sub">Average of all student ratings, out of 5 &middot; {{ period_label }}</p>
+                    </div>
+                </div>
+                <div class="tools no-print">
+                    <div class="control">
+                        <label for="sortCategory">Sort by</label>
+                        <select id="sortCategory" class="select">
+                            <option value="default">Default order</option>
+                            <option value="high">Highest first</option>
+                            <option value="low">Lowest first</option>
+                        </select>
+                    </div>
+                    {% if previous %}
+                    <label class="switch">
+                        <input type="checkbox" id="togglePrevious" checked>
+                        <span class="switch-track" aria-hidden="true"></span>
+                        <span class="switch-label">Show last period</span>
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="chart-wrap chart-wrap--bars">
+                    <canvas id="categoryChart" role="img" aria-label="Bar chart of your score in each category, out of 5{% if previous %}, with last period next to it{% endif %}. The same numbers are in the Table tab."></canvas>
+                </div>
+                <ul class="legend">
+                    <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
+                    <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
+                    <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
+                    {% if previous %}<li><i class="key key--prev" aria-hidden="true"></i> Last period</li>{% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- TAB: table -->
+        <div class="tab-panel" role="tabpanel" id="panel-table" aria-labelledby="tab-table" hidden>
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
+                    <div>
+                        <h3>Scores in numbers</h3>
+                        <p class="card-sub">The same scores as the chart{% if previous %}, with the change from the last period{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table" id="categoryTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Category</th>
+                            <th scope="col">Score</th>
+                            {% if previous %}
+                            <th scope="col" class="col-prev">Last period</th>
+                            <th scope="col">Change</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr data-label="{{ row.label }}" data-score="{{ row.score|stringformat:'f' }}"{% if previous %} data-previous="{{ row.previous|stringformat:'f' }}"{% endif %}>
+                            <th scope="row">{{ row.label }}</th>
+                            <td>
+                                <span class="badge badge-{{ row.level }}">
+                                    {% if row.level == "high" %}<i class="bi bi-check-circle" aria-hidden="true"></i>{% elif row.level == "mid" %}<i class="bi bi-dash-circle" aria-hidden="true"></i>{% else %}<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{% endif %}
+                                    {{ row.score|floatformat:2 }} / 5
+                                    {% if row.level == "high" %}Excellent{% elif row.level == "mid" %}Good{% else %}Needs improvement{% endif %}
+                                </span>
+                            </td>
+                            {% if previous %}
+                            <td class="col-prev">{{ row.previous|floatformat:2 }} / 5</td>
+                            <td>
+                                <span class="trend {{ row.trend }}">
+                                    {% if row.trend == "up" %}<i class="bi bi-caret-up-fill" aria-hidden="true"></i>{% elif row.trend == "down" %}<i class="bi bi-caret-down-fill" aria-hidden="true"></i>{% else %}<i class="bi bi-dash" aria-hidden="true"></i>{% endif %}
+                                    {{ row.diff_text }}
+                                </span>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pager no-print" id="categoryPager" hidden>
+                <span class="pager-info" data-pager-info aria-live="polite"></span>
+                <div class="pager-buttons">
+                    <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                </div>
+            </div>
+
+            {% if not previous %}
+            <div class="card-foot"><i class="bi bi-info-circle" aria-hidden="true"></i> There is no earlier finished evaluation, so there is nothing to compare with yet.</div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <p class="privacy">
+        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+        These are combined averages. Student names and single answers are never shown.
+    </p>
+
+    {% else %}
+
+    <!-- Nothing to show yet: say why in simple words -->
+    <section class="card empty" aria-live="polite">
+        {% if state == "no_periods" %}
+            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+            <h3>No evaluation periods yet</h3>
+            <p class="state-text">The administrator has not created an evaluation period yet.</p>
+        {% elif state == "not_found" %}
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <h3>No period matches your choice</h3>
+            <p class="state-text">There is no evaluation period for that school year, semester and period. Please try another choice.</p>
+        {% elif state == "not_open" %}
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+            <h3>This evaluation has not opened yet</h3>
+            <p class="state-text">{{ period_label }} is not open for students yet, so there are no results.</p>
+        {% elif state == "in_progress" %}
+            <i class="bi bi-lock-fill" aria-hidden="true"></i>
+            <h3>Results are not released yet</h3>
+            <p class="state-text">{{ period_label }} is still open for students. Results come out after the period closes, so the scores are final.</p>
+        {% elif state == "no_responses" %}
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <h3>No student responses</h3>
+            <p class="state-text">{{ period_label }} is closed, but no student sent an evaluation for you.</p>
+        {% endif %}
+
+        {% if has_released and state != "no_periods" %}
+        <a href="{% url 'instructor_evaluation_results' %}" class="btn btn-ghost">
+            <i class="bi bi-clock-history" aria-hidden="true"></i> Show my latest released results
+        </a>
+        {% endif %}
+    </section>
+
+    {% endif %}
+
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'users/js/instructor_common.js' %}"></script>
+<script>
+/* The chart and the cards are built from the table, so they always match it. */
+(function () {
+    var table = document.getElementById('categoryTable');
+    if (!table) return;
+
+    var rows  = Instructor.readCategoryRows(table);
+    var chart = Instructor.categoryChart(document.getElementById('categoryChart'), rows);
+    Instructor.showInsights(rows);
+    Instructor.paginate(table.querySelector('tbody'), document.getElementById('categoryPager'), 5);
+
+    /* Input controls */
+    var sort = document.getElementById('sortCategory');
+    var prev = document.getElementById('togglePrevious');
+    if (chart && sort) sort.addEventListener('change', function () { chart.setSort(sort.value); });
+    if (chart && prev) prev.addEventListener('change', function () { chart.setPrevious(prev.checked); });
+
+    /* Tabs: Chart | Table */
+    Instructor.tabs(document.querySelector('.tabbed'), function (key) {
+        if (key === 'chart' && chart) chart.resize();
+    });
+})();
+</script>
+{% endblock %}

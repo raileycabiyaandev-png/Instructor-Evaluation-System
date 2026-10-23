@@ -1,0 +1,87 @@
+/* ============================================================
+   users/static/users/css/admin_dashboard.css
+   Admin Dashboard only.
+   Shared styles (cards, tabs, buttons, hero, tables) are in admin_common.css.
+
+   1. Instructor table     2. Charts     3. Needs-attention list
+   4. Responsive
+   ============================================================ */
+
+
+/* ============================================================
+   1. INSTRUCTOR TABLE
+   ============================================================ */
+.person { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.person-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--navy-800);
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+.person-name { font-weight: 600; color: var(--navy-900); overflow-wrap: anywhere; }
+.person-role { font-size: 14px; color: var(--muted); }
+
+.score-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.score-sub { font-size: 14px; color: var(--muted); }
+
+.perf-table .cell-chart { min-width: 320px; }
+
+
+/* ============================================================
+   2. CHARTS
+   ============================================================ */
+.mini-chart { position: relative; width: 100%; max-width: 420px; height: 150px; }
+.mini-note { font-size: 14px; color: var(--muted); }
+.chart-wrap--bars { height: 300px; }
+
+
+/* ============================================================
+   3. NEEDS-ATTENTION LIST
+   ============================================================ */
+.attention-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+}
+.attention-list li:last-child { border-bottom: 0; }
+.attention-meta { display: flex; align-items: center; gap: 12px; }
+.attention-count { font-size: 14px; color: var(--muted); }
+
+
+/* ============================================================
+   4. RESPONSIVE
+   ============================================================ */
+@media (max-width: 767.98px) {
+    /* each table row becomes a small card */
+    .perf-table thead { display: none; }
+    .perf-table, .perf-table tbody { display: block; }
+    .perf-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px 12px;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+    }
+    .perf-table tbody tr:last-child { border-bottom: 0; }
+    .perf-table td { display: block; padding: 0; border: 0; }
+    .perf-table .cell-chart { grid-column: 1 / -1; min-width: 0; }
+    .score-wrap { align-items: flex-end; }
+}
+
+@media (max-width: 575.98px) {
+    .attention-list li { padding: 14px 16px; }
+    .mini-chart { max-width: none; }
+}

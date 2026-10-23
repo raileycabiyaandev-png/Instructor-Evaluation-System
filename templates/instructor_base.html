@@ -1,0 +1,281 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Faculty Portal{% endblock %} | ACLC College of Tacloban</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+<style>
+/* users/static/users/css/instructor_base.css - shared look for every instructor page: colors, sidebar, top bar, cards, tables, stat cards, buttons */
+
+/* ===== Design tokens (change colors here only) ===== */
+:root{
+  --navy-900:#13224f; --navy-800:#1b2f6b; --navy-700:#223a85; --navy-600:#2f4a9e;
+  --navy-200:#c9d4ee; --navy-100:#e4eaf7; --navy-50:#f3f6fc;
+  --gold:#c9a227; --gold-soft:#fbf3d5;
+  --ink:#1c2540; --muted:#5b6585; --line:#dbe2f0; --bg:#f4f6fb;
+  --ok:#166534; --ok-bg:#dcfce7; --bad:#991b1b; --bad-bg:#fee2e2;
+}
+
+/* ===== Base ===== */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;color:var(--ink);background:var(--bg);-webkit-tap-highlight-color:transparent}
+h1,h2,h3,h4{font-family:"Playfair Display",Georgia,serif;color:var(--navy-900);margin:0;line-height:1.25}
+:focus-visible{outline:3px solid var(--navy-600);outline-offset:2px}
+.skip-link{position:absolute;left:-9999px;top:8px;background:#fff;color:var(--navy-800);padding:10px 16px;border-radius:8px;z-index:100;font-weight:600}
+.skip-link:focus{left:12px}
+
+/* ===== App shell ===== */
+.app{display:flex;min-height:100vh;min-height:100dvh}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ===== Sidebar (dark navy, faint grid, gold accent) ===== */
+.sidebar{width:264px;flex:0 0 264px;color:#fff;position:sticky;top:0;height:100vh;height:100dvh;background-color:#0d1431;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:32px 32px;border-right:1px solid rgba(255,255,255,.06)}
+.sidebar-inner{display:flex;flex-direction:column;height:100%;padding:22px 14px calc(16px + env(safe-area-inset-bottom));overflow-y:auto}
+.sidebar :focus-visible{outline-color:#f2d77a}
+.brand-logo-row{display:flex;align-items:center;gap:12px;padding:0 6px}
+.brand-logo-ring{width:48px;height:48px;flex:0 0 48px;border-radius:50%;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(212,175,55,.6),0 0 14px rgba(212,175,55,.3)}
+.brand-logo{width:100%;height:100%;object-fit:cover}
+.brand-text{display:flex;flex-direction:column;line-height:1.3}
+.brand-name{font-family:"Playfair Display",Georgia,serif;font-weight:700;font-size:18px;color:#fff}
+.brand-sub{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#8d97b5}
+.brand-divider{height:1px;background:rgba(255,255,255,.1);margin:20px -14px 0}
+.nav{flex:1;display:flex;flex-direction:column;gap:6px;margin-top:22px}
+.nav-label{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#8d97b5;padding:0 14px 8px}
+.nav-link{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:0 14px;border:1px solid transparent;border-radius:10px;background:none;color:#a3acc6;font:inherit;font-size:16px;text-align:left;text-decoration:none;cursor:pointer}
+.nav-link:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.08);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 #d4af37}
+.nav-icon{font-size:18px;width:22px;text-align:center}
+.nav-link.active .nav-icon{color:#e0bb4a}
+.sidebar-footer{border-top:1px solid rgba(255,255,255,.1);padding-top:16px}
+.user-strip{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.05)}
+.user-avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:#162a63;border:1px solid rgba(212,175,55,.7);color:#e0bb4a;font-weight:700;display:flex;align-items:center;justify-content:center}
+.user-info{min-width:0}
+.user-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:14px;color:#8d97b5}
+.logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;border:1px solid rgba(239,68,68,.45);border-radius:10px;background:rgba(239,68,68,.08);color:#f87171;font:inherit;font-weight:600;cursor:pointer}
+.logout-btn:hover{background:rgba(239,68,68,.16)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(19,34,79,.5);z-index:30}
+
+/* ===== Top bar ===== */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:env(safe-area-inset-top) 28px 0;background:#fff;border-bottom:1px solid var(--line)}
+.topbar-left{display:flex;align-items:center;gap:8px;min-width:0}
+.topbar-title{font-family:"Playfair Display",Georgia,serif;font-weight:600;font-size:20px;color:var(--navy-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-badge{font-size:14px;font-weight:600;color:var(--navy-700);background:var(--navy-50);border:1px solid var(--navy-200);border-radius:999px;padding:3px 12px}
+.menu-toggle{display:none;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:0;border-radius:8px;background:none;color:var(--navy-800);font-size:26px;cursor:pointer}
+
+/* ===== Page + shared components (reuse on every instructor page) ===== */
+.page{max-width:1100px;margin:0 auto;padding:24px 28px calc(32px + env(safe-area-inset-bottom))}
+.page-intro{margin-bottom:20px}
+.page-intro h2{font-size:26px}
+.page-intro p{margin:6px 0 0;color:var(--muted)}
+.view{display:none}
+.view.active{display:block}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:20px}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.card-head h3{font-size:18px}
+.card-body{padding:16px 20px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);background:var(--navy-50);border-radius:999px;padding:4px 12px}
+
+.table-wrap{overflow-x:auto}
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;font-weight:600;font-size:14px;color:var(--muted);background:var(--navy-50);padding:10px 20px;border-bottom:1px solid var(--line)}
+.data-table td,.data-table tbody th{padding:14px 20px;border-bottom:1px solid var(--line);vertical-align:middle;text-align:left;font-weight:400;font-size:16px;color:var(--ink);background:none}
+.data-table tbody tr:last-child td,.data-table tbody tr:last-child th{border-bottom:0}
+
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:14px;font-weight:600;white-space:nowrap}
+.badge-high{background:var(--ok-bg);color:var(--ok)}
+.badge-mid{background:var(--navy-100);color:var(--navy-800)}
+.badge-low{background:var(--bad-bg);color:var(--bad)}
+
+.empty{text-align:center;padding:36px 20px;color:var(--muted)}
+.empty i{display:block;font-size:32px;color:#8d99bd;margin-bottom:8px}
+.empty h3{font-size:18px;margin-bottom:4px}
+.empty p{margin:0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--navy-600);color:#fff}
+.btn-primary:hover{background:var(--navy-700)}
+.btn-primary:disabled{background:#c9d1e6;color:#56608a;cursor:not-allowed}
+.btn-ghost{background:#fff;color:var(--navy-700);border-color:var(--navy-200)}
+
+/* ===== Summary numbers ===== */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:0 0 20px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px}
+.stat dt{font-size:15px;color:var(--muted)}
+.stat dd{margin:0}
+.stat-value{font-family:"Playfair Display",Georgia,serif;font-size:40px;font-weight:700;line-height:1.1;color:var(--navy-900);margin-top:4px}
+.stat-value small{font-family:"Source Sans 3",system-ui,sans-serif;font-size:16px;font-weight:500;color:var(--muted)}
+.stat-note{font-size:14px;color:var(--muted);margin-top:6px}
+
+/* ===== Category scores ===== */
+.score-cell{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
+.bar-track{flex:1 1 120px;min-width:100px;height:8px;border-radius:999px;background:var(--navy-100);overflow:hidden}
+.bar-fill{height:100%;background:var(--navy-600);border-radius:999px}
+
+@media (max-width:575.98px){.stat-value{font-size:34px}}
+
+/* ===== Tablet and mobile ===== */
+@media (max-width:991.98px){
+  .sidebar{position:fixed;left:0;top:0;z-index:40;width:min(86vw,288px);transform:translateX(-100%);visibility:hidden;transition:transform .2s ease,visibility 0s linear .2s}
+  .sidebar.sidebar-open{transform:none;visibility:visible;transition-delay:0s}
+  .menu-toggle{display:inline-flex}
+}
+@media (max-width:575.98px){
+  .topbar{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+  .topbar-title{font-size:18px}
+  .page{padding:16px max(16px,env(safe-area-inset-left)) calc(28px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right))}
+  .page-intro h2{font-size:22px}
+  .card-head{padding:14px 16px}
+  .card-body{padding:14px 16px}
+  .data-table th,.data-table td,.data-table tbody th{padding-left:16px;padding-right:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+{% block extra_css %}{% endblock %}
+{% block extra_head %}{% endblock %}
+</head>
+
+<body>
+<a class="skip-link" href="#mainContent">Skip to main content</a>
+
+<div class="app">
+
+    <aside class="sidebar" id="sidebar" aria-label="Faculty sidebar">
+        <div class="sidebar-inner">
+            <div class="brand">
+                <div class="brand-logo-row">
+                    <div class="brand-logo-ring">
+                        <img src="{% static 'images/aclc_logo.jpg' %}" class="brand-logo" width="46" height="46" alt="ACLC College of Tacloban logo">
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">ACLC · SES</span>
+                        <span class="brand-sub">Faculty Portal</span>
+                    </div>
+                </div>
+                <div class="brand-divider"></div>
+            </div>
+
+            <nav class="nav" aria-label="Faculty navigation">
+                <span class="nav-label">Menu</span>
+
+                <button type="button" class="nav-link {% if active_tab == 'dashboard' or not active_tab and request.resolver_match.url_name != 'instructor_evaluation_results' %}active{% endif %}" data-view="dashboard" data-title="Dashboard" {% if active_tab == 'dashboard' or not active_tab and request.resolver_match.url_name != 'instructor_evaluation_results' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-grid-1x2 nav-icon" aria-hidden="true"></i> Dashboard
+                </button>
+
+                <a class="nav-link {% if active_tab == 'results' or request.resolver_match.url_name == 'instructor_evaluation_results' %}active{% endif %}" href="{% url 'instructor_evaluation_results' %}" {% if active_tab == 'results' or request.resolver_match.url_name == 'instructor_evaluation_results' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-clipboard-data nav-icon" aria-hidden="true"></i> Evaluation Results
+                </a>
+
+                <button type="button" class="nav-link {% if active_tab == 'profile' %}active{% endif %}" data-view="profile" data-title="Profile" {% if active_tab == 'profile' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-person-circle nav-icon" aria-hidden="true"></i> Profile
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-strip">
+                    <div class="user-avatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
+                    <div class="user-info">
+                        <div class="user-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
+                        <div class="user-role">Faculty</div>
+                    </div>
+                </div>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="logout-btn" type="submit">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button type="button" class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <div class="topbar-title" id="topbarTitle">{% block page_title %}Dashboard{% endblock %}</div>
+            </div>
+            <span class="topbar-badge">Faculty</span>
+        </header>
+
+        <main id="mainContent" tabindex="-1">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+/* Sidebar (mobile drawer) + switching between in-page views */
+(function () {
+    // IMPORTANT: change 'instructor_dashboard' to the real URL name of your dashboard page
+    var DASHBOARD_URL = "{% url 'instructor_dashboard' %}";
+
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sbOverlay');
+    var toggle  = document.getElementById('menuToggle');
+
+    function setOpen(open) {
+        sidebar.classList.toggle('sidebar-open', open);
+        overlay.style.display = open ? 'block' : 'none';
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+            var first = sidebar.querySelector('.nav-link');
+            if (first) first.focus();
+        }
+    }
+    window.toggleSidebar = function () { setOpen(!sidebar.classList.contains('sidebar-open')); };
+    window.closeSidebar  = function () { setOpen(false); };
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('sidebar-open')) {
+            setOpen(false);
+            toggle.focus();
+        }
+    });
+    window.matchMedia('(min-width: 992px)').addEventListener('change', function (e) {
+        if (e.matches) setOpen(false);
+    });
+
+    function switchView(target, title) {
+        var view = document.getElementById('view-' + target);
+        // Not on the dashboard page (e.g. Results page): go there instead
+        if (!view) { window.location.href = DASHBOARD_URL + '?tab=' + target; return; }
+
+        document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active'); });
+        view.classList.add('active');
+
+        document.querySelectorAll('.nav-link[data-view]').forEach(function (l) {
+            var on = l.dataset.view === target;
+            l.classList.toggle('active', on);
+            if (on) l.setAttribute('aria-current', 'page'); else l.removeAttribute('aria-current');
+        });
+
+        document.getElementById('topbarTitle').textContent = title || '';
+        var url = new URL(window.location.href);
+        url.searchParams.set('tab', target);
+        window.history.pushState({ tab: target }, '', url.toString());
+
+        setOpen(false);
+        window.scrollTo(0, 0);
+        document.getElementById('mainContent').focus({ preventScroll: true });
+    }
+
+    document.querySelectorAll('.nav-link[data-view]').forEach(function (btn) {
+        btn.addEventListener('click', function () { switchView(this.dataset.view, this.dataset.title); });
+    });
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

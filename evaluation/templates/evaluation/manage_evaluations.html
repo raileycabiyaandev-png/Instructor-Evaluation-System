@@ -1,0 +1,354 @@
+<!-- evaluation/manage_evaluations.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Evaluation | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'evaluation/css/manage_evaluations.css' %}">
+{% endblock %}
+
+{% block page_title %}Manage Evaluation{% endblock %}
+
+
+{% block content %}
+<div class="admin-page">
+
+    <!-- Messages (saved, deleted, errors) -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'error' in message.tags %}alert-error{% else %}alert-success{% endif %}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
+        <i class="bi {% if 'error' in message.tags %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i>
+        <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Page title + main action -->
+    <div class="page-intro page-intro-row">
+        <div>
+            <h2>Evaluation periods</h2>
+            <p>Create, open and close the times when students can evaluate their teachers.</p>
+        </div>
+        <button type="button" class="btn btn-primary" id="openCreate">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Create evaluation period
+        </button>
+    </div>
+
+
+    <!-- ═══════════ LIST ═══════════ -->
+    <section class="card" aria-labelledby="listTitle">
+
+        <div class="card-head">
+            <div class="card-title">
+                <span class="card-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+                <div>
+                    <h3 id="listTitle">Evaluation period list</h3>
+                    <p class="card-sub">Only periods that are switched on are open to students.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search + filter + sort -->
+        <div class="card-body">
+            <div class="tools">
+                <label class="search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" id="searchEvaluation" placeholder="Search evaluation" aria-label="Search evaluation">
+                </label>
+
+                <div class="seg" id="statusFilter" role="group" aria-label="Show which periods">
+                    <button type="button" data-filter="all" aria-pressed="true">All <span class="tab-count" data-count="all">0</span></button>
+                    <button type="button" data-filter="active" aria-pressed="false">Active <span class="tab-count" data-count="active">0</span></button>
+                    <button type="button" data-filter="draft" aria-pressed="false">Draft <span class="tab-count" data-count="draft">0</span></button>
+                </div>
+
+                <div class="control">
+                    <label for="sortEvaluation">Sort by</label>
+                    <select id="sortEvaluation" class="select">
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="active">Active first</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table period-table" id="evaluationTable">
+                <thead>
+                    <tr>
+                        <th scope="col">Period</th>
+                        <th scope="col">Dates</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="actions-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="evaluationBody">
+                {% for p in periods %}
+                    <tr data-status="{% if p.is_active %}active{% else %}draft{% endif %}"
+                        data-start="{{ p.start_date|date:'Y-m-d' }}">
+
+                        <td>
+                            <div class="period-name">{{ p.school_year }}</div>
+                            <div class="period-sub">{{ p.get_semester_display }} &middot; {{ p.get_term_display }}</div>
+                        </td>
+
+                        <td class="date-range">
+                            {{ p.start_date|date:"M d, Y" }}
+                            <small>to {{ p.end_date|date:"M d, Y" }}</small>
+                        </td>
+
+                        <td>
+                            {% if p.is_active %}
+                            <span class="badge badge-high status-badge"><i class="bi bi-circle-fill" aria-hidden="true"></i> Active</span>
+                            {% else %}
+                            <span class="badge badge-off status-badge"><i class="bi bi-circle" aria-hidden="true"></i> Draft</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="cell-actions">
+                            <div class="row-actions">
+
+                                <a href="{% url 'update_evaluation' p.id %}" class="btn btn-ghost btn-sm">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i> Edit
+                                </a>
+
+                                <form action="{% url 'toggle_active' p.id %}" method="POST" class="toggle-form">
+                                    {% csrf_token %}
+                                    <label class="switch">
+                                        <input type="checkbox" onchange="this.form.submit()" {% if p.is_active %}checked{% endif %}
+                                               aria-label="Switch {{ p.school_year }} {{ p.get_semester_display }} {{ p.get_term_display }} on or off">
+                                        <span class="switch-track" aria-hidden="true"></span>
+                                        <span class="switch-label">{% if p.is_active %}On{% else %}Off{% endif %}</span>
+                                    </label>
+                                </form>
+
+                                <form action="{% url 'delete_evaluation' p.id %}" method="POST" class="delete-form"
+                                      data-name="{{ p.school_year }}, {{ p.get_semester_display }}, {{ p.get_term_display }}">
+                                    {% csrf_token %}
+                                    <button type="button" class="btn btn-ghost btn-sm btn-delete js-delete">
+                                        <i class="bi bi-trash" aria-hidden="true"></i> Delete
+                                    </button>
+                                </form>
+
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Nothing to show -->
+        <div class="empty" id="evalEmpty" {% if periods %}hidden{% endif %}>
+            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+            <h3>{% if periods %}No period found{% else %}No evaluation periods yet{% endif %}</h3>
+            <p>{% if periods %}Try another word or another filter.{% else %}Press "Create evaluation period" to add the first one.{% endif %}</p>
+        </div>
+
+        <!-- Pages -->
+        <div class="pager" id="evalPager" hidden>
+            <span class="pager-info" data-pager-info aria-live="polite"></span>
+            <div class="pager-buttons">
+                <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+            </div>
+        </div>
+        <div class="card-foot" id="evalCount" aria-live="polite"></div>
+    </section>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     CREATE WINDOW
+═══════════════════════════════════════════════ -->
+<div id="evaluationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="createTitle"
+     data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
+    <div class="modal-content eval-modal">
+
+        <div class="eval-modal__header">
+            <div>
+                <h3 id="createTitle">Create evaluation period</h3>
+                <p>Set up a new school evaluation schedule.</p>
+            </div>
+            <button type="button" class="close" id="closeCreate" aria-label="Close">&times;</button>
+        </div>
+
+        <form method="POST" id="evaluationForm">
+            {% csrf_token %}
+
+            <div class="eval-modal__body">
+                {% if form.non_field_errors %}
+                <div class="alert alert-error" role="alert"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i><span>{{ form.non_field_errors }}</span></div>
+                {% endif %}
+
+                <div class="form-grid">
+
+                    <div class="form-field full-width">
+                        <label for="{{ form.school_year.id_for_label }}">School year</label>
+                        {{ form.school_year }}
+                        <span class="error">{{ form.school_year.errors }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="{{ form.semester.id_for_label }}">Semester</label>
+                        {{ form.semester }}
+                        <span class="error">{{ form.semester.errors }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="{{ form.term.id_for_label }}">Term</label>
+                        {{ form.term }}
+                        <span class="error">{{ form.term.errors }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="{{ form.start_date.id_for_label }}">Start date</label>
+                        {{ form.start_date }}
+                        <span class="error">{{ form.start_date.errors }}</span>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="{{ form.end_date.id_for_label }}">End date</label>
+                        {{ form.end_date }}
+                        <span class="error">{{ form.end_date.errors }}</span>
+                    </div>
+
+                    <div class="form-field full-width">
+                        <span class="form-label-text" style="font-size:15px;font-weight:600;color:var(--navy-800);">Evaluation status</span>
+                        <label class="toggle-label">
+                            {{ form.is_active }}
+                            <span class="toggle-text">Open this period to students</span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="eval-modal__footer">
+                <button type="button" class="btn btn-ghost" id="cancelCreate">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn"><i class="bi bi-check2-circle" aria-hidden="true"></i> Save evaluation</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     DELETE WINDOW  ("are you sure?")
+═══════════════════════════════════════════════ -->
+<div id="confirmModal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+    <div class="modal-content confirm-box">
+        <div class="confirm-body">
+            <h3 id="confirmTitle">Delete this evaluation period?</h3>
+            <p id="confirmText">You are about to delete <strong id="confirmName"></strong>. This cannot be undone.</p>
+        </div>
+        <div class="eval-modal__footer">
+            <button type="button" class="btn btn-ghost" id="confirmCancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmYes"><i class="bi bi-trash" aria-hidden="true"></i> Yes, delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'users/js/admin_common.js' %}"></script>
+<script>
+/* ── Open and close the windows ── */
+(function () {
+    var createModal  = document.getElementById('evaluationModal');
+    var confirmModal = document.getElementById('confirmModal');
+    var lastFocus    = null;
+
+    function openModal(modal, focusEl) {
+        lastFocus = document.activeElement;
+        modal.classList.add('show');
+        if (focusEl) focusEl.focus();
+    }
+    function closeModal(modal) {
+        modal.classList.remove('show');
+        if (lastFocus) lastFocus.focus();
+    }
+
+    /* Create window */
+    document.getElementById('openCreate').addEventListener('click', function () {
+        openModal(createModal, createModal.querySelector('select, input'));
+    });
+    document.getElementById('closeCreate').addEventListener('click', function () { closeModal(createModal); });
+    document.getElementById('cancelCreate').addEventListener('click', function () { closeModal(createModal); });
+    if (createModal.dataset.hasErrors === '1') createModal.classList.add('show');   // show form errors
+
+    /* Stop double saving */
+    document.getElementById('evaluationForm').addEventListener('submit', function () {
+        document.getElementById('submitBtn').disabled = true;
+    });
+
+    /* Delete window: ask first, then send the right form */
+    var pendingForm = null;
+    document.querySelectorAll('.js-delete').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            pendingForm = btn.closest('form');
+            document.getElementById('confirmName').textContent = pendingForm.dataset.name;
+            openModal(confirmModal, document.getElementById('confirmCancel'));
+        });
+    });
+    document.getElementById('confirmCancel').addEventListener('click', function () { pendingForm = null; closeModal(confirmModal); });
+    document.getElementById('confirmYes').addEventListener('click', function () { if (pendingForm) pendingForm.submit(); });
+
+    /* Click outside a window, or press Escape, to close it */
+    [createModal, confirmModal].forEach(function (modal) {
+        modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(modal); });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (confirmModal.classList.contains('show')) closeModal(confirmModal);
+        else if (createModal.classList.contains('show')) closeModal(createModal);
+    });
+})();
+
+
+/* ── List: search, filter (All / Active / Draft), sort, 8 rows per page ── */
+(function () {
+    var body = document.getElementById('evaluationBody');
+    if (!body || !body.children.length) return;
+
+    /* Numbers on the filter buttons */
+    var rows = Array.prototype.slice.call(body.children);
+    var counts = { all: rows.length, active: 0, draft: 0 };
+    rows.forEach(function (r) { counts[r.dataset.status]++; });
+    document.querySelectorAll('[data-count]').forEach(function (el) { el.textContent = counts[el.dataset.count]; });
+
+    var list = Admin.listTable({
+        tbody: body,
+        pageSize: 8,
+        search: document.getElementById('searchEvaluation'),
+        sort: document.getElementById('sortEvaluation'),
+        sorters: {
+            newest: function (a, b) { return b.dataset.start.localeCompare(a.dataset.start); },
+            oldest: function (a, b) { return a.dataset.start.localeCompare(b.dataset.start); },
+            active: function (a, b) {
+                if (a.dataset.status === b.dataset.status) return b.dataset.start.localeCompare(a.dataset.start);
+                return a.dataset.status === 'active' ? -1 : 1;
+            }
+        },
+        filterBy: function (row, value) { return row.dataset.status === value; },
+        pager: document.getElementById('evalPager'),
+        count: document.getElementById('evalCount'),
+        empty: document.getElementById('evalEmpty')
+    });
+
+    var buttons = document.querySelectorAll('#statusFilter button');
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            buttons.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+            list.setFilter(btn.dataset.filter);
+        });
+    });
+})();
+</script>
+{% endblock %}

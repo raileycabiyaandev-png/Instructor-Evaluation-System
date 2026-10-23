@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:70vh;
+    text-align:center;
+    flex-direction:column;
+">
+
+    <h1 style="font-size:40px; color:#e74a3b;">
+        🚫 Evaluation Closed
+    </h1>
+
+    <p style="font-size:18px; color:#555; margin-top:10px;">
+        The evaluation period is currently not active.
+    </p>
+
+    <a href="{% url 'student_dashboard' %}"
+       style="
+            margin-top:20px;
+            padding:12px 20px;
+            background:#4e73df;
+            color:white;
+            border-radius:8px;
+            text-decoration:none;
+       ">
+        Go Back to Dashboard
+    </a>
+
+</div>
+
+{% endblock %}

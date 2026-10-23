@@ -1,0 +1,34 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+
+# Local databases
+db.sqlite3
+db.sqlite3-journal
+
+# Generated QR codes and uploaded media
+qr_codes/
+media/
+
+# Test and coverage files
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

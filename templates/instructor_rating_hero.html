@@ -1,0 +1,81 @@
+{% comment %}
+  templates/instructor_rating_hero.html  (same folder as instructor_base.html)
+  The big navy "overall rating" banner. Used by the Dashboard and the Results page.
+
+  Needs:  score        a number from 1 to 5
+          title        small heading, e.g. "Overall rating"
+          period       (optional) an evaluation period object
+          period_text  (optional) the period as plain text, used when there is no period object
+          note         (optional) one short sentence under the meter
+          live         (optional) True when the period is still open
+{% endcomment %}
+{% widthratio score 5 100 as pct %}
+{% widthratio score 1 100 as s100 %}
+
+<section class="hero" aria-labelledby="heroTitle"
+         data-level="{% if s100|add:'0' >= 450 %}high{% elif s100|add:'0' >= 350 %}mid{% else %}low{% endif %}">
+    <div class="hero-grid">
+
+        <!-- Left: the number and the stars -->
+        <div>
+            <div class="hero-top">
+                <h3 class="hero-title" id="heroTitle">{{ title }}</h3>
+                {% if live %}
+                <span class="hero-tag"><i class="bi bi-hourglass-split" aria-hidden="true"></i> In progress</span>
+                {% else %}
+                <span class="hero-tag"><i class="bi bi-check2-circle" aria-hidden="true"></i> Completed</span>
+                {% endif %}
+            </div>
+
+            <p class="hero-period">
+                {% if period %}{{ period.school_year }}, {{ period.get_semester_display }}, {{ period.get_term_display }}{% else %}{{ period_text }}{% endif %}
+            </p>
+
+            <div class="hero-score">
+                <span class="hero-number">{{ score|floatformat:2 }}</span>
+                <span class="hero-outof">out of 5</span>
+            </div>
+
+            <div class="stars" role="img" aria-label="{{ score|floatformat:2 }} out of 5 stars">
+                <div class="stars-back" aria-hidden="true">★★★★★</div>
+                <div class="stars-front" aria-hidden="true" style="width:{{ pct }}%;">★★★★★</div>
+            </div>
+        </div>
+
+        <!-- Right: what the number means -->
+        <div>
+            <span class="hero-verdict">
+                {% if s100|add:'0' >= 450 %}
+                    <i class="bi bi-trophy-fill" aria-hidden="true"></i> Excellent
+                {% elif s100|add:'0' >= 350 %}
+                    <i class="bi bi-hand-thumbs-up-fill" aria-hidden="true"></i> Good
+                {% else %}
+                    <i class="bi bi-flag-fill" aria-hidden="true"></i> Needs improvement
+                {% endif %}
+            </span>
+
+            <p class="hero-meaning">
+                {% if s100|add:'0' >= 450 %}Students rated you very highly.
+                {% elif s100|add:'0' >= 350 %}Most students rated you well.
+                {% else %}There is room to grow. Check your lowest category.{% endif %}
+            </p>
+
+            <!-- Meter: where your score sits between 0 and 5 -->
+            <div class="meter" aria-hidden="true">
+                <span class="meter-zone meter-zone--low"></span>
+                <span class="meter-zone meter-zone--mid"></span>
+                <span class="meter-zone meter-zone--high"></span>
+                <span class="meter-marker" style="left:{{ pct }}%;"></span>
+            </div>
+
+            <ul class="hero-guide">
+                <li><i class="g-low" aria-hidden="true"></i> Needs improvement: below 3.5</li>
+                <li><i class="g-mid" aria-hidden="true"></i> Good: 3.5 to 4.4</li>
+                <li><i class="g-high" aria-hidden="true"></i> Excellent: 4.5 to 5</li>
+            </ul>
+
+            {% if note %}<p class="hero-note">{{ note }}</p>{% endif %}
+        </div>
+
+    </div>
+</section>

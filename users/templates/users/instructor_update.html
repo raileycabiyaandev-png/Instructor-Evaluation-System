@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/instructor_update.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="instructor-update-wrapper container-fluid py-4 px-3 px-lg-5">
+
+    <!-- Main Form Container -->
+    <div class="update-card">
+
+        <!-- Decorative Header -->
+        <div class="update-card-header">
+            <div>
+                <span class="section-badge">Instructor Record</span>
+                <h2>Edit Instructor Information</h2>
+                <p>Ensure all fields are accurate before saving updates.</p>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="update-card-body">
+            <form method="POST" novalidate>
+                {% csrf_token %}
+
+                <div class="custom-form-fields">
+                    {{ form.as_p }}
+                </div>
+
+                <!-- Buttons -->
+                <div class="form-actions">
+                    <button type="submit" class="btn save-btn">
+                        <i class="fas fa-save me-2"></i> Save Changes
+                    </button>
+
+                    <button type="button" onclick="history.back()" class="btn cancel-btn">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,453 @@
+/* ============================================================
+   users/static/users/css/admin_common.css
+
+   Shared look of the ADMIN pages (Dashboard, Manage Evaluations, ...).
+   Same design language as the instructor pages, but with NO gold:
+   navy + light blue only. (Sidebar + top bar CSS is inline in templates/base.html.)
+
+    1. Tokens          5. Tabs
+    2. Page header     6. Buttons and controls
+    3. Cards           7. Tables, badges, pager
+    4. Stat cards      8. Hero (best instructor), alerts, empty
+                       9. Responsive
+   ============================================================ */
+
+
+/* ============================================================
+   1. TOKENS
+   ============================================================ */
+:root {
+    --navy-900: #13224f;
+    --navy-800: #1b2f6b;
+    --navy-700: #223a85;
+    --navy-600: #2f4a9e;
+    --navy-500: #5b78c4;
+    --navy-300: #9fb0dc;
+    --navy-200: #c9d4ee;
+    --navy-100: #e4eaf7;
+    --navy-50:  #f3f6fc;
+
+    --ink:   #1c2540;
+    --muted: #5b6585;
+    --line:  #dbe2f0;
+    --bg:    #f4f6fb;
+
+    /* One warning color for "needs attention" (never gold) */
+    --warn:    #b4443a;
+    --warn-bg: #fbeae8;
+
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(11, 18, 41, .05), 0 4px 14px rgba(11, 18, 41, .05);
+}
+
+.admin-page { max-width: 1120px; margin: 0 auto; }
+.admin-page h2, .admin-page h3, .admin-page h4 { font-family: "Playfair Display", Georgia, serif; line-height: 1.25; color: var(--navy-900); }
+.admin-page p { line-height: 1.5; }
+.admin-page ul { list-style: none; }
+
+
+/* ============================================================
+   2. PAGE HEADER
+   ============================================================ */
+.page-intro { margin-bottom: 20px; }
+.page-intro h2 { font-size: 28px; }
+.page-intro p { margin-top: 6px; color: var(--muted); }
+
+.page-intro-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+
+/* ============================================================
+   3. CARDS  (head, body, foot)
+   ============================================================ */
+.card {
+    margin-bottom: 20px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+}
+.card-head h3 { font-size: 18px; }
+.card-sub { margin-top: 2px; font-size: 14px; color: var(--muted); }
+.card-body { padding: 18px 20px; }
+.card-foot { padding: 12px 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+.card-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.card-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--navy-50);
+    color: var(--navy-700);
+    font-size: 18px;
+}
+
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--navy-50);
+    font-size: 14px;
+    color: var(--muted);
+}
+
+
+/* ============================================================
+   4. STAT CARDS + OVERVIEW LAYOUT
+   ============================================================ */
+.overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.overview--single { grid-template-columns: 1fr; }
+.overview .hero { margin-bottom: 0; }
+
+.side { display: grid; gap: 12px; align-content: start; }
+.side--grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.stat-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--navy-50);
+    font-size: 20px;
+    color: var(--navy-700);
+}
+.stat-label { font-size: 14px; font-weight: 600; color: var(--muted); }
+.stat-value { font-family: "Playfair Display", Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15; color: var(--navy-900); }
+
+
+/* ============================================================
+   5. TABS
+   ============================================================ */
+.tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 50px;
+    padding: 0 16px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.tab:hover { color: var(--navy-700); }
+.tab[aria-selected="true"] { color: var(--navy-900); border-bottom-color: var(--navy-600); }
+
+.tab-count {
+    min-width: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--navy-100);
+    font-size: 13px;
+    text-align: center;
+    color: var(--navy-800);
+}
+.tab-count--warn { background: var(--warn-bg); color: var(--warn); }
+
+
+/* ============================================================
+   6. BUTTONS AND CONTROLS
+   ============================================================ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.btn-primary { background: var(--navy-700); color: #fff; }
+.btn-primary:hover { background: var(--navy-800); }
+.btn-ghost { background: #fff; color: var(--navy-700); border-color: var(--navy-200); }
+.btn-ghost:hover { background: var(--navy-50); }
+.btn-danger { background: var(--warn); color: #fff; }
+.btn-danger:hover { background: #9a3a31; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sm { min-height: 40px; padding: 0 14px; font-size: 15px; }
+
+/* Search box with an icon */
+.search { position: relative; display: block; min-width: 240px; }
+.search i { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px 0 40px;
+    border: 1px solid #aab5d3;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 16px;                 /* 16px stops iPhone zoom */
+    color: var(--ink);
+}
+
+.control { display: inline-flex; align-items: center; gap: 8px; }
+.control label { font-size: 15px; font-weight: 600; color: var(--navy-800); white-space: nowrap; }
+.select {
+    min-height: 44px;
+    padding: 0 38px 0 12px;
+    border: 1px solid #aab5d3;
+    border-radius: 10px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2313224f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Choose-one switch: All | Active | Draft */
+.seg { display: inline-flex; padding: 3px; border: 1px solid var(--navy-200); border-radius: 10px; background: var(--navy-50); }
+.seg button {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy-700);
+    cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 3px rgba(11, 18, 41, .18); color: var(--navy-900); }
+
+/* On / off switch */
+.switch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track { position: relative; flex: 0 0 44px; width: 44px; height: 26px; border-radius: 999px; background: var(--navy-200); transition: background .15s; }
+.switch-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(11, 18, 41, .3);
+    transition: transform .15s;
+}
+.switch input:checked + .switch-track { background: var(--navy-700); }
+.switch input:checked + .switch-track::after { transform: translateX(18px); }
+.switch input:focus-visible + .switch-track { outline: 3px solid var(--navy-500); outline-offset: 2px; }
+.switch-label { font-size: 15px; font-weight: 600; color: var(--navy-800); }
+
+
+/* ============================================================
+   7. TABLES, BADGES, PAGER
+   ============================================================ */
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+    padding: 11px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--navy-50);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    color: var(--muted);
+}
+.data-table td { padding: 14px 20px; border-bottom: 1px solid var(--line); font-size: 16px; vertical-align: middle; color: var(--ink); }
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr:hover { background: var(--navy-50); }
+
+/* Badges: deep navy = good news, light navy = normal, red-tint = needs attention */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.badge-high { background: var(--navy-800); color: #fff; }
+.badge-mid  { background: var(--navy-100); color: var(--navy-800); }
+.badge-low  { background: var(--warn-bg); color: var(--warn); box-shadow: inset 0 0 0 1px rgba(180, 68, 58, .35); }
+.badge-off  { background: #fff; color: var(--muted); box-shadow: inset 0 0 0 1px var(--navy-200); }
+
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.pager-info { font-size: 14px; color: var(--muted); }
+.pager-buttons { display: flex; gap: 8px; }
+
+
+/* ============================================================
+   8. HERO (best instructor), ALERTS, EMPTY, LEGEND
+   ============================================================ */
+.hero {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+    padding: 24px 26px;
+    border: 1px solid rgba(159, 176, 220, .4);
+    border-radius: 16px;
+    background: linear-gradient(155deg, var(--navy-900) 0%, var(--navy-700) 100%);
+    box-shadow: 0 10px 30px rgba(19, 34, 79, .2);
+    color: #fff;
+}
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+}
+.hero > * { position: relative; }
+
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .14);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.hero-person { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.hero-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    border: 2px solid rgba(255, 255, 255, .7);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .12);
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+}
+.hero .hero-name { font-family: "Playfair Display", Georgia, serif; font-size: 22px; font-weight: 700; line-height: 1.2; color: #fff; overflow-wrap: anywhere; }
+.hero-role { margin-top: 2px; font-size: 14px; color: rgba(255, 255, 255, .75); }
+
+.hero-score { display: flex; align-items: baseline; gap: 8px; margin-top: 18px; }
+.hero-number { font-family: "Playfair Display", Georgia, serif; font-size: 56px; font-weight: 700; line-height: 1; }
+.hero-outof { font-size: 17px; color: rgba(255, 255, 255, .75); }
+
+.stars { position: relative; display: inline-block; margin-top: 10px; font-size: 26px; line-height: 1; }
+.stars-back { color: rgba(255, 255, 255, .22); }
+.stars-front { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: #cfd9f5; }
+
+.hero-foot { margin-top: 14px; font-size: 15px; color: rgba(255, 255, 255, .82); }
+
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    border-left: 4px solid var(--navy-700);
+    border-radius: 10px;
+    background: var(--navy-100);
+    font-weight: 500;
+    color: var(--navy-900);
+}
+.alert-error { border-left-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.empty i { display: block; margin-bottom: 8px; font-size: 34px; color: var(--navy-300); }
+.empty h3 { margin-bottom: 4px; font-size: 18px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: 14px; color: var(--muted); }
+.legend li { display: inline-flex; align-items: center; gap: 7px; }
+.key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.key--high { background: var(--navy-800); }
+.key--mid  { background: var(--navy-500); }
+.key--low  { background: var(--warn); }
+
+.chart-wrap { position: relative; height: 300px; }
+
+
+/* ============================================================
+   9. RESPONSIVE
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .overview { grid-template-columns: 1fr; }
+    .side { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+
+@media (max-width: 575.98px) {
+    .page-intro h2 { font-size: 23px; }
+    .card-head, .card-body { padding-left: 16px; padding-right: 16px; }
+    .card-foot, .pager { padding-left: 16px; padding-right: 16px; }
+
+    .tabs { padding: 0 4px; }
+    .tab { flex: 1; justify-content: center; padding: 0 10px; font-size: 15px; }
+
+    .tools { width: 100%; }
+    .tools .search, .tools .control, .tools .seg { width: 100%; }
+    .control .select { flex: 1; }
+    .seg button { flex: 1; }
+
+    .hero { padding: 20px 18px; }
+    .hero-number { font-size: 48px; }
+    .chart-wrap { height: 250px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}

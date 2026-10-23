@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'evaluation/css/evaluation_detail.css' %}">
+{% endblock %}
+
+{% block page_title %}Term Analytics{% endblock %}
+
+{% block content %}
+
+<div class="detail-page">
+    <a href="javascript:history.back()" class="detail-back-btn">
+        <span class="detail-back-btn__icon">←</span>
+        <span class="detail-back-btn__text">Back</span>
+    </a>
+
+    <!-- ═══════════════════════════════
+         PAGE HEADER
+    ═══════════════════════════════ -->
+    <div class="detail-header">
+        <div class="detail-header__left">
+            <span class="detail-tag">Term Analytics Dashboard</span>
+            <h2 class="detail-title">
+                {{ period.school_year }} — {{ period.semester }} Semester
+            </h2>
+            <div class="detail-meta">
+                <span class="detail-meta__item">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+                        <path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                    </svg>
+                    {{ period.start_date }} → {{ period.end_date }}
+                </span>
+                <span class="detail-meta__dot"></span>
+                <span class="detail-meta__item">{{ period.term }}</span>
+                <span class="detail-meta__dot"></span>
+                <span class="detail-meta__item">
+                    <span class="status-pill status-pill--{{ period.status|lower }}">
+                        {{ period.status }}
+                    </span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════
+         KPI CARDS
+    ═══════════════════════════════ -->
+    <div class="kpi-grid">
+
+        <!-- Total Submissions -->
+        <div class="kpi-card">
+            <div class="kpi-card__icon kpi-icon--navy">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M6.5 7h7M6.5 10h5M6.5 13h4"
+                          stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="kpi-card__body">
+                <span class="kpi-label">Total Submissions</span>
+                <span class="kpi-value">{{ total_submissions }}</span>
+            </div>
+            <div class="kpi-bar kpi-bar--navy"></div>
+        </div>
+
+        <!-- Best Instructor -->
+        <div class="kpi-card">
+            <div class="kpi-card__icon kpi-icon--gold">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 2l2 5.5h5.5l-4.5 3.3 1.7 5.5L10 13.5l-4.7 2.8 1.7-5.5L2.5 7.5H8z"
+                          stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="kpi-card__body">
+                <span class="kpi-label">Best Instructor</span>
+                <span class="kpi-value kpi-value--md">{{ best_teacher.instructor.get_full_name }}</span>
+                <span class="kpi-sub kpi-sub--green">Score: {{ best_teacher.overall }}</span>
+            </div>
+            <div class="kpi-bar kpi-bar--gold"></div>
+        </div>
+
+        <!-- Lowest Performing -->
+        <div class="kpi-card">
+            <div class="kpi-card__icon kpi-icon--slate">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7"
+                          stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="kpi-card__body">
+                <span class="kpi-label">Lowest Performing</span>
+                <span class="kpi-value kpi-value--md">{{ worst_teacher.instructor.get_full_name }}</span>
+                <span class="kpi-sub kpi-sub--red">Score: {{ worst_teacher.overall }}</span>
+            </div>
+            <div class="kpi-bar kpi-bar--slate"></div>
+        </div>
+
+        <!-- Completion Insight -->
+        <div class="kpi-card">
+            <div class="kpi-card__icon kpi-icon--green">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M7 10l2 2 4-4"
+                          stroke="currentColor" stroke-width="1.6"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="kpi-card__body">
+                <span class="kpi-label">Completion Insight</span>
+                <span class="kpi-value kpi-value--sm kpi-value--muted">
+                    Based on submitted evaluations only
+                </span>
+            </div>
+            <div class="kpi-bar kpi-bar--green"></div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════
+         CONTENT ROW  (category avg + ranking)
+    ═══════════════════════════════ -->
+    <div class="content-row">
+
+        <!-- CATEGORY AVERAGES -->
+        <div class="panel panel--category">
+
+            <div class="panel__header">
+                <span class="panel__tag">Performance Metrics</span>
+                <h3 class="panel__title">Category Averages</h3>
+            </div>
+
+            <div class="panel__body">
+                <div class="category-list">
+
+                    <div class="cat-row">
+                        <span class="cat-row__label">Teaching</span>
+                        <div class="cat-row__bar-wrap">
+                            <div class="cat-row__bar cat-bar--navy"
+                                 style="width: {{ category_avg.teaching|floatformat:0 }}0%"></div>
+                        </div>
+                        <span class="cat-row__score">{{ category_avg.teaching|floatformat:2 }}</span>
+                    </div>
+
+                    <div class="cat-row">
+                        <span class="cat-row__label">Communication</span>
+                        <div class="cat-row__bar-wrap">
+                            <div class="cat-row__bar cat-bar--gold"
+                                 style="width: {{ category_avg.communication|floatformat:0 }}0%"></div>
+                        </div>
+                        <span class="cat-row__score">{{ category_avg.communication|floatformat:2 }}</span>
+                    </div>
+
+                    <div class="cat-row">
+                        <span class="cat-row__label">Management</span>
+                        <div class="cat-row__bar-wrap">
+                            <div class="cat-row__bar cat-bar--green"
+                                 style="width: {{ category_avg.management|floatformat:0 }}0%"></div>
+                        </div>
+                        <span class="cat-row__score">{{ category_avg.management|floatformat:2 }}</span>
+                    </div>
+
+                    <div class="cat-row">
+                        <span class="cat-row__label">Punctuality</span>
+                        <div class="cat-row__bar-wrap">
+                            <div class="cat-row__bar cat-bar--slate"
+                                 style="width: {{ category_avg.punctuality|floatformat:0 }}0%"></div>
+                        </div>
+                        <span class="cat-row__score">{{ category_avg.punctuality|floatformat:2 }}</span>
+                    </div>
+
+                    <div class="cat-row">
+                        <span class="cat-row__label">Engagement</span>
+                        <div class="cat-row__bar-wrap">
+                            <div class="cat-row__bar cat-bar--mid"
+                                 style="width: {{ category_avg.engagement|floatformat:0 }}0%"></div>
+                        </div>
+                        <span class="cat-row__score">{{ category_avg.engagement|floatformat:2 }}</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- INSTRUCTOR RANKINGS -->
+        <div class="panel panel--ranking">
+
+            <div class="panel__header">
+                <span class="panel__tag">Leaderboard</span>
+                <h3 class="panel__title">Instructor Rankings</h3>
+            </div>
+
+            <div class="table-wrap">
+                <table class="rank-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Instructor</th>
+                            <th>Overall Score</th>
+                            <th>Submissions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in instructor_data %}
+                        <tr {% if forloop.first %}class="rank-row--top"{% endif %}>
+                            <td>
+                                <span class="rank-num rank-num--{{ forloop.counter }}">
+                                    {% if forloop.counter == 1 %}
+                                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                            <path d="M6.5 1.5l1.5 3 3.3.5-2.4 2.3.6 3.2-3-1.6-3 1.6.6-3.2L1.7 5l3.3-.5z"
+                                                  fill="currentColor" stroke="currentColor"
+                                                  stroke-width="0.6" stroke-linejoin="round"/>
+                                        </svg>
+                                    {% else %}
+                                        {{ forloop.counter }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="rank-instructor">
+                                    <div class="rank-avatar">
+                                        {{ item.instructor.first_name|first }}{{ item.instructor.last_name|first }}
+                                    </div>
+                                    <span>{{ item.instructor.get_full_name }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="rank-score">{{ item.overall }}</span>
+                            </td>
+                            <td class="rank-count">{{ item.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,557 @@
+{% extends "instructor_base.html" %}
+{% load static %}
+
+{% block title %}{% if active_tab == 'profile' %}Profile{% else %}Dashboard{% endif %}{% endblock %}
+{% block page_title %}{% if active_tab == 'profile' %}Profile{% else %}Dashboard{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}">
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+
+{% block content %}
+<div class="page">
+
+    <!-- ═══════════════════════════════════════════════
+         DASHBOARD VIEW
+    ═══════════════════════════════════════════════ -->
+    <div class="view {% if active_tab != 'profile' %}active{% endif %}" id="view-dashboard">
+
+        <div class="page-intro">
+            <h2>Welcome back, {{ request.user.first_name }}</h2>
+            <p>See how students rate you and how your scores change over time.</p>
+        </div>
+
+        <!-- 1. Slim status bar: is an evaluation open? -->
+        {% if current_period %}
+        <div class="status-bar status-bar--active">
+            <span class="status-pill"><i class="bi bi-broadcast" aria-hidden="true"></i> Evaluation open</span>
+            <div class="status-text">
+                <strong>{{ current_period }}</strong>
+                <span>{{ current_period.school_year }} &middot; {{ current_period.get_semester_display }} &middot; {{ current_period.get_term_display }}. Scores can still change until it closes.</span>
+            </div>
+            <a class="btn btn-ghost btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+        </div>
+        {% else %}
+        <div class="status-bar">
+            <span class="status-pill"><i class="bi bi-pause-circle" aria-hidden="true"></i> No evaluation open</span>
+            <div class="status-text">
+                <strong>Nothing to evaluate right now</strong>
+                <span>Your latest finished results and your history are shown below.</span>
+            </div>
+            <a class="btn btn-ghost btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+        </div>
+        {% endif %}
+
+
+        <!-- 2. Overview: big rating on the left, quick facts on the right -->
+        {% if current_period and dashboard_state == "current_results" %}
+        <div class="overview">
+            {% include "instructor_rating_hero.html" with score=current_overall_average title="Your rating so far" period=current_period live=True note="This number can still change until the period closes." %}
+
+            <div class="side">
+                <div class="stat">
+                    <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                    <div class="stat-body">
+                        <div class="stat-label">Student responses</div>
+                        <div class="stat-value">{{ current_total_responses }}</div>
+                        <div class="stat-note">Received this period</div>
+                    </div>
+                </div>
+
+                <!-- Filled in by JavaScript from the category scores -->
+                <div class="stat" id="insightBest" hidden>
+                    <span class="stat-icon"><i class="bi bi-arrow-up-circle-fill" aria-hidden="true"></i></span>
+                    <div class="stat-body">
+                        <div class="stat-label">Your strongest area</div>
+                        <div class="stat-value stat-value--text" data-name></div>
+                        <div class="stat-note" data-score></div>
+                    </div>
+                </div>
+
+                <div class="stat" id="insightLow" hidden>
+                    <span class="stat-icon stat-icon--gold"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
+                    <div class="stat-body">
+                        <div class="stat-label">Needs the most attention</div>
+                        <div class="stat-value stat-value--text" data-name></div>
+                        <div class="stat-note" data-score></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif current_period %}
+        <div class="card empty">
+            <i class="bi bi-star" aria-hidden="true"></i>
+            <h3>No ratings yet</h3>
+            <p>No student has rated you in this period yet. Check back soon.</p>
+        </div>
+
+        {% elif recent_overall_average is not None %}
+        <div class="overview overview--single">
+            {% include "instructor_rating_hero.html" with score=recent_overall_average title="Your latest finished rating" period=recent_period note="Open Detailed results to see every category and compare with other periods." %}
+        </div>
+
+        {% else %}
+        <div class="card empty">
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <h3>No finished results yet</h3>
+            <p>Your results will show here after an evaluation period is completed.</p>
+        </div>
+        {% endif %}
+
+
+        <!-- 3. Tabs: one section at a time, so the page stays short -->
+        <section class="card tabbed" aria-label="Your results in detail">
+
+            <div class="tabs" role="tablist" aria-label="Choose what to see">
+                {% if current_period and dashboard_state == "current_results" %}
+                <button type="button" class="tab" role="tab" id="tab-categories" data-tab="categories" aria-controls="panel-categories" aria-selected="true">
+                    <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Categories
+                </button>
+                {% endif %}
+                <button type="button" class="tab" role="tab" id="tab-trend" data-tab="trend" aria-controls="panel-trend" aria-selected="{% if current_period and dashboard_state == 'current_results' %}false{% else %}true{% endif %}">
+                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Trend
+                </button>
+                {% if performance_graph.has_data %}
+                <button type="button" class="tab" role="tab" id="tab-history" data-tab="history" aria-controls="panel-history" aria-selected="false">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i> History
+                </button>
+                {% endif %}
+            </div>
+
+
+            <!-- TAB: scores by category -->
+            {% if current_period and dashboard_state == "current_results" %}
+            <div class="tab-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories">
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
+                        <div>
+                            <h3>Your score in each category</h3>
+                            <p class="card-sub">Average of all student ratings, out of 5 &middot; {{ current_period.get_term_display }}, {{ current_period.school_year }}</p>
+                        </div>
+                    </div>
+                    <div class="tools">
+                        <div class="control">
+                            <label for="sortCategory">Sort by</label>
+                            <select id="sortCategory" class="select">
+                                <option value="default">Default order</option>
+                                <option value="high">Highest first</option>
+                                <option value="low">Lowest first</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="chart-wrap chart-wrap--bars">
+                        <canvas id="categoryChart" role="img" aria-label="Bar chart of your score in each category, out of 5. The same numbers are in the table below."></canvas>
+                    </div>
+                    <ul class="legend">
+                        <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
+                        <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
+                        <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
+                    </ul>
+                </div>
+
+                <details class="disclosure">
+                    <summary>View as table</summary>
+                    <div class="table-wrap">
+                        <table class="data-table" id="categoryTable">
+                            <thead><tr><th scope="col">Category</th><th scope="col">Score</th><th scope="col">Meaning</th></tr></thead>
+                            <tbody>
+                            {% for key, value in current_category_averages.items %}
+                                <tr data-label="{{ key }}" data-score="{{ value|stringformat:'f' }}">
+                                    <th scope="row">{{ key }}</th>
+                                    <td>{{ value }} / 5</td>
+                                    <td>
+                                        {% if value >= 4.5 %}
+                                            <span class="badge badge-high"><i class="bi bi-check-circle" aria-hidden="true"></i> Excellent</span>
+                                        {% elif value >= 3.5 %}
+                                            <span class="badge badge-mid"><i class="bi bi-dash-circle" aria-hidden="true"></i> Good</span>
+                                        {% else %}
+                                            <span class="badge badge-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs improvement</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+            {% endif %}
+
+
+            <!-- TAB: trend line -->
+            <div class="tab-panel" role="tabpanel" id="panel-trend" aria-labelledby="tab-trend" {% if current_period and dashboard_state == "current_results" %}hidden{% endif %}>
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
+                        <div>
+                            <h3>How your rating changes over time</h3>
+                            <p class="card-sub">Your average rating in each term, from 1 to 5 &middot; {% if performance_graph.period_label %}{{ performance_graph.period_label }}{% else %}latest semester{% endif %}</p>
+                        </div>
+                    </div>
+                    <div class="tools">
+                        <!-- Shown by JavaScript only when there are more than 4 terms -->
+                        <div class="seg" id="rangeControl" role="group" aria-label="How many terms to show" hidden>
+                            <button type="button" data-range="4" aria-pressed="true">Last 4 terms</button>
+                            <button type="button" data-range="all" aria-pressed="false">All terms</button>
+                        </div>
+                        {% if performance_graph.summary.title %}
+                        <div class="pt-badge {{ performance_graph.summary.css }}">
+                            <i class="bi {{ performance_graph.summary.icon }}" aria-hidden="true"></i>
+                            <div><strong>{{ performance_graph.summary.title }}</strong>{{ performance_graph.summary.text }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="chart-wrap">
+                        <canvas id="performanceTrendChart" role="img" aria-label="Line graph of your average rating in each term, from 1 to 5. The same numbers are in the History tab."></canvas>
+                        {% if not performance_graph.has_data %}
+                        <div class="chart-empty">No ratings yet for this semester. Your scores will show here as students evaluate.</div>
+                        {% endif %}
+                    </div>
+                    <ul class="legend">
+                        <li><span class="shape--up" aria-hidden="true">▲</span> Score went up</li>
+                        <li><span class="shape--down" aria-hidden="true">▼</span> Score went down</li>
+                        <li><span class="shape--same" aria-hidden="true">●</span> First score, or no change</li>
+                        <li><span aria-hidden="true">○</span> Empty dot: this term is not finished</li>
+                    </ul>
+                </div>
+            </div>
+
+
+            <!-- TAB: history table with pages -->
+            {% if performance_graph.has_data %}
+            <div class="tab-panel" role="tabpanel" id="panel-history" aria-labelledby="tab-history" hidden>
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                        <div>
+                            <h3>Rating history</h3>
+                            <p class="card-sub">Every term, newest first</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">Term</th><th scope="col">Rating</th><th scope="col">Responses</th><th scope="col">Status</th></tr></thead>
+                        <tbody id="ptTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pager" id="ptPager" hidden>
+                    <span class="pager-info" data-pager-info aria-live="polite"></span>
+                    <div class="pager-buttons">
+                        <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                        <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </section>
+
+    </div><!-- /view-dashboard -->
+
+
+    <!-- ═══════════════════════════════════════════════
+         PROFILE VIEW
+    ═══════════════════════════════════════════════ -->
+    <div class="view {% if active_tab == 'profile' %}active{% endif %}" id="view-profile">
+
+        <div class="page-intro">
+            <h2>My profile</h2>
+            <p>See your account details and update your name and email.</p>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="msg {% if 'success' in message.tags %}msg-success{% else %}msg-error{% endif %}" role="{% if 'success' in message.tags %}status{% else %}alert{% endif %}">
+            <i class="bi {% if 'success' in message.tags %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="profile-hero">
+            <div class="profile-avatar" id="heroAvatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
+            <div>
+                <h3 id="heroName">{{ request.user.first_name }} {{ request.user.last_name }}</h3>
+                <span>Faculty account</span>
+            </div>
+        </div>
+
+        <section class="card" aria-labelledby="detailsTitle">
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                    <h3 id="detailsTitle">Account details</h3>
+                </div>
+            </div>
+            <dl class="detail-list">
+                <div class="detail"><dt><i class="bi bi-at" aria-hidden="true"></i> Username</dt><dd>{{ request.user.username }}</dd></div>
+                <div class="detail"><dt><i class="bi bi-building" aria-hidden="true"></i> Department</dt><dd>{{ request.user.department|upper|default:"—" }}</dd></div>
+                <div class="detail"><dt><i class="bi bi-shield-check" aria-hidden="true"></i> Role</dt><dd>Faculty / Instructor</dd></div>
+            </dl>
+        </section>
+
+        <section class="card" aria-labelledby="editTitle">
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                    <h3 id="editTitle">Update your details</h3>
+                </div>
+                <span class="changes-pill" id="changesPill"><i class="bi bi-pencil" aria-hidden="true"></i> Unsaved changes</span>
+            </div>
+
+            <form method="POST" action="{% url 'faculty_update_profile' %}" id="profileForm">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="id_first_name">First name</label>
+                        <input type="text" id="id_first_name" name="first_name" class="form-input" required value="{{ request.user.first_name }}" data-original="{{ request.user.first_name }}" autocomplete="given-name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="id_last_name">Last name</label>
+                        <input type="text" id="id_last_name" name="last_name" class="form-input" required value="{{ request.user.last_name }}" data-original="{{ request.user.last_name }}" autocomplete="family-name">
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label" for="id_email">Email address</label>
+                        <input type="email" id="id_email" name="email" class="form-input" value="{{ request.user.email }}" data-original="{{ request.user.email }}" autocomplete="email" aria-describedby="emailHint">
+                        <span class="form-hint" id="emailHint">Used for notifications and account recovery.</span>
+                    </div>
+                </div>
+                <div class="form-footer">
+                    <span class="form-hint" style="margin:0;">The Save button turns on after you change something.</span>
+                    <div class="form-actions">
+                        <button type="button" id="discardBtn" class="btn btn-ghost" hidden><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Discard</button>
+                        <button type="submit" id="updateBtn" class="btn btn-primary" disabled><i class="bi bi-check2-circle" aria-hidden="true"></i> Save changes</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+    </div><!-- /view-profile -->
+
+</div>
+
+{{ performance_graph|json_script:"performance-graph-data" }}
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'users/js/instructor_common.js' %}"></script>
+<script>
+var charts = {};      // so the tabs can resize a chart when it becomes visible
+
+
+/* ── 1. Category chart + "strongest / needs attention" cards ── */
+(function () {
+    var rows  = Instructor.readCategoryRows(document.getElementById('categoryTable'));
+    var chart = Instructor.categoryChart(document.getElementById('categoryChart'), rows);
+    Instructor.showInsights(rows);
+    if (!chart) return;
+
+    charts.categories = chart;
+    var sort = document.getElementById('sortCategory');
+    if (sort) sort.addEventListener('change', function () { chart.setSort(sort.value); });
+})();
+
+
+/* ── 2. Trend line (data comes from "performance_graph" in views.py) ── */
+(function () {
+    var g      = Instructor.getJSON('performance-graph-data');
+    var canvas = document.getElementById('performanceTrendChart');
+    if (!g || !canvas || typeof Chart === 'undefined') return;
+
+    var C      = Instructor.COLOR;
+    var COLORS = { up: C.high, down: '#b8860b', same: C.mid };
+    var total  = g.labels.length;
+    var offset = 0;                              // how many old terms are hidden
+
+    // For every term: went up, went down, or same as the last term with a rating
+    var kinds = [], last = null;
+    g.values.forEach(function (v) {
+        if (v === null) { kinds.push(null); return; }
+        kinds.push(last === null || v === last ? 'same' : v > last ? 'up' : 'down');
+        last = v;
+    });
+
+    function kind(i)  { return kinds[i + offset]; }
+    function color(i) { return COLORS[kind(i)] || C.line; }
+    function live(i)  { return g.statuses[i + offset] === 'ongoing'; }
+
+    /* History table: newest term first, 5 rows per page */
+    var body = document.getElementById('ptTableBody');
+    if (body) {
+        g.labels.map(function (label, i) { return i; }).reverse().forEach(function (i) {
+            var tr = document.createElement('tr');
+            [
+                g.labels[i],
+                g.values[i] === null ? '—' : g.values[i].toFixed(2) + ' / 5',
+                g.responses[i],
+                g.statuses[i] === 'ongoing' ? 'In progress' : 'Completed'
+            ].forEach(function (text, c) {
+                var cell = document.createElement(c === 0 ? 'th' : 'td');
+                if (c === 0) cell.scope = 'row';
+                cell.textContent = text;
+                tr.appendChild(cell);
+            });
+            body.appendChild(tr);
+        });
+        Instructor.paginate(body, document.getElementById('ptPager'), 5);
+    }
+
+    /* Writes the score above each point */
+    var scoreLabels = {
+        id: 'scoreLabels',
+        afterDatasetsDraw: function (chart) {
+            var ctx = chart.ctx;
+            chart.getDatasetMeta(0).data.forEach(function (pt, i) {
+                var v = g.values[i + offset];
+                if (v === null) return;
+                ctx.save();
+                ctx.font = '700 13px "Source Sans 3", sans-serif';
+                ctx.fillStyle = C.navy;
+                ctx.textAlign = 'center';
+                ctx.fillText(v.toFixed(2), pt.x, pt.y - 14);
+                ctx.restore();
+            });
+        }
+    };
+
+    var chart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: g.labels,
+            datasets: [{
+                label: 'Average rating',
+                data: g.values,
+                borderColor: C.line,
+                borderWidth: 2.5,
+                backgroundColor: 'rgba(34, 58, 133, 0.07)',
+                fill: true,
+                tension: 0.25,
+                spanGaps: false,
+                pointRadius: 7,
+                pointHoverRadius: 9,
+                pointBorderWidth: 3,
+                // The SHAPE shows the direction too (not only color): triangle up / down, circle = same
+                pointStyle:    function (c) { var k = kind(c.dataIndex); return (k === 'up' || k === 'down') ? 'triangle' : 'circle'; },
+                pointRotation: function (c) { return kind(c.dataIndex) === 'down' ? 180 : 0; },
+                // Empty dot = term still open, filled dot = term finished
+                pointBackgroundColor: function (c) { return live(c.dataIndex) ? '#ffffff' : color(c.dataIndex); },
+                pointBorderColor:     function (c) { return live(c.dataIndex) ? color(c.dataIndex) : '#ffffff'; }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 28, right: 16 } },
+            scales: {
+                y: {
+                    min: 1, max: 5,
+                    ticks: { stepSize: 1 },
+                    grid: { color: C.grid },
+                    border: { display: false },
+                    title: { display: true, text: 'Average rating (out of 5)', color: C.muted }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: C.navy, font: { size: 12, weight: '600' } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    displayColors: false,
+                    callbacks: {
+                        label: function (c) { return 'Rating: ' + c.parsed.y.toFixed(2) + ' / 5'; },
+                        afterLabel: function (c) {
+                            var i = c.dataIndex + offset;
+                            return ['Responses: ' + g.responses[i], 'Status: ' + (g.statuses[i] === 'ongoing' ? 'In progress' : 'Completed')];
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [Instructor.targetLine('y', 4.5, 'Excellent 4.5'), scoreLabels]
+    });
+
+    charts.trend = { resize: function () { chart.resize(); } };
+
+    /* "Last 4 terms | All terms" switch (only when there are more than 4 terms) */
+    var control = document.getElementById('rangeControl');
+    function showRange(count) {
+        offset = count && total > count ? total - count : 0;
+        chart.data.labels = g.labels.slice(offset);
+        chart.data.datasets[0].data = g.values.slice(offset);
+        chart.update();
+        control.querySelectorAll('button').forEach(function (b) {
+            b.setAttribute('aria-pressed', (b.dataset.range === 'all' ? 0 : 4) === count ? 'true' : 'false');
+        });
+    }
+    if (control && total > 4) {
+        control.hidden = false;
+        control.querySelectorAll('button').forEach(function (b) {
+            b.addEventListener('click', function () { showRange(b.dataset.range === 'all' ? 0 : 4); });
+        });
+        showRange(4);
+    }
+})();
+
+
+/* ── 3. Tabs ── */
+Instructor.tabs(document.querySelector('.tabbed'), function (key) {
+    if (charts[key]) charts[key].resize();
+});
+
+
+/* ── 4. Profile form: turn the Save button on only after a change ── */
+(function () {
+    var form = document.getElementById('profileForm');
+    if (!form) return;
+
+    var updateBtn  = document.getElementById('updateBtn');
+    var discardBtn = document.getElementById('discardBtn');
+    var pill       = document.getElementById('changesPill');
+    var heroName   = document.getElementById('heroName');
+    var heroAvatar = document.getElementById('heroAvatar');
+    var first      = document.getElementById('id_first_name');
+    var lastName   = document.getElementById('id_last_name');
+    var inputs     = form.querySelectorAll('.form-input[data-original]');
+
+    function evaluate() {
+        var any = false;
+        inputs.forEach(function (inp) {
+            var changed = inp.value.trim() !== inp.dataset.original.trim();
+            inp.classList.toggle('input-changed', changed);
+            if (changed) any = true;
+        });
+        updateBtn.disabled = !any;
+        pill.classList.toggle('visible', any);
+        discardBtn.hidden = !any;
+
+        heroAvatar.textContent = (first.value.trim().charAt(0) + lastName.value.trim().charAt(0)).toUpperCase();
+        heroName.textContent   = (first.value.trim() + ' ' + lastName.value.trim()).trim() || '—';
+    }
+
+    inputs.forEach(function (inp) { inp.addEventListener('input', evaluate); });
+    discardBtn.addEventListener('click', function () {
+        inputs.forEach(function (inp) { inp.value = inp.dataset.original; });
+        evaluate();
+    });
+    evaluate();
+})();
+</script>
+{% endblock %}

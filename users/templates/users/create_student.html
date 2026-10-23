@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+{% endblock %}
+
+{% block page_title %}Student Lists{% endblock %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+
+        <button class="btn-primary" onclick="openModal()">
+            + Add Student
+        </button>
+
+    </div>
+
+    <!-- SUCCESS MESSAGE -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert success">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- STUDENT TABLE -->
+    <div class="card">
+
+        <div class="card-header-area">
+
+            <div>
+                <span class="table-badge">
+                    Records
+                </span>
+            </div>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search student..."
+                class="search-input"
+            >
+
+        </div>
+
+        <div class="table-wrapper">
+
+            <table class="custom-table" id="studentTable">
+
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Program</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+    {% for student in students %}
+    <tr>
+
+        <td>
+            <div class="user-info">
+
+                <div class="user-avatar">
+                    {{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}
+                </div>
+
+                <div class="user-details">
+
+                    <div class="user-name">
+                        {{ student.first_name }}
+                        {{ student.middle_name|default:'' }}
+                        {{ student.last_name }}
+                    </div>
+
+                    <div class="user-subtext">
+                        {{ student.email }}
+                    </div>
+
+                </div>
+
+            </div>
+        </td>
+
+        <td>
+            <span class="department-badge">
+                {{ student.get_program_display }}
+            </span>
+            
+        </td>
+
+        <td>
+            {% if student.status == 'active' %}
+                <span class="status-badge active">Active</span>
+            {% else %}
+                <span class="status-badge inactive">Inactive</span>
+            {% endif %}
+
+        <td class="actions-column">
+
+            <div class="action-group">
+
+                <a href="{% url 'update_student' student.id %}"
+                   class="btn-action btn-edit">
+
+                    <i class="fas fa-pen"></i>
+                    Edit
+            </a>
+
+            {% if student.is_active == True %}
+                <form action="{% url 'deactivate_student' student.id %}"
+                      method="POST"
+                      class="status-form">
+
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn-action btn-deactivate"
+                            onclick="return confirm('Deactivate this student?');">
+
+                        <i class="fas fa-user-slash"></i>
+                        Deactivate
+                    </button>
+            {% else %}
+                <form action="{% url 'activate_student' student.id %}"
+                      method="POST"
+                      class="status-form">
+
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn-action btn-activate"
+                            onclick="return confirm('Activate this student?');">
+
+                        <i class="fas fa-user-check"></i>
+                        Activate
+                    </button>
+            {% endif %}
+
+                <form action="{% url 'delete_student' student.id %}"
+                      method="POST"
+                      class="delete-form">
+
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn-action btn-delete"
+                            onclick="return confirm('Delete this student?');">
+
+                        <i class="fas fa-trash-alt"></i>
+                        Delete
+                    </button>
+                    
+                </form>
+
+            </div>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+        <td colspan="3" class="empty">
+            No students available.
+        </td>
+    </tr>
+
+    {% endfor %}
+
+</tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ======================================================
+     MODAL
+====================================================== -->
+
+<div
+    id="studentModal"
+    class="modal"
+    data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
+
+    <div class="modal-content modern-modal">
+
+        <!-- MODAL HEADER (MATCH INSTRUCTOR STYLE) -->
+        <div class="modal-header-modern">
+
+            <div>
+                <h3>Create Student</h3>
+                <p>Fill in student details to create an account</p>
+            </div>
+
+            <button class="close-btn" onclick="closeModal()">
+                ×
+            </button>
+
+        </div>
+
+        <!-- FORM -->
+        <form method="POST" id="studentForm">
+
+            {% csrf_token %}
+
+            <!-- MODAL BODY (UPDATED GRID SYSTEM) -->
+            <div class="modal-body-modern">
+
+                <div class="form-grid">
+
+                    <!-- FIRST NAME -->
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        {{ form.first_name }}
+                        <span class="error">{{ form.first_name.errors }}</span>
+                    </div>
+
+                    <!-- MIDDLE NAME -->
+                    <div class="form-group">
+                        <label class="form-label">Middle Name</label>
+                        {{ form.middle_name }}
+                    </div>
+
+                    <!-- LAST NAME -->
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        {{ form.last_name }}
+                        <span class="error">{{ form.last_name.errors }}</span>
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        {{ form.email }}
+                        <span class="error">{{ form.email.errors }}</span>
+                    </div>
+
+                    <!-- PROGRAM -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Program</label>
+                        {{ form.program }}
+                        <span class="error">{{ form.program.errors }}</span>
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Temporary Password</label>
+                        {{ form.password }}
+                        <span class="error">{{ form.password.errors }}</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- MODAL FOOTER (MATCH INSTRUCTOR STYLE) -->
+            <div class="modal-footer-modern">
+
+                <button type="button"
+                        class="btn-secondary"
+                        onclick="closeModal()">
+
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="btn-primary"
+                        id="submitBtn">
+
+                    Create Student
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+    // OPEN MODAL
+    function openModal() {
+        document.getElementById("studentModal").classList.add("show");
+    }
+
+    // CLOSE MODAL
+    function closeModal() {
+        document.getElementById("studentModal").classList.remove("show");
+    }
+
+    // CLOSE OUTSIDE
+    window.onclick = function(event) {
+
+        let modal = document.getElementById("studentModal");
+
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+
+    // SEARCH
+    const searchInput = document.getElementById("searchInput");
+
+    if (searchInput) {
+
+        searchInput.addEventListener("keyup", function() {
+
+            let value = this.value.toLowerCase();
+
+            let rows = document.querySelectorAll(
+                "#studentTable tbody tr"
+            );
+
+            rows.forEach((row) => {
+
+                row.style.display =
+                    row.innerText.toLowerCase().includes(value)
+                    ? ""
+                    : "none";
+            });
+        });
+    }
+
+    // PREVENT DOUBLE SUBMIT
+    document
+        .getElementById("studentForm")
+        .addEventListener("submit", function() {
+
+            document
+                .getElementById("submitBtn")
+                .disabled = true;
+        });
+
+    // OPEN MODAL IF FORM HAS ERRORS
+    const modal = document.getElementById("studentModal");
+
+    if (modal.dataset.hasErrors === "1") {
+        openModal();
+    }
+
+</script>
+
+{% endblock %}
+

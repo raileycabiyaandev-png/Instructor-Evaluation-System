@@ -1,0 +1,457 @@
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'evaluation/css/evaluate.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="evaluation-page">
+
+    <!-- BACKGROUND -->
+    <div class="bg-circle circle-1"></div>
+    <div class="bg-circle circle-2"></div>
+
+    <div class="evaluation-container">
+
+        <!-- BACK BUTTON -->
+        <a href="{% url 'student_dashboard' %}" class="back-link">
+
+            <svg width="15"
+                 height="15"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="2.2">
+
+                <polyline points="15 18 9 12 15 6"/>
+
+            </svg>
+
+            Back to Dashboard
+
+        </a>
+
+        <!-- TEACHER HEADER -->
+        <div class="teacher-header">
+
+            <div class="teacher-left">
+
+                <div class="teacher-avatar">
+
+                    {{ teacher.first_name|slice:":1" }}{{ teacher.last_name|slice:":1" }}
+
+                </div>
+
+                <div class="teacher-details">
+
+                    <div class="header-badge">
+                        Instructor Evaluation
+                    </div>
+
+                    <h1>
+                        {{ teacher.first_name }} {{ teacher.last_name }}
+                    </h1>
+
+                    <p>
+                        {{ teacher.department|upper|default:"INSTRUCTOR" }}
+                        •
+                        {{ period.name|default:"Evaluation Period" }}
+                    </p>
+
+                </div>
+
+            </div>
+
+            <div class="evaluation-status">
+
+                <span class="status-dot"></span>
+
+                Active Evaluation
+
+            </div>
+
+        </div>
+
+        <!-- DJANGO MESSAGES -->
+        {% if messages %}
+            {% for message in messages %}
+
+                <div class="alert-box danger">
+
+                    <svg width="18"
+                         height="18"
+                         viewBox="0 0 24 24"
+                         fill="none"
+                         stroke="currentColor"
+                         stroke-width="2">
+
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+
+                    </svg>
+
+                    <div>
+                        {{ message }}
+                    </div>
+
+                </div>
+
+            {% endfor %}
+        {% endif %}
+
+        <!-- ALREADY EVALUATED -->
+        {% if already_evaluated %}
+
+            <div class="alert-box warning">
+
+                <svg width="18"
+                     height="18"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2">
+
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+
+                </svg>
+
+                <div>
+                    You already submitted an evaluation for this instructor during the current evaluation period.
+                </div>
+
+            </div>
+
+        {% endif %}
+
+        <!-- FORM -->
+        <form method="POST"
+              action="{% url 'submit_evaluation' teacher.id period.id %}"
+              id="evalForm">
+
+            {% csrf_token %}
+
+            <div class="evaluation-card">
+
+                <!-- FORM HEADER -->
+                <div class="evaluation-card-header">
+
+                    <div>
+
+                        <h2>
+                            Evaluation Criteria
+                        </h2>
+
+                        <p>
+                            Rate each category from 1 to 5 stars.
+                        </p>
+
+                    </div>
+
+                    <div class="score-guide">
+
+                        1 = Poor • 5 = Excellent
+
+                    </div>
+
+                </div>
+
+                <!-- FORM BODY -->
+                <div class="evaluation-body">
+
+                    {% for field, label in ratings %}
+
+                        <div class="rating-item">
+
+                            <div class="rating-top">
+
+                                <div class="rating-title">
+
+                                    {{ label }}
+
+                                </div>
+
+                                <div class="rating-value"
+                                     id="val-{{ field }}">
+
+                                    Not Rated
+
+                                </div>
+
+                            </div>
+
+                            <div class="stars"
+                                 data-name="{{ field }}">
+
+                                {% for i in "12345" %}
+
+                                    <span class="star"
+                                          data-value="{{ forloop.counter }}">
+
+                                        ★
+
+                                    </span>
+
+                                {% endfor %}
+
+                            </div>
+
+                            <div class="rating-labels">
+
+                                <span>Poor</span>
+                                <span>Excellent</span>
+
+                            </div>
+
+                            <input type="hidden"
+                                   name="{{ field }}"
+                                   id="input-{{ field }}"
+                                   required>
+
+                        </div>
+
+                    {% endfor %}
+
+                    <!-- COMMENT -->
+                    <div class="comment-box">
+
+                        <label for="comment">
+
+                            Additional Comments
+
+                            <span>(Optional)</span>
+
+                        </label>
+
+                        <textarea
+                            name="comment"
+                            id="comment"
+                            placeholder="Provide additional feedback, observations, or recommendations..."></textarea>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="evaluation-footer">
+
+                    <div class="form-note"
+                         id="formNote">
+
+                        All evaluation categories must be rated.
+
+                    </div>
+
+                    {% if not already_evaluated %}
+
+                        <button type="submit"
+                                class="submit-btn"
+                                id="submitBtn"
+                                disabled>
+
+                            <svg width="16"
+                                 height="16"
+                                 viewBox="0 0 24 24"
+                                 fill="none"
+                                 stroke="currentColor"
+                                 stroke-width="2">
+
+                                <polyline points="20 6 9 17 4 12"/>
+
+                            </svg>
+
+                            Submit Evaluation
+
+                        </button>
+
+                    {% else %}
+
+                        <button type="button"
+                                class="submitted-btn"
+                                disabled>
+
+                            Evaluation Submitted
+
+                        </button>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+const LABELS = [
+    'Poor',
+    'Fair',
+    'Good',
+    'Very Good',
+    'Excellent'
+];
+
+const totalGroups = document.querySelectorAll('.stars').length;
+
+const rated = {};
+
+function updateSubmitState() {
+
+    const allRated =
+        Object.keys(rated).length === totalGroups;
+
+    const btn =
+        document.getElementById('submitBtn');
+
+    const note =
+        document.getElementById('formNote');
+
+    if (!btn) return;
+
+    if (allRated) {
+
+        btn.disabled = false;
+
+        note.textContent =
+            'All categories rated — ready for submission.';
+
+        note.style.color = '#166534';
+
+    } else {
+
+        btn.disabled = true;
+
+        const remaining =
+            totalGroups - Object.keys(rated).length;
+
+        note.textContent =
+            `${remaining} categor${remaining === 1 ? 'y' : 'ies'} remaining.`;
+
+        note.style.color = '';
+    }
+}
+
+document.querySelectorAll('.stars').forEach(group => {
+
+    const fieldName = group.dataset.name;
+
+    const stars =
+        group.querySelectorAll('.star');
+
+    const input =
+        document.getElementById('input-' + fieldName);
+
+    const valEl =
+        document.getElementById('val-' + fieldName);
+
+    function highlight(upTo) {
+
+        stars.forEach((s, i) => {
+
+            s.classList.toggle(
+                'hovered',
+                i <= upTo
+            );
+        });
+    }
+
+    function clearHover() {
+
+        const current =
+            parseInt(input.value) - 1;
+
+        stars.forEach((s, i) => {
+
+            s.classList.remove('hovered');
+
+            s.classList.toggle(
+                'selected',
+                i <= current
+            );
+        });
+    }
+
+    stars.forEach((star, idx) => {
+
+        star.addEventListener(
+            'mouseenter',
+            () => highlight(idx)
+        );
+
+        star.addEventListener(
+            'mouseleave',
+            clearHover
+        );
+
+        star.addEventListener('click', () => {
+
+            const val =
+                parseInt(star.dataset.value);
+
+            input.value = val;
+
+            rated[fieldName] = val;
+
+            stars.forEach((s, i) => {
+
+                s.classList.toggle(
+                    'selected',
+                    i < val
+                );
+
+                s.classList.remove('hovered');
+            });
+
+            valEl.textContent =
+                `${val}/5 — ${LABELS[val - 1]}`;
+
+            valEl.classList.add('active');
+
+            updateSubmitState();
+        });
+    });
+});
+
+document.getElementById('evalForm')
+?.addEventListener('submit', function() {
+
+    const btn =
+        document.getElementById('submitBtn');
+
+    if (btn) {
+
+        btn.disabled = true;
+
+        btn.innerHTML = `
+
+            <svg width="16"
+                 height="16"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="2"
+                 style="animation:spin 1s linear infinite">
+
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+
+            </svg>
+
+            Submitting...
+
+        `;
+    }
+});
+
+updateSubmitState();
+
+</script>
+
+{% endblock %}

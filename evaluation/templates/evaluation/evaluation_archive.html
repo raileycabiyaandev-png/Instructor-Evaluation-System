@@ -1,0 +1,181 @@
+<!-- evaluation/evaluation_archive.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'evaluation/css/evaluation_archive.css' %}">
+{% endblock %}
+
+{% block page_title %}Evaluation Archives{% endblock %}
+
+{% block content %}
+
+<div class="archive-page">
+    <!-- ACCORDION LIST -->
+    <div class="accordion-list">
+
+        {% regroup archived_periods by school_year as year_groups %}
+
+        {% for year in year_groups %}
+        <div class="acc-item" data-acc>
+
+            <!-- Year header -->
+            <button class="acc-header" type="button" data-acc-toggle>
+                <div class="acc-header__left">
+                    <div class="acc-header__icon">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <rect x="2" y="2" width="12" height="12" rx="2"
+                                  stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="acc-header__text">
+                        <span class="acc-header__label">Academic Year</span>
+                        <span class="acc-header__title">{{ year.grouper }}</span>
+                    </div>
+                </div>
+                <div class="acc-header__right">
+                    <span class="acc-header__count">
+                        {{ year.list|length }} period{{ year.list|length|pluralize }}
+                    </span>
+                    <span class="acc-arrow">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M3 5l4 4 4-4"
+                                  stroke="currentColor" stroke-width="1.7"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </div>
+            </button>
+
+            <!-- Year body -->
+            <div class="acc-body" data-acc-body>
+
+                {% regroup year.list by semester as sem_groups %}
+
+                {% for sem in sem_groups %}
+                <div class="sub-acc-item" data-acc>
+
+                    <!-- Semester header -->
+                    <button class="sub-acc-header" type="button" data-acc-toggle>
+                        <div class="sub-acc-header__left">
+                            <div class="sub-acc-header__dot"></div>
+                            <span>{{ sem.grouper }} Semester</span>
+                        </div>
+                        <span class="acc-arrow acc-arrow--sm">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <path d="M2.5 4.5l3.5 3.5 3.5-3.5"
+                                      stroke="currentColor" stroke-width="1.6"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <!-- Semester body -->
+                    <div class="sub-acc-body" data-acc-body>
+
+                        {% regroup sem.list by term as term_groups %}
+
+                        <div class="term-grid">
+                            {% for term in term_groups %}
+                            <a href="{% url 'evaluation_term_detail' term.list.0.id %}" class="term-card">
+
+                                <!-- Card accent line -->
+                                <div class="term-card__accent"></div>
+
+                                <div class="term-card__inner">
+                                    <div class="term-card__icon">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <rect x="2" y="2" width="12" height="12" rx="2"
+                                                  stroke="currentColor" stroke-width="1.4"/>
+                                            <path d="M5 8h6M5 5.5h3M5 10.5h4"
+                                                  stroke="currentColor" stroke-width="1.3"
+                                                  stroke-linecap="round"/>
+                                        </svg>
+                                    </div>
+
+                                    <div class="term-card__body">
+                                        <span class="term-card__name">{{ term.grouper|title }}</span>
+                                        <span class="term-card__meta">
+                                            {{ year.grouper }} &nbsp;·&nbsp; {{ sem.grouper }} Sem.
+                                        </span>
+                                    </div>
+
+                                    <div class="term-card__footer">
+                                        <span class="term-card__count">
+                                            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                                                <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.3"/>
+                                                <path d="M5.5 3v2.5l1.5 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                                            </svg>
+                                            {{ term.list|length }} period{{ term.list|length|pluralize }}
+                                        </span>
+                                        <span class="term-card__arrow">
+                                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                <path d="M2.5 6h7M6.5 3l3 3-3 3"
+                                                      stroke="currentColor" stroke-width="1.5"
+                                                      stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                </div>
+
+                            </a>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    /* Universal accordion toggle */
+    document.querySelectorAll("[data-acc-toggle]").forEach(function (btn) {
+        var item = btn.closest("[data-acc]");
+        var body = item.querySelector("[data-acc-body]");
+
+        btn.addEventListener("click", function () {
+            var isOpen = item.classList.contains("open");
+
+            /* Close siblings at same level */
+            var parent = item.parentElement;
+            parent.querySelectorAll(":scope > [data-acc].open").forEach(function (sib) {
+                if (sib !== item) {
+                    sib.classList.remove("open");
+                    sib.querySelector("[data-acc-body]").style.maxHeight = "0";
+                }
+            });
+
+            if (isOpen) {
+                item.classList.remove("open");
+                body.style.maxHeight = "0";
+            } else {
+                item.classList.add("open");
+                body.style.maxHeight = body.scrollHeight + "px";
+
+                /* Re-expand if parent re-opens */
+                body.addEventListener("transitionend", function recalc() {
+                    if (item.classList.contains("open")) {
+                        body.style.maxHeight = "none";
+                    }
+                    body.removeEventListener("transitionend", recalc);
+                });
+            }
+        });
+    });
+
+});
+</script>
+{% endblock %}

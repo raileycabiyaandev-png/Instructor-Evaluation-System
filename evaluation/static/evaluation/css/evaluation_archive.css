@@ -1,0 +1,185 @@
+/* ============================================================
+   evaluation/static/evaluation/css/evaluation_archive.css
+
+   Evaluation Archive: Year > Semester > Term cards.
+   Same navy look as the new admin pages. NO gold.
+   Works with the existing evaluation_archive.html (no HTML change needed).
+   ============================================================ */
+
+:root {
+    --navy-900: #13224f;
+    --navy-800: #1b2f6b;
+    --navy-700: #223a85;
+    --navy-600: #2f4a9e;
+    --navy-500: #5b78c4;
+    --navy-300: #9fb0dc;
+    --navy-200: #c9d4ee;
+    --navy-100: #e4eaf7;
+    --navy-50:  #f3f6fc;
+    --muted: #5b6585;
+    --line:  #dbe2f0;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'Source Sans 3', system-ui, sans-serif;
+    --shadow: 0 1px 2px rgba(11, 18, 41, .05), 0 4px 14px rgba(11, 18, 41, .05);
+}
+
+.archive-page { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.accordion-list { display: flex; flex-direction: column; gap: 12px; }
+
+
+/* ============================================================
+   1. YEAR (outer accordion)
+   ============================================================ */
+.acc-item {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+.acc-item.open { border-color: var(--navy-300); }
+
+.acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 68px;
+    padding: 14px 20px;
+    border: 0;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+.acc-header:hover { background: var(--navy-50); }
+.acc-item.open .acc-header { background: var(--navy-50); border-bottom: 1px solid var(--line); }
+
+.acc-header__left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.acc-header__icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--navy-100);
+    color: var(--navy-700);
+}
+.acc-item.open .acc-header__icon { background: var(--navy-800); color: #fff; }
+
+.acc-header__text { display: flex; flex-direction: column; }
+.acc-header__label { font-size: 14px; color: var(--muted); }
+.acc-header__title { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--navy-900); }
+
+.acc-header__right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.acc-header__count {
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: var(--navy-100);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy-800);
+}
+
+.acc-arrow { display: flex; align-items: center; color: var(--muted); transition: transform .25s ease; }
+.acc-item.open > .acc-header .acc-arrow,
+.sub-acc-item.open > .sub-acc-header .acc-arrow { transform: rotate(180deg); color: var(--navy-700); }
+
+/* Smooth open and close (the page script sets max-height) */
+.acc-body, .sub-acc-body { max-height: 0; overflow: hidden; transition: max-height .4s cubic-bezier(.22, 1, .36, 1); }
+
+.acc-body { display: flex; flex-direction: column; gap: 10px; background: var(--navy-50); }
+.acc-item.open .acc-body { padding: 16px; }
+
+
+/* ============================================================
+   2. SEMESTER (inner accordion)
+   ============================================================ */
+.sub-acc-item { overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.sub-acc-item.open { border-color: var(--navy-300); }
+
+.sub-acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 18px;
+    border: 0;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+.sub-acc-header:hover { background: var(--navy-50); }
+.sub-acc-item.open > .sub-acc-header { background: var(--navy-50); border-bottom: 1px solid var(--line); }
+
+.sub-acc-header__left { display: flex; align-items: center; gap: 10px; }
+.sub-acc-header__dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--navy-200); }
+.sub-acc-item.open .sub-acc-header__dot { background: var(--navy-700); }
+.sub-acc-header span { font-size: 16px; font-weight: 600; color: var(--navy-900); }
+
+.sub-acc-body { background: #fff; }
+.sub-acc-item.open .sub-acc-body { padding: 16px; }
+
+
+/* ============================================================
+   3. TERM CARDS
+   ============================================================ */
+.term-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+.term-card {
+    display: block;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.term-card:hover { transform: translateY(-2px); border-color: var(--navy-300); box-shadow: 0 8px 22px rgba(11, 18, 41, .12); }
+.term-card:focus-visible { outline: 3px solid var(--navy-500); outline-offset: 2px; }
+
+.term-card__accent { height: 4px; background: var(--navy-700); }
+.term-card:hover .term-card__accent { background: var(--navy-500); }
+
+.term-card__inner { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.term-card__icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--navy-100);
+    color: var(--navy-700);
+}
+.term-card:hover .term-card__icon { background: var(--navy-800); color: #fff; }
+
+.term-card__body { display: flex; flex-direction: column; gap: 2px; }
+.term-card__name { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.2; color: var(--navy-900); }
+.term-card__meta { font-size: 14px; color: var(--muted); }
+
+.term-card__footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--line); }
+.term-card__count { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.term-card__arrow { display: flex; color: var(--navy-300); transition: transform .2s ease, color .2s ease; }
+.term-card:hover .term-card__arrow { color: var(--navy-700); transform: translateX(3px); }
+
+
+/* ============================================================
+   4. RESPONSIVE
+   ============================================================ */
+@media (max-width: 767.98px) {
+    .acc-header { padding: 12px 16px; }
+    .acc-item.open .acc-body { padding: 12px; }
+    .term-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+
+@media (max-width: 479.98px) {
+    .term-grid { grid-template-columns: 1fr; }
+    .acc-header__count { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+}

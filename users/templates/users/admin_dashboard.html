@@ -1,0 +1,458 @@
+<!-- Admin dashboard -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+
+{% block content %}
+<div class="admin-page">
+
+    <!-- ═══════════ 1. OVERVIEW: best instructor + quick numbers ═══════════ -->
+    <div class="overview {% if not best_teacher %}overview--single{% endif %}">
+
+        {% if best_teacher %}
+        {% widthratio best_teacher.overall 5 100 as best_pct %}
+        <section class="hero" aria-label="Best performing instructor">
+            <span class="hero-eyebrow"><i class="bi bi-trophy-fill" aria-hidden="true"></i> Best performing instructor</span>
+
+            <div class="hero-person">
+                <div class="hero-avatar" aria-hidden="true">{{ best_teacher.teacher.first_name|first }}{{ best_teacher.teacher.last_name|first }}</div>
+                <div>
+                    <h3 class="hero-name">{{ best_teacher.teacher.first_name }} {{ best_teacher.teacher.last_name }}</h3>
+                    <p class="hero-role">Instructor</p>
+                </div>
+            </div>
+
+            <div class="hero-score">
+                <span class="hero-number">{{ best_teacher.overall }}</span>
+                <span class="hero-outof">out of 5</span>
+            </div>
+
+            <div class="stars" role="img" aria-label="{{ best_teacher.overall }} out of 5 stars">
+                <div class="stars-back" aria-hidden="true">★★★★★</div>
+                <div class="stars-front" aria-hidden="true" style="width:{{ best_pct }}%;">★★★★★</div>
+            </div>
+
+            <p class="hero-foot">Based on {{ best_teacher.evaluation_count }} evaluation{{ best_teacher.evaluation_count|pluralize }}.</p>
+        </section>
+        {% endif %}
+
+        <div class="side {% if not best_teacher %}side--grid{% endif %}">
+            <div class="stat">
+                <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-label">Total users</div>
+                    <div class="stat-value">{{ total_users }}</div>
+                </div>
+            </div>
+            <div class="stat">
+                <span class="stat-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-label">Teachers</div>
+                    <div class="stat-value">{{ total_instructors }}</div>
+                </div>
+            </div>
+            <div class="stat">
+                <span class="stat-icon"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-label">Students</div>
+                    <div class="stat-value">{{ total_students }}</div>
+                </div>
+            </div>
+            <div class="stat">
+                <span class="stat-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></span>
+                <div>
+                    <div class="stat-label">Active evaluations</div>
+                    <div class="stat-value">{{ total_evaluations }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ═══════════ 2. TABS: one section at a time ═══════════ -->
+    <section class="card" aria-label="Instructor performance">
+
+        <div class="tabs" role="tablist" aria-label="Choose what to see">
+            <button type="button" class="tab" role="tab" id="tab-instructors" data-tab="instructors" aria-controls="panel-instructors" aria-selected="true">
+                <i class="bi bi-person-lines-fill" aria-hidden="true"></i> Instructors
+            </button>
+            <button type="button" class="tab" role="tab" id="tab-categories" data-tab="categories" aria-controls="panel-categories" aria-selected="false">
+                <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Categories
+            </button>
+            <button type="button" class="tab" role="tab" id="tab-attention" data-tab="attention" aria-controls="panel-attention" aria-selected="false">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs attention <span class="tab-count tab-count--warn" id="attentionCount">0</span>
+            </button>
+        </div>
+
+
+        <!-- TAB: instructors (search, sort, pages) -->
+        <div class="tab-panel" role="tabpanel" id="panel-instructors" aria-labelledby="tab-instructors">
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
+                    <div>
+                        <h3>Instructor performance</h3>
+                        <p class="card-sub">Average score from all evaluations, out of 5</p>
+                    </div>
+                </div>
+                {% if data %}
+                <div class="tools">
+                    <label class="search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input type="search" id="perfSearch" placeholder="Search instructor" aria-label="Search instructor">
+                    </label>
+                    <div class="control">
+                        <label for="perfSort">Sort by</label>
+                        <select id="perfSort" class="select">
+                            <option value="high">Highest rating</option>
+                            <option value="low">Lowest rating</option>
+                            <option value="name">Name (A to Z)</option>
+                            <option value="count">Most evaluations</option>
+                        </select>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if data %}
+            <div class="table-wrap">
+                <table class="data-table perf-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Instructor</th>
+                            <th scope="col">Overall rating</th>
+                            <th scope="col">Score in each category</th>
+                        </tr>
+                    </thead>
+                    <tbody id="perfBody">
+                    {% for item in data %}
+                        {% widthratio item.overall 1 100 as s100 %}
+                        <tr data-name="{{ item.teacher.first_name }} {{ item.teacher.last_name }}"
+                            data-overall="{{ item.overall|stringformat:'f' }}"
+                            data-count="{{ item.evaluation_count }}"
+                            data-chart="chart{{ forloop.counter }}">
+                            <td>
+                                <div class="person">
+                                    <div class="person-avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
+                                    <div>
+                                        <div class="person-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
+                                        <div class="person-role">Instructor</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="score-wrap">
+                                    {% if s100|add:'0' >= 450 %}
+                                        <span class="badge badge-high"><i class="bi bi-check-circle" aria-hidden="true"></i> {{ item.overall }} / 5</span>
+                                    {% elif s100|add:'0' >= 350 %}
+                                        <span class="badge badge-mid"><i class="bi bi-dash-circle" aria-hidden="true"></i> {{ item.overall }} / 5</span>
+                                    {% else %}
+                                        <span class="badge badge-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ item.overall }} / 5</span>
+                                    {% endif %}
+                                    <span class="score-sub">{{ item.evaluation_count }} evaluation{{ item.evaluation_count|pluralize }}</span>
+                                </div>
+                            </td>
+                            <td class="cell-chart">
+                                <div class="mini-chart">
+                                    <canvas id="chart{{ forloop.counter }}" role="img" aria-label="Bar chart of {{ item.teacher.first_name }} {{ item.teacher.last_name }}'s score in each category, out of 5"></canvas>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="empty" id="perfEmpty" hidden>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <h3>No instructor found</h3>
+                <p>Try a different name.</p>
+            </div>
+
+            <div class="pager" id="perfPager" hidden>
+                <span class="pager-info" data-pager-info aria-live="polite"></span>
+                <div class="pager-buttons">
+                    <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="card-foot" id="perfCount" aria-live="polite"></div>
+
+            {% else %}
+            <div class="empty">
+                <i class="bi bi-inbox" aria-hidden="true"></i>
+                <h3>No evaluation results yet</h3>
+                <p>Instructor scores will show here after students send their evaluations.</p>
+            </div>
+            {% endif %}
+        </div>
+
+
+        <!-- TAB: category averages for all instructors -->
+        <div class="tab-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories" hidden>
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
+                    <div>
+                        <h3>Average score in each category</h3>
+                        <p class="card-sub">All instructors together, out of 5</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-wrap chart-wrap--bars">
+                    <canvas id="overallChart" role="img" aria-label="Bar chart of the average score in each category for all instructors, out of 5"></canvas>
+                </div>
+                <p class="card-sub" id="chartMessage" hidden></p>
+                <ul class="legend">
+                    <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
+                    <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
+                    <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
+                </ul>
+            </div>
+        </div>
+
+
+        <!-- TAB: instructors who may need help -->
+        <div class="tab-panel" role="tabpanel" id="panel-attention" aria-labelledby="tab-attention" hidden>
+            <div class="card-head">
+                <div class="card-title">
+                    <span class="card-icon"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>
+                    <div>
+                        <h3>Instructors who may need support</h3>
+                        <p class="card-sub">Overall rating below 3.5, lowest first</p>
+                    </div>
+                </div>
+            </div>
+            <ul class="attention-list" id="attentionList"></ul>
+            <div class="empty" id="attentionEmpty" hidden>
+                <i class="bi bi-emoji-smile" aria-hidden="true"></i>
+                <h3>Everyone is doing well</h3>
+                <p>No instructor has an overall rating below 3.5.</p>
+            </div>
+        </div>
+
+    </section>
+
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'users/js/admin_common.js' %}"></script>
+<script>
+var COLOR = { high: '#1b2f6b', mid: '#5b78c4', low: '#b4443a', navy: '#13224f', muted: '#5b6585', grid: 'rgba(19, 34, 79, 0.08)' };
+var SHORT = ['Teaching', 'Communication', 'Classroom', 'Punctuality', 'Engagement'];
+var FULL  = ['Teaching Effectiveness', 'Communication Skills', 'Classroom Management', 'Punctuality', 'Student Engagement'];
+
+var chartData = {};        // chart id -> 5 scores (from /api/charts/)
+var miniCharts = {};       // chart id -> Chart object (made only when the row is on screen)
+var overallChart = null;
+var table = null;
+
+Chart.defaults.font.family = '"Source Sans 3", system-ui, sans-serif';
+Chart.defaults.color = COLOR.muted;
+Chart.defaults.plugins.tooltip.backgroundColor = COLOR.navy;
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+function levelColor(v) { return v >= 4.5 ? COLOR.high : v >= 3.5 ? COLOR.mid : COLOR.low; }
+
+
+/* ── Instructor table: search, sort, 5 rows per page ── */
+(function () {
+    var body = document.getElementById('perfBody');
+    if (!body) return;
+
+    function num(tr, key) { return parseFloat(tr.dataset[key]) || 0; }
+
+    table = Admin.listTable({
+        tbody: body,
+        pageSize: 5,
+        search: document.getElementById('perfSearch'),
+        sort: document.getElementById('perfSort'),
+        sorters: {
+            high:  function (a, b) { return num(b, 'overall') - num(a, 'overall'); },
+            low:   function (a, b) { return num(a, 'overall') - num(b, 'overall'); },
+            name:  function (a, b) { return a.dataset.name.localeCompare(b.dataset.name); },
+            count: function (a, b) { return num(b, 'count') - num(a, 'count'); }
+        },
+        pager: document.getElementById('perfPager'),
+        count: document.getElementById('perfCount'),
+        empty: document.getElementById('perfEmpty'),
+        onRender: function (shown) { shown.forEach(drawMini); }
+    });
+})();
+
+
+/* ── Small bar chart inside a table row (made only when the row is shown) ── */
+function drawMini(tr) {
+    var id = tr.dataset.chart;
+    var canvas = document.getElementById(id);
+    var values = chartData[id];
+    if (!canvas || !values || miniCharts[id]) return;
+
+    miniCharts[id] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: SHORT,
+            datasets: [{ data: values, backgroundColor: values.map(levelColor), borderRadius: 5, maxBarThickness: 28 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11 } } },
+                y: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: COLOR.grid }, border: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    displayColors: false,
+                    callbacks: {
+                        title: function (items) { return FULL[items[0].dataIndex]; },
+                        label: function (c) { return 'Score: ' + c.parsed.y.toFixed(2) + ' / 5'; }
+                    }
+                }
+            }
+        }
+    });
+}
+
+
+/* ── Average of every category, all instructors together ── */
+function drawOverall() {
+    var canvas = document.getElementById('overallChart');
+    var lists = Object.keys(chartData).map(function (k) { return chartData[k]; });
+    if (!canvas || !lists.length) return;
+
+    var averages = FULL.map(function (name, i) {
+        var nums = lists.map(function (v) { return v[i]; }).filter(function (v) { return typeof v === 'number'; });
+        return nums.length ? nums.reduce(function (a, b) { return a + b; }, 0) / nums.length : 0;
+    });
+
+    var valueLabels = {
+        id: 'valueLabels',
+        afterDatasetsDraw: function (chart) {
+            var ctx = chart.ctx;
+            ctx.save();
+            ctx.font = '700 13px "Source Sans 3", sans-serif';
+            ctx.fillStyle = COLOR.navy;
+            ctx.textBaseline = 'middle';
+            chart.getDatasetMeta(0).data.forEach(function (bar, i) { ctx.fillText(averages[i].toFixed(2), bar.x + 8, bar.y); });
+            ctx.restore();
+        }
+    };
+
+    overallChart = new Chart(canvas, {
+        type: 'bar',
+        data: { labels: FULL, datasets: [{ data: averages, backgroundColor: averages.map(levelColor), borderRadius: 6, maxBarThickness: 28 }] },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { right: 44 } },
+            scales: {
+                x: { min: 0, max: 5, ticks: { stepSize: 1 }, grid: { color: COLOR.grid }, border: { display: false }, title: { display: true, text: 'Average score (out of 5)' } },
+                y: { grid: { display: false }, border: { display: false }, ticks: { color: COLOR.navy, font: { size: 13, weight: '600' } } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { displayColors: false, callbacks: { label: function (c) { return 'Average: ' + c.parsed.x.toFixed(2) + ' / 5'; } } }
+            }
+        },
+        plugins: [valueLabels]
+    });
+}
+
+
+/* ── "Needs attention": instructors with an overall rating below 3.5 ── */
+(function () {
+    var body = document.getElementById('perfBody');
+    var list = document.getElementById('attentionList');
+    var empty = document.getElementById('attentionEmpty');
+    var badge = document.getElementById('attentionCount');
+    if (!list) return;
+
+    var low = body ? Array.prototype.slice.call(body.children).filter(function (tr) {
+        return parseFloat(tr.dataset.overall) < 3.5;
+    }).sort(function (a, b) { return parseFloat(a.dataset.overall) - parseFloat(b.dataset.overall); }) : [];
+
+    badge.textContent = low.length;
+    empty.hidden = low.length > 0;
+
+    low.forEach(function (tr) {
+        var li = document.createElement('li');
+
+        var who = document.createElement('div');
+        who.className = 'person';
+        var av = document.createElement('div');
+        av.className = 'person-avatar';
+        av.setAttribute('aria-hidden', 'true');
+        av.textContent = tr.querySelector('.person-avatar').textContent;
+        var name = document.createElement('div');
+        name.className = 'person-name';
+        name.textContent = tr.dataset.name;
+        who.appendChild(av);
+        who.appendChild(name);
+
+        var meta = document.createElement('div');
+        meta.className = 'attention-meta';
+        var score = document.createElement('span');
+        score.className = 'badge badge-low';
+        score.textContent = parseFloat(tr.dataset.overall).toFixed(2) + ' / 5';
+        var count = document.createElement('span');
+        count.className = 'attention-count';
+        count.textContent = tr.dataset.count + ' evaluation' + (tr.dataset.count === '1' ? '' : 's');
+        meta.appendChild(score);
+        meta.appendChild(count);
+
+        li.appendChild(who);
+        li.appendChild(meta);
+        list.appendChild(li);
+    });
+})();
+
+
+/* ── Tabs ── */
+Admin.tabs(document.querySelector('.card[aria-label="Instructor performance"]'), function (key) {
+    if (key === 'instructors') {
+        if (table) table.refresh();
+        Object.keys(miniCharts).forEach(function (id) { miniCharts[id].resize(); });
+    }
+    if (key === 'categories' && overallChart) overallChart.resize();
+});
+
+
+/* ── Load the chart numbers from the server ── */
+(function () {
+    var message = document.getElementById('chartMessage');
+    fetch('/api/charts/')
+        .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        .then(function (items) {
+            items.forEach(function (it) { chartData[it.id] = it.values; });
+            drawOverall();
+            if (table) table.refresh();       // draws the charts of the rows on screen
+        })
+        .catch(function () {
+            if (message) { message.textContent = 'The charts could not load. Please refresh the page.'; message.hidden = false; }
+            document.querySelectorAll('.mini-chart').forEach(function (box) {
+                var note = document.createElement('p');
+                note.className = 'mini-note';
+                note.textContent = 'Chart not available.';
+                box.appendChild(note);
+            });
+        });
+})();
+</script>
+{% endblock %}

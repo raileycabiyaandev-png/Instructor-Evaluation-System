@@ -1,0 +1,83 @@
+/* ============================================================
+   users/static/users/css/instructor_evaluation_results.css
+   Evaluation Results page only.
+   Shared styles (cards, tabs, hero, controls) are in instructor_common.css.
+
+   1. Filter bar     2. Messages     3. Print
+   ============================================================ */
+
+
+/* ============================================================
+   1. FILTER BAR
+   ============================================================ */
+.filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    gap: 14px;
+    align-items: end;
+    padding: 16px 20px;
+}
+.field label { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 600; color: var(--navy-800); }
+.field .select { width: 100%; }
+.filter-actions { display: flex; gap: 10px; }
+
+.filters-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--navy-50);
+    border-radius: 0 0 var(--radius) var(--radius);
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.privacy { margin: 4px 0 8px; font-size: 14px; color: var(--muted); }
+.privacy i { margin-right: 6px; color: var(--navy-700); }
+
+
+/* ============================================================
+   2. MESSAGES  (not released, no data, ...)
+   ============================================================ */
+.state-text { max-width: 520px; margin: 0 auto 18px; }
+.print-only { display: none; }
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 860px) {
+    .filters { grid-template-columns: 1fr 1fr; }
+    .filter-actions { grid-column: 1 / -1; }
+}
+
+@media (max-width: 575.98px) {
+    .filters { grid-template-columns: 1fr; padding: 14px 16px; }
+    .filter-actions .btn { flex: 1; }
+    .filters-foot { padding: 12px 16px; }
+    .col-prev { display: none; }          /* the Change column already tells the story */
+}
+
+
+/* ============================================================
+   3. PRINT / SAVE AS PDF
+   ============================================================ */
+@media print {
+    .sidebar, .sb-overlay, .topbar, .skip-link, .no-print, .tabs, .crumbs { display: none !important; }
+
+    .app  { display: block; }
+    body  { background: #fff; }
+    .page { max-width: none; padding: 0; }
+
+    .tab-panel[hidden] { display: block !important; }
+    .card, .stat, .hero { break-inside: avoid; box-shadow: none; }
+    .overview { grid-template-columns: 1fr; }
+
+    .print-only { display: block; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--navy-900); }
+    .print-only h2 { margin-bottom: 8px; }
+    .print-only p  { margin: 2px 0; font-size: 14px; }
+
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

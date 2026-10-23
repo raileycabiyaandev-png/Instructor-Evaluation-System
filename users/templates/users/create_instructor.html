@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+{% endblock %}
+
+{% block page_title %}Instructor Lists{% endblock %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <!-- SUCCESS MESSAGES -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert success">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- ================= PAGE HEADER (CLEANED) ================= -->
+    <div class="page-header">
+
+        <button type="button"
+                class="btn-primary"
+                onclick="openModal()">
+
+            + Add Instructor
+        </button>
+
+    </div>
+
+    <!-- ================= TABLE CARD ================= -->
+    <div class="card">
+
+        <!-- CLEAN CARD HEADER -->
+        <div class="card-header-area">
+
+            <div>
+                <span class="table-badge">Records</span>
+            </div>
+
+            <input type="text"
+                   id="searchInstructor"
+                   placeholder="Search instructor..."
+                   class="search-input">
+
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper">
+
+            <table class="custom-table" id="instructorTable">
+
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th class="actions-column">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+    {% for instructor in instructors %}
+    <tr>
+
+        <!-- NAME COLUMN -->
+        <td>
+
+            <div class="user-info">
+
+                <div class="user-avatar">
+                    {{ instructor.first_name|slice:":1" }}{{ instructor.last_name|slice:":1" }}
+                </div>
+
+                <div class="user-details">
+
+                    <div class="user-name">
+                        {{ instructor.first_name }}
+                        {{ instructor.middle_name|default:'' }}
+                        {{ instructor.last_name }}
+                    </div>
+
+                    <div class="user-subtext">
+                        {{ instructor.email }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </td>
+
+        <!-- DEPARTMENT -->
+        <td>
+
+            <span class="department-badge">
+                {{ instructor.get_department_display }}
+            </span>
+
+        </td>
+
+        <!-- ACTIONS -->
+        <td class="actions-column">
+
+            <div class="action-group">
+
+                <a href="{% url 'update_instructor' instructor.id %}"
+                   class="btn-action btn-edit">
+
+                    <i class="fas fa-pen"></i>
+                    Edit
+                </a>
+
+                <form action="{% url 'delete_instructor' instructor.id %}"
+                      method="POST"
+                      class="delete-form">
+
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn-action btn-delete"
+                            onclick="return confirm('Delete this instructor?');">
+
+                        <i class="fas fa-trash-alt"></i>
+                        Delete
+                    </button>
+
+                </form>
+
+            </div>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+        <td colspan="3" class="empty">
+            No instructors found
+        </td>
+    </tr>
+
+    {% endfor %}
+
+</tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= MODAL (UNCHANGED - GOOD ALREADY) ================= -->
+<div id="instructorModal"
+     class="modal"
+     data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
+
+    <div class="modal-content modern-modal">
+
+        <div class="modal-header-modern">
+
+            <div>
+                <h3>Create Instructor</h3>
+                <p>Fill in instructor details to create an account</p>
+            </div>
+
+            <button type="button"
+                    class="close-btn"
+                    onclick="closeModal()">
+                ×
+            </button>
+
+        </div>
+
+        <form method="POST"
+              action="{% url 'create_instructor' %}"
+              id="instructorForm">
+
+            {% csrf_token %}
+
+            <div class="modal-body-modern">
+
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        {{ form.first_name }}
+                        <span class="error">{{ form.first_name.errors }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Middle Name</label>
+                        {{ form.middle_name }}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        {{ form.last_name }}
+                        <span class="error">{{ form.last_name.errors }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        {{ form.email }}
+                        <span class="error">{{ form.email.errors }}</span>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Department</label>
+                        {{ form.department }}
+                        <span class="error">{{ form.department.errors }}</span>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Temporary Password</label>
+                        {{ form.password }}
+                        <span class="error">{{ form.password.errors }}</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer-modern">
+
+                <button type="button"
+                        class="btn-secondary"
+                        onclick="closeModal()">
+
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="btn-primary"
+                        id="submitBtn">
+
+                    Create Instructor
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+const modal = document.getElementById("instructorModal");
+
+function openModal() {
+    modal.classList.add("show");
+}
+
+function closeModal() {
+    modal.classList.remove("show");
+}
+
+window.addEventListener("click", function (e) {
+    if (e.target === modal) {
+        closeModal();
+    }
+});
+
+document.getElementById("searchInstructor")?.addEventListener("input", function () {
+    let value = this.value.toLowerCase();
+
+    document.querySelectorAll("#instructorTable tbody tr").forEach(row => {
+        row.style.display =
+            row.innerText.toLowerCase().includes(value) ? "" : "none";
+    });
+});
+
+document.getElementById("instructorForm")?.addEventListener("submit", function () {
+    document.getElementById("submitBtn").disabled = true;
+});
+
+if (modal.dataset.hasErrors === "1") {
+    openModal();
+}
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'evaluation/css/manage_evaluations.css' %}">
+{% endblock %}
+
+{% block page_title %}Update Evaluation Period{% endblock %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+
+        <div>
+            <h2 class="page-title">Evaluation Period Management</h2>
+            <p class="page-subtitle">
+                Manage academic evaluation schedules, terms, and institutional review periods.
+            </p>
+        </div>
+
+        <button class="btn-primary" onclick="openModal()">
+            <i class="fas fa-edit me-2"></i> Update Evaluation Period
+        </button>
+
+    </div>
+
+    <!-- SUCCESS MESSAGE -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert success">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- CURRENT PERIOD CARD -->
+    <div class="table-card">
+
+        <div class="table-card__header">
+
+            <div class="table-card__title">
+                <span class="table-tag">Current Record</span>
+                <h3>Selected Evaluation Period</h3>
+            </div>
+
+        </div>
+
+        <div class="eval-modal__body">
+
+            <div class="form-grid">
+
+                <div class="form-field full-width">
+                    <label>School Year</label>
+                    <div class="readonly-display">
+                        {{ form.instance.school_year }}
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Semester</label>
+                    <div class="readonly-display">
+                        {{ form.instance.get_semester_display }}
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Term</label>
+                    <div class="readonly-display">
+                        {{ form.instance.get_term_display }}
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Start Date</label>
+                    <div class="readonly-display">
+                        {{ form.instance.start_date }}
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>End Date</label>
+                    <div class="readonly-display">
+                        {{ form.instance.end_date }}
+                    </div>
+                </div>
+
+                <div class="form-field full-width">
+                    <label>Status</label>
+
+                    {% if form.instance.is_active %}
+                        <span class="badge badge--active">
+                            Active
+                        </span>
+                    {% else %}
+                        <span class="badge badge--inactive">
+                            Inactive
+                        </span>
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ======================================================
+     UPDATE MODAL
+====================================================== -->
+
+<div
+    id="evaluationModal"
+    class="modal show"
+    data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
+
+    <div class="modal-content modern-modal">
+
+        <!-- MODAL HEADER -->
+        <div class="modal-header-modern">
+
+            <div>
+                <h3>Update Evaluation Period</h3>
+                <p>Modify institutional academic schedule settings</p>
+            </div>
+
+            <button class="close-btn" onclick="closeModal()">
+                ×
+            </button>
+
+        </div>
+
+        <!-- FORM -->
+        <form method="POST" id="evaluationForm">
+
+            {% csrf_token %}
+
+            <div class="modal-body-modern">
+
+                <div class="form-grid">
+
+                    <!-- SCHOOL YEAR -->
+                    <div class="form-group full-width">
+                        <label class="form-label">School Year</label>
+                        {{ form.school_year }}
+                        <span class="error">{{ form.school_year.errors }}</span>
+                    </div>
+
+                    <!-- SEMESTER -->
+                    <div class="form-group">
+                        <label class="form-label">Semester</label>
+                        {{ form.semester }}
+                        <span class="error">{{ form.semester.errors }}</span>
+                    </div>
+
+                    <!-- TERM -->
+                    <div class="form-group">
+                        <label class="form-label">Academic Term</label>
+                        {{ form.term }}
+                        <span class="error">{{ form.term.errors }}</span>
+                    </div>
+
+                    <!-- START DATE -->
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        {{ form.start_date }}
+                        <span class="error">{{ form.start_date.errors }}</span>
+                    </div>
+
+                    <!-- END DATE -->
+                    <div class="form-group">
+                        <label class="form-label">End Date</label>
+                        {{ form.end_date }}
+                        <span class="error">{{ form.end_date.errors }}</span>
+                    </div>
+
+                    <!-- ACTIVE -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Active Status</label>
+
+                        <label class="toggle-label">
+                            {{ form.is_active }}
+                            <span class="toggle-text">
+                                Enable this evaluation period
+                            </span>
+                        </label>
+
+                        <span class="error">
+                            {{ form.is_active.errors }}
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- MODAL FOOTER -->
+            <div class="modal-footer-modern">
+
+                <a href="{% url 'manage_evaluations' %}"
+                   class="btn-secondary">
+
+                    Cancel
+                </a>
+
+                <button type="submit"
+                        class="btn-primary"
+                        id="submitBtn">
+
+                    <i class="fas fa-save me-2"></i>
+                    Save Changes
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<!-- ======================================================
+     SCRIPT
+====================================================== -->
+
+<script>
+
+    function openModal() {
+        document
+            .getElementById("evaluationModal")
+            .classList.add("show");
+    }
+
+    function closeModal() {
+        document
+            .getElementById("evaluationModal")
+            .classList.remove("show");
+    }
+
+    window.onclick = function(event) {
+
+        let modal = document.getElementById("evaluationModal");
+
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+
+    document
+        .getElementById("evaluationForm")
+        .addEventListener("submit", function() {
+
+            document
+                .getElementById("submitBtn")
+                .disabled = true;
+        });
+
+    const modal = document.getElementById("evaluationModal");
+
+    if (modal.dataset.hasErrors === "1") {
+        openModal();
+    }
+
+</script>
+
+{% endblock %}

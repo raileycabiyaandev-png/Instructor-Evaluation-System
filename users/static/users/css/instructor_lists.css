@@ -1,0 +1,118 @@
+/* ===== TABLE WRAPPER STYLE ===== */
+.instructor-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    overflow-x: auto;
+}
+
+/* ===== TABLE ===== */
+.instructor-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+/* HEADER */
+.instructor-table thead {
+    background: #f8fafc;
+}
+
+.instructor-table th {
+    text-align: left;
+    font-size: 12px;
+    color: #64748b;
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ROWS */
+.instructor-table td {
+    padding: 12px;
+    font-size: 14px;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* ROW HOVER */
+.instructor-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* ===== NAME CELL ===== */
+.name-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* AVATAR */
+.avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===== DEPARTMENT BADGE ===== */
+.dept-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: #eef2ff;
+    color: #3730a3;
+}
+
+/* ===== ACTIONS ===== */
+.actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* BUTTON BASE */
+.btn {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+/* EDIT */
+.btn.edit {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+/* DELETE */
+.btn.delete {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* DELETE FORM INLINE */
+.actions form {
+    display: inline;
+}
+
+/* ===== HEADER COUNTER (optional reuse) ===== */
+.count {
+    font-size: 12px;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 999px;
+    color: #334155;
+}

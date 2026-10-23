@@ -1,0 +1,372 @@
+{% block content %}
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e2a;
+    --border: #252a38;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Sora', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .scan-wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  /* back link */
+  .back-link {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--text); }
+
+  /* title */
+  .scan-title {
+    text-align: center;
+  }
+  .scan-title h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .scan-title p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* teacher context badge */
+  .teacher-context {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    width: 100%;
+  }
+  .teacher-context svg { color: var(--accent); flex-shrink: 0; }
+  .teacher-context span { color: var(--text-muted); }
+  .teacher-context strong { color: var(--text); font-weight: 600; }
+
+  /* scanner container */
+  .scanner-box {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #qr-reader {
+    width: 100% !important;
+  }
+
+  /* Override html5-qrcode default styles */
+  #qr-reader video {
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 0 !important;
+  }
+
+  #qr-reader__scan_region {
+    background: transparent !important;
+  }
+
+  #qr-reader__dashboard {
+    padding: 1rem !important;
+    background: var(--surface2) !important;
+    border-top: 1px solid var(--border) !important;
+  }
+
+  #qr-reader__dashboard_section_csr button {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1.25rem !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+  }
+
+  #qr-reader__dashboard_section_csr select {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    padding: 0.4rem 0.75rem !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: 0.78rem !important;
+  }
+
+  #qr-reader__status_span {
+    color: var(--text-muted) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* scan frame overlay */
+  .scan-frame {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px; height: 180px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .scan-frame::before,
+  .scan-frame::after,
+  .scan-frame > span::before,
+  .scan-frame > span::after {
+    content: '';
+    position: absolute;
+    width: 28px; height: 28px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+
+  .scan-frame::before { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .scan-frame::after  { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .scan-frame > span::before { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .scan-frame > span::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .scan-line {
+    position: absolute;
+    top: 0; left: 8px; right: 8px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanLine 2s ease-in-out infinite;
+  }
+
+  @keyframes scanLine {
+    0%   { top: 0;    opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* status box */
+  .scan-status {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: center;
+    display: none;
+    border: 1px solid;
+  }
+
+  .scan-status.error {
+    background: rgba(239,68,68,.1);
+    border-color: rgba(239,68,68,.3);
+    color: var(--danger);
+    display: block;
+  }
+
+  .scan-status.success {
+    background: rgba(34,197,94,.1);
+    border-color: rgba(34,197,94,.3);
+    color: var(--success);
+    display: block;
+  }
+
+  .scan-status.info {
+    background: rgba(79,142,247,.1);
+    border-color: rgba(79,142,247,.3);
+    color: var(--accent);
+    display: block;
+  }
+
+  /* instructions */
+  .scan-instructions {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .scan-instructions strong {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .scan-instructions ol {
+    padding-left: 1.25rem;
+  }
+
+  .scan-instructions li { margin-bottom: 0.25rem; }
+</style>
+
+<div class="scan-wrap">
+
+  <!-- Back -->
+  <a href="{% url 'student_dashboard' %}" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Dashboard
+  </a>
+
+  <!-- Title -->
+  <div class="scan-title">
+    <h2>Scan QR Code</h2>
+    <p>Point your camera at the teacher's QR code<br>to begin your evaluation</p>
+  </div>
+
+  <!-- Teacher context (shown if coming from dashboard with query params) -->
+  <div class="teacher-context" id="teacherContext" style="display:none;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <div>
+      <span>Scanning for teacher — </span>
+      <strong id="teacherContextText">loading...</strong>
+    </div>
+  </div>
+
+  <!-- Status messages -->
+  <div class="scan-status" id="scanStatus"></div>
+
+  <!-- Scanner -->
+  <div class="scanner-box">
+    <div id="qr-reader"></div>
+    <div class="scan-frame"><span></span><div class="scan-line"></div></div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="scan-instructions">
+    <strong>How to scan</strong>
+    <ol>
+      <li>Allow camera access when prompted</li>
+      <li>Hold the QR code steady inside the frame</li>
+      <li>You will be redirected automatically</li>
+    </ol>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+  // Read query params passed from the dashboard
+  const params = new URLSearchParams(window.location.search);
+  const expectedTeacherId = params.get('teacher');
+  const expectedPeriodId  = params.get('period');
+
+  // Show teacher context badge if params are present
+  if (expectedTeacherId) {
+    document.getElementById('teacherContext').style.display = 'flex';
+    document.getElementById('teacherContextText').textContent =
+      'Teacher ID #' + expectedTeacherId;
+  }
+
+  const statusEl = document.getElementById('scanStatus');
+
+  function showStatus(msg, type) {
+    statusEl.textContent = msg;
+    statusEl.className = 'scan-status ' + type;
+  }
+
+  let scanning = true;
+
+  function onScanSuccess(decodedText) {
+    if (!scanning) return;
+
+    scanning = false;
+
+    showStatus('QR code detected — redirecting…', 'success');
+
+    try {
+        const url = new URL(decodedText, window.location.origin);
+
+        setTimeout(() => {
+            window.location.href = url.toString();
+        }, 600);
+
+    } catch (e) {
+        showStatus('Invalid QR code.', 'error');
+        scanning = true;
+    }
+}
+  function onScanError(err) {
+    // Suppress frame-by-frame "no QR code" errors — they're noisy and expected
+    // Only surface real device/permission errors
+  }
+
+  const html5QrCode = new Html5Qrcode("qr-reader");
+
+  Html5Qrcode.getCameras()
+    .then(devices => {
+      if (!devices || devices.length === 0) {
+        showStatus('No camera found on this device.', 'error');
+        return;
+      }
+
+      // Prefer back/environment camera on mobile
+      const backCam = devices.find(d =>
+        d.label.toLowerCase().includes('back') ||
+        d.label.toLowerCase().includes('environment')
+      );
+      const cameraId = backCam ? backCam.id : devices[0].id;
+
+      return html5QrCode.start(
+        cameraId,
+        { fps: 12, qrbox: { width: 220, height: 220 } },
+        onScanSuccess,
+        onScanError
+      );
+    })
+    .catch(err => {
+      if (err.name === 'NotAllowedError' || String(err).includes('Permission')) {
+        showStatus('Camera permission denied. Please allow camera access and refresh.', 'error');
+      } else {
+        showStatus('Unable to start camera: ' + err, 'error');
+      }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,363 @@
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/login.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- ═══════════════════════════════════════
+         HERO / LOGIN SECTION
+    ═══════════════════════════════════════ -->
+    <section class="section section--hero">
+
+        <!-- Background decoration -->
+        <div class="hero-bg">
+            <div class="hero-bg__lines"></div>
+            <div class="hero-bg__seal"></div>
+        </div>
+
+        <div class="hero-inner">
+
+            <!-- LEFT — Branding -->
+            <div class="hero-brand reveal reveal--left">
+
+                <div class="brand-logo-wrap">
+                    <div class="brand-logo-ring">
+                        <img src="{% static 'images/aclc_logo.jpg' %}"
+                             class="brand-logo"
+                             alt="ACLC Logo">
+                    </div>
+                </div>
+
+                <div class="brand-divider"></div>
+
+                <div class="brand-label">Academic Platform</div>
+
+                <h1 class="brand-title">
+                    <span>Teacher</span>
+                    <span class="brand-title--gold">Evaluation</span>
+                    <span>System</span>
+                </h1>
+
+                <p class="brand-desc">
+                    A formal academic platform for structured teacher
+                    assessment, performance monitoring, and evaluation
+                    management — built for educational institutions.
+                </p>
+
+                <!-- Scroll hint -->
+                <div class="scroll-hint">
+                    <span>See System Features</span>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 2v10M2 8l5 5 5-5"
+                              stroke="currentColor"
+                              stroke-width="1.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                    </svg>
+                </div>
+
+            </div>
+
+            <!-- RIGHT — Login Card -->
+            <div class="login-card reveal reveal--right">
+
+                <!-- Card header -->
+                <div class="login-card__header">
+                    <div class="login-card__icon">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <circle cx="10" cy="6.5" r="3.5" stroke="currentColor" stroke-width="1.7"/>
+                            <path d="M2.5 18c0-4.142 3.358-7.5 7.5-7.5s7.5 3.358 7.5 7.5"
+                                  stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="login-card__title">Sign In</h2>
+                        <p class="login-card__sub">Access your account to continue</p>
+                    </div>
+                </div>
+
+                    {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert danger">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                    {% endif %}
+
+                <!-- Login form -->
+                <form method="POST" class="login-form">
+                    {% csrf_token %}
+
+                    <!-- USERNAME -->
+                    <div class="form-field">
+                        <label for="id_username">
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+                                <path d="M1 11.5c0-3.038 2.462-5.5 5.5-5.5s5.5 2.462 5.5 5.5"
+                                      stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                            </svg>
+                            Email
+                        </label>
+                        <input type="text"
+                               id="id_username"
+                               name="username"
+                               autocomplete="username"
+                               required>
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="form-field">
+                        <label for="id_password">
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <rect x="2" y="5.5" width="9" height="6" rx="1.5"
+                                      stroke="currentColor" stroke-width="1.4"/>
+                                <path d="M4 5.5V4a2.5 2.5 0 0 1 5 0v1.5"
+                                      stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                            </svg>
+                            Password
+                        </label>
+                        <div class="input-pw-wrap">
+                            <input type="password"
+                                   id="id_password"
+                                   name="password"
+                                   autocomplete="current-password"
+                                   required>
+                            <button type="button" class="toggle-pw" tabindex="-1" aria-label="Toggle password">
+                                <!-- Eye open -->
+                                <svg class="eye-open" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <ellipse cx="8" cy="8" rx="5.5" ry="3.5"
+                                             stroke="currentColor" stroke-width="1.4"/>
+                                    <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                                </svg>
+                                <!-- Eye closed -->
+                                <svg class="eye-closed" width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                     style="display:none">
+                                    <path d="M2 2l12 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                                    <path d="M6.5 6.7A2 2 0 0 0 9.3 9.5"
+                                          stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SUBMIT -->
+                    <button class="btn-signin" type="submit">
+                        <span>Sign In</span>
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                            <path d="M3 7.5h9M8.5 3.5l4 4-4 4"
+                                  stroke="currentColor" stroke-width="1.8"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+
+                </form>
+
+                <!-- Footer note -->
+                <p class="login-card__note">
+                    Use your email to log in.
+                    Contact the administrator if you need access.
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- Scroll down arrow -->
+        <a href="#features" class="scroll-arrow" aria-label="Scroll to features">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <path d="M11 4v14M4 12l7 7 7-7"
+                      stroke="currentColor" stroke-width="1.8"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         FEATURES SECTION
+    ═══════════════════════════════════════ -->
+    <section class="section section--features" id="features">
+        <div class="section-inner">
+
+            <div class="section-head reveal reveal--up">
+                <span class="section-tag">System Features</span>
+                <h2 class="section-title">Academic Evaluation Tools</h2>
+                <p class="section-sub">
+                    Core tools designed to make evaluation and performance
+                    tracking simple for teachers and administrators.
+                </p>
+            </div>
+
+            <div class="features-grid">
+
+                <div class="feat-card reveal reveal--up">
+                    <div class="feat-card__icon feat--blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="11" width="8" height="10" rx="1.5" stroke="white" stroke-width="1.7"/>
+                            <rect x="13" y="3" width="8" height="18" rx="1.5" stroke="white" stroke-width="1.7"/>
+                        </svg>
+                    </div>
+                    <h3>Secure Login</h3>
+                    <p>Role-based access for administrators, teachers, and students with protected credentials.</p>
+                </div>
+
+                <div class="feat-card reveal reveal--up">
+                    <div class="feat-card__icon feat--gold">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 3L3 8v5c0 5.25 3.8 10.15 9 11.35C17.2 23.15 21 18.25 21 13V8l-9-5z"
+                                  stroke="white" stroke-width="1.7" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3>Digital Evaluation</h3>
+                    <p>Structured online evaluation forms that replace paper-based processes with digital efficiency.</p>
+                </div>
+
+                <div class="feat-card reveal reveal--up">
+                    <div class="feat-card__icon feat--green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 17l5-5 4 4 7-8" stroke="white" stroke-width="1.7"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3>Performance Reports</h3>
+                    <p>Auto-generated reports and performance analytics organized for academic review and record-keeping.</p>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         HOW IT WORKS SECTION
+    ═══════════════════════════════════════ -->
+    <section class="section section--how">
+        <div class="section-inner">
+
+            <div class="section-head reveal reveal--up">
+                <span class="section-tag">Evaluation Process</span>
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-sub">
+                    A simple three-step workflow designed for daily academic use.
+                </p>
+            </div>
+
+            <div class="steps-grid">
+
+                <div class="step-card reveal reveal--up">
+                    <div class="step-num">01</div>
+                    <div class="step-icon">
+                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                            <rect x="3" y="3" width="20" height="20" rx="3"
+                                  stroke="currentColor" stroke-width="1.7"/>
+                            <path d="M8 13h10M8 9h10M8 17h6"
+                                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3>Log In</h3>
+                    <p>Sign in using your email and password to access the system.</p>
+                </div>
+
+                <div class="step-card reveal reveal--up">
+                    <div class="step-num">02</div>
+                    <div class="step-icon">
+                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                            <path d="M6 8h14M6 13h10M6 18h8"
+                                  stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3>Submit Evaluation</h3>
+                    <p>Fill out structured digital evaluation forms and submit your performance feedback.</p>
+                </div>
+
+                <div class="step-card reveal reveal--up">
+                    <div class="step-num">03</div>
+                    <div class="step-icon">
+                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                            <path d="M4 20l5-6 4 4 4-5 5 4"
+                                  stroke="currentColor" stroke-width="1.7"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3>View Reports</h3>
+                    <p>Evaluation results are automatically compiled and available for academic review.</p>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         FOOTER
+    ═══════════════════════════════════════ -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <img src="{% static 'images/aclc_logo.jpg' %}"
+                     class="footer-logo" alt="ACLC Logo">
+                <span>AI-Based Teacher Evaluation System</span>
+            </div>
+            <p class="footer-copy">&copy; 2025 ACLC College. All rights reserved.</p>
+        </div>
+    </footer>
+
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════ -->
+<script>
+(function () {
+    "use strict";
+
+    /* ── Password toggle ── */
+    document.querySelectorAll('.toggle-pw').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var input = btn.closest('.input-pw-wrap').querySelector('input');
+            var open   = btn.querySelector('.eye-open');
+            var closed = btn.querySelector('.eye-closed');
+            var isHidden = input.type === 'password';
+            input.type          = isHidden ? 'text' : 'password';
+            open.style.display  = isHidden ? 'none' : 'block';
+            closed.style.display= isHidden ? 'block' : 'none';
+        });
+    });
+
+    /* ── Smooth scroll ── */
+    document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+        anchor.addEventListener('click', function (e) {
+            var target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
+    /* ── Scroll reveal ── */
+    var revealEls = document.querySelectorAll('.reveal');
+
+    function onScroll() {
+        var vh = window.innerHeight;
+        revealEls.forEach(function (el) {
+            if (el.getBoundingClientRect().top < vh - 110) {
+                el.classList.add('revealed');
+            } else {
+                el.classList.remove('revealed');
+            }
+        });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+})();
+</script>
+
+{% endblock %}

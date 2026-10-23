@@ -1,0 +1,559 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}AI Teacher Evaluation System{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <style>
+        /* ============================================================
+           ADMIN SHELL: sidebar + top bar + content area (inline on purpose)
+
+           1. Tokens   2. Reset   3. Shell   4. Sidebar   5. Top bar
+           6. Content  7. Mobile
+           No gold anywhere. Navy + light blue only.
+           ============================================================ */
+
+
+        /* ============================================================
+           1. TOKENS
+           ============================================================ */
+        :root {
+            --sidebar-w: 260px;
+            --topbar-h:  60px;
+
+            /* Sidebar */
+            --sb-bg:        #0d1431;
+            --sb-line:      rgba(255, 255, 255, 0.10);
+            --sb-text:      #a3acc6;
+            --sb-strong:    #ffffff;
+            --sb-label:     #8d97b5;
+            --sb-hover:     rgba(255, 255, 255, 0.06);
+            --sb-active:    rgba(255, 255, 255, 0.10);
+            --sb-accent:    #9fb0dc;          /* light blue: active bar + icon */
+
+            /* Main area */
+            --main-bg:       #f4f6fb;
+            --topbar-bg:     #ffffff;
+            --topbar-border: #dbe2f0;
+            --ink:           #1c2540;
+
+            --font-display: 'Playfair Display', Georgia, serif;
+            --font-body:    'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+            /* ---- Old names kept so the other admin pages (students, instructors,
+                   QR lists ...) do not break. New pages do not use these. ---- */
+            --navy-950: #06091a;  --navy-900: #0b1229;  --navy-800: #0f1d40;
+            --navy-700: #162550;  --navy-600: #1e3163;  --navy-400: #3a5598;
+            --gold: #c9a84c;      --gold-light: #e8c97a;
+            --white: #ffffff;
+            --slate-100: #f1f5f9; --slate-200: #e2e8f0; --slate-400: #94a3b8;
+            --slate-500: #64748b; --slate-600: #475569; --slate-700: #334155;
+            --slate-900: #0f172a; --red-500: #ef4444;
+            --r-sm: 6px;  --r-md: 10px;  --r-lg: 16px;
+        }
+
+
+        /* ============================================================
+           2. RESET
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--main-bg);
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        [hidden] { display: none !important; }
+        :focus-visible { outline: 3px solid #5b78c4; outline-offset: 2px; }
+
+        .skip-link {
+            position: absolute;
+            left: -9999px;
+            top: 8px;
+            z-index: 100;
+            padding: 10px 16px;
+            border-radius: 8px;
+            background: #fff;
+            color: #1b2f6b;
+            font-weight: 600;
+        }
+        .skip-link:focus { left: 12px; }
+
+
+        /* ============================================================
+           3. SHELL
+           ============================================================ */
+        .app {
+            display: flex;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+
+        /* ============================================================
+           4. SIDEBAR  (dark navy, faint grid, light-blue accent)
+           ============================================================ */
+        .sidebar {
+            position: relative;
+            flex: 0 0 var(--sidebar-w);
+            width: var(--sidebar-w);
+            overflow: hidden;
+            color: var(--sb-strong);
+            background-color: var(--sb-bg);
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+            background-size: 32px 32px;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .sidebar :focus-visible { outline-color: #cfd9f5; }
+
+        .sidebar-inner {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 22px 14px calc(16px + env(safe-area-inset-bottom));
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+        }
+
+        /* Brand */
+        .brand-logo-row { display: flex; align-items: center; gap: 12px; padding: 0 6px; }
+        .brand-logo-ring {
+            flex: 0 0 46px;
+            width: 46px;
+            height: 46px;
+            overflow: hidden;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(159, 176, 220, 0.6), 0 0 14px rgba(159, 176, 220, 0.3);
+        }
+        .brand-logo { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .brand-text { display: flex; flex-direction: column; line-height: 1.3; }
+        .brand-name { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: #fff; }
+        .brand-sub  { font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sb-label); }
+        .brand-divider { height: 1px; margin: 20px -14px 0; background: var(--sb-line); }
+
+        /* Navigation */
+        .nav { flex: 1; display: flex; flex-direction: column; gap: 2px; margin-top: 14px; }
+        .nav-section { margin-bottom: 6px; }
+        .nav-label {
+            display: block;
+            padding: 10px 14px 6px;
+            font-size: 11.5px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--sb-label);
+        }
+
+        .nav-link {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            min-height: 44px;
+            padding: 0 14px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            background: none;
+            color: var(--sb-text);
+            font: inherit;
+            font-size: 15.5px;
+            text-align: left;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .nav-link:hover { background: var(--sb-hover); color: #fff; }
+        .nav-link.active {
+            background: var(--sb-active);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 var(--sb-accent);
+        }
+
+        .nav-icon { flex: 0 0 22px; width: 22px; font-size: 17px; text-align: center; }
+        .nav-link.active .nav-icon { color: var(--sb-accent); }
+
+        .nav-soon {
+            margin-left: auto;
+            padding: 1px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.10);
+            font-size: 11px;
+            color: var(--sb-label);
+        }
+
+        /* Dropdown groups */
+        .nav-toggle .nav-text { flex: 1; }
+        .nav-arrow { font-size: 12px; color: var(--sb-label); transition: transform 0.2s ease; }
+        .nav-item.open > .nav-toggle .nav-arrow { transform: rotate(90deg); color: var(--sb-accent); }
+
+        .submenu {
+            display: none;
+            flex-direction: column;
+            gap: 2px;
+            margin: 4px 0 4px 22px;
+            padding-left: 12px;
+            border-left: 1px solid rgba(159, 176, 220, 0.25);
+        }
+        .nav-item.open .submenu { display: flex; }
+        .submenu .nav-link { min-height: 40px; font-size: 14.5px; }
+
+        /* Footer: user card + sign out */
+        .sidebar-footer { padding-top: 16px; border-top: 1px solid var(--sb-line); }
+        .user-strip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .user-avatar {
+            flex: 0 0 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(159, 176, 220, 0.7);
+            border-radius: 50%;
+            background: #162a63;
+            font-weight: 700;
+            color: #cfd9f5;
+        }
+        .user-info { min-width: 0; }
+        .user-name { overflow: hidden; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+        .user-role { font-size: 14px; color: var(--sb-label); }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            border-radius: 10px;
+            background: rgba(239, 68, 68, 0.08);
+            color: #f87171;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.16); }
+
+        .sb-overlay { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(19, 34, 79, 0.5); }
+
+
+        /* ============================================================
+           5. TOP BAR
+           ============================================================ */
+        .topbar {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: var(--topbar-h);
+            padding: env(safe-area-inset-top) 28px 0;
+            background: var(--topbar-bg);
+            border-bottom: 1px solid var(--topbar-border);
+        }
+        .topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .topbar-title {
+            overflow: hidden;
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 600;
+            color: #13224f;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .topbar-badge {
+            padding: 3px 12px;
+            border: 1px solid #c9d4ee;
+            border-radius: 999px;
+            background: #f3f6fc;
+            font-size: 14px;
+            font-weight: 600;
+            color: #223a85;
+        }
+        .menu-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            margin-left: -10px;
+            border: 0;
+            border-radius: 8px;
+            background: none;
+            font-size: 26px;
+            color: #1b2f6b;
+            cursor: pointer;
+        }
+
+
+        /* ============================================================
+           6. CONTENT AREA  (pages scroll inside this box)
+           ============================================================ */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            padding-bottom: calc(28px + env(safe-area-inset-bottom));
+        }
+
+
+        /* ============================================================
+           7. TABLET AND MOBILE  (sidebar becomes a slide-in menu)
+           ============================================================ */
+        @media (max-width: 991.98px) {
+            .menu-toggle { display: inline-flex; }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 40;
+                width: min(86vw, 300px);
+                height: 100%;
+                transform: translateX(-100%);
+                visibility: hidden;
+                transition: transform 0.2s ease, visibility 0s linear 0.2s;
+            }
+            .sidebar.sidebar-open { transform: none; visibility: visible; transition-delay: 0s; }
+        }
+
+        @media (max-width: 575.98px) {
+            .topbar  { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+            .topbar-title { font-size: 18px; }
+            .content { padding: 16px max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar, .nav-arrow { transition: none; }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+<a class="skip-link" href="#mainContent">Skip to main content</a>
+
+<div class="app">
+
+    <!-- ═══════════════════════════════════════
+         SIDEBAR
+    ═══════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar" aria-label="Administrator sidebar">
+        <div class="sidebar-inner">
+
+            <!-- Brand -->
+            <div class="brand">
+                <div class="brand-logo-row">
+                    <div class="brand-logo-ring">
+                        <img src="{% static 'images/aclc_logo.jpg' %}" class="brand-logo" width="46" height="46" alt="ACLC College of Tacloban logo">
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">ACLC · SES</span>
+                        <span class="brand-sub">Teacher Evaluation</span>
+                    </div>
+                </div>
+                <div class="brand-divider"></div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="nav" aria-label="Administrator navigation">
+            {% with current=request.resolver_match.url_name %}
+
+                <!-- MAIN -->
+                <div class="nav-section">
+                    <span class="nav-label">Main</span>
+                    <a href="{% url 'admin_dashboard' %}" class="nav-link {% if current == 'admin_dashboard' %}active{% endif %}" {% if current == 'admin_dashboard' %}aria-current="page"{% endif %}>
+                        <i class="bi bi-grid-1x2 nav-icon" aria-hidden="true"></i> Dashboard
+                    </a>
+                </div>
+
+                <!-- EVALUATION -->
+                <div class="nav-section">
+                    <span class="nav-label">Evaluation</span>
+                    <div class="nav-item {% if current == 'manage_evaluations' or current == 'update_evaluation' or current == 'evaluation_archive' or current == 'evaluation_term_detail' %}open{% endif %}" id="evaluationMenu">
+                        <button type="button" class="nav-link nav-toggle" aria-expanded="false">
+                            <i class="bi bi-calendar2-check nav-icon" aria-hidden="true"></i>
+                            <span class="nav-text">Evaluation Period</span>
+                            <i class="bi bi-chevron-right nav-arrow" aria-hidden="true"></i>
+                        </button>
+                        <div class="submenu">
+                            <a href="{% url 'manage_evaluations' %}" class="nav-link {% if current == 'manage_evaluations' or current == 'update_evaluation' %}active{% endif %}">Evaluations</a>
+                            <a href="{% url 'evaluation_archive' %}" class="nav-link {% if current == 'evaluation_archive' or current == 'evaluation_term_detail' %}active{% endif %}">Evaluation Archive</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MANAGEMENT -->
+                <div class="nav-section">
+                    <span class="nav-label">Management</span>
+                    <div class="nav-item {% if current == 'create_student' or current == 'create_instructor' %}open{% endif %}" id="userMenu">
+                        <button type="button" class="nav-link nav-toggle" aria-expanded="false">
+                            <i class="bi bi-people nav-icon" aria-hidden="true"></i>
+                            <span class="nav-text">User Management</span>
+                            <i class="bi bi-chevron-right nav-arrow" aria-hidden="true"></i>
+                        </button>
+                        <div class="submenu">
+                            <a href="{% url 'create_student' %}" class="nav-link {% if current == 'create_student' %}active{% endif %}">Students</a>
+                            <a href="{% url 'create_instructor' %}" class="nav-link {% if current == 'create_instructor' %}active{% endif %}">Instructors</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR SYSTEM -->
+                <div class="nav-section">
+                    <span class="nav-label">QR System</span>
+                    <div class="nav-item {% if current == 'qr_list' %}open{% endif %}" id="qrMenu">
+                        <button type="button" class="nav-link nav-toggle" aria-expanded="false">
+                            <i class="bi bi-qr-code nav-icon" aria-hidden="true"></i>
+                            <span class="nav-text">QR Management</span>
+                            <i class="bi bi-chevron-right nav-arrow" aria-hidden="true"></i>
+                        </button>
+                        <div class="submenu">
+                            <a href="{% url 'qr_list' %}" class="nav-link {% if current == 'qr_list' %}active{% endif %}">QR Lists</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ANALYTICS -->
+                <div class="nav-section">
+                    <span class="nav-label">Analytics</span>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-bar-chart-line nav-icon" aria-hidden="true"></i> Reports <span class="nav-soon">Soon</span>
+                    </a>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-graph-up-arrow nav-icon" aria-hidden="true"></i> AI Forecasting <span class="nav-soon">Soon</span>
+                    </a>
+                </div>
+
+            {% endwith %}
+            </nav>
+
+            <!-- Footer -->
+            <div class="sidebar-footer">
+                <div class="user-strip">
+                    <div class="user-avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first }}{{ request.user.last_name|first }}{% else %}AD{% endif %}</div>
+                    <div class="user-info">
+                        <div class="user-name">{% if request.user.first_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}Administrator{% endif %}</div>
+                        <div class="user-role">System Admin</div>
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="logout-btn" type="submit">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </aside>
+
+    <div class="sb-overlay" id="sbOverlay"></div>
+
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT
+    ═══════════════════════════════════════ -->
+    <div class="main">
+
+        <header class="topbar">
+            <div class="topbar-left">
+                <button type="button" class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+            </div>
+            <span class="topbar-badge">Administrator</span>
+        </header>
+
+        <main class="content" id="mainContent" tabindex="-1">
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+</div>
+
+{% block extra_js %}{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+/* Sidebar: slide-in menu on phones + dropdown groups */
+(function () {
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sbOverlay');
+    var toggle  = document.getElementById('menuToggle');
+
+    function setOpen(open) {
+        sidebar.classList.toggle('sidebar-open', open);
+        overlay.style.display = open ? 'block' : 'none';
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) { var first = sidebar.querySelector('.nav-link'); if (first) first.focus(); }
+    }
+
+    toggle.addEventListener('click', function () { setOpen(!sidebar.classList.contains('sidebar-open')); });
+    overlay.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('sidebar-open')) { setOpen(false); toggle.focus(); }
+    });
+    window.matchMedia('(min-width: 992px)').addEventListener('change', function (e) { if (e.matches) setOpen(false); });
+
+    /* Dropdown groups: open one, close the others */
+    var items = document.querySelectorAll('.nav-item');
+    function syncAria() {
+        items.forEach(function (item) {
+            var btn = item.querySelector('.nav-toggle');
+            if (btn) btn.setAttribute('aria-expanded', item.classList.contains('open') ? 'true' : 'false');
+        });
+    }
+    items.forEach(function (item) {
+        var btn = item.querySelector('.nav-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            items.forEach(function (other) { if (other !== item) other.classList.remove('open'); });
+            item.classList.toggle('open');
+            syncAria();
+        });
+    });
+    syncAria();
+})();
+</script>
+
+</body>
+</html>

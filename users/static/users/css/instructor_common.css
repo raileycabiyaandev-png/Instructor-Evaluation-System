@@ -1,0 +1,668 @@
+/* ============================================================
+   users/static/users/css/instructor_common.css
+
+   Shared look of the MAIN CONTENT of every instructor page.
+   The sidebar CSS is NOT here (it is inline in templates/instructor_base.html).
+   Every instructor page loads this file in its own {% block extra_css %}.
+
+   Colors: ONE family only = ACLC navy + gold.
+     Navy deep  = Excellent / good news      Gold = needs attention
+     Blue       = Good                       Light navy = last period
+
+    1. Tokens and base         8. Controls (select, switch, segmented)
+    2. Page shell              9. Tables, badges, pager
+    3. Top bar                10. Info elements (notes, legend, trend)
+    4. Page header            11. Stat cards and overview layout
+    5. Cards (anatomy)        12. Rating hero
+    6. Tabs                   13. Charts
+    7. Buttons                14. Responsive
+   ============================================================ */
+
+
+/* ============================================================
+   1. TOKENS AND BASE
+   ============================================================ */
+:root {
+    --navy-950: #0b1229;
+    --navy-900: #13224f;
+    --navy-800: #1b2f6b;
+    --navy-700: #223a85;
+    --navy-600: #2f4a9e;
+    --navy-500: #5b78c4;
+    --navy-300: #9fb0dc;
+    --navy-200: #c9d4ee;
+    --navy-100: #e4eaf7;
+    --navy-50:  #f3f6fc;
+
+    --gold:        #c9a227;
+    --gold-bright: #e0bb4a;
+    --gold-soft:   #fbf3d5;
+    --gold-ink:    #7a5c14;
+
+    --ink:   #1c2540;
+    --muted: #5b6585;
+    --line:  #dbe2f0;
+    --bg:    #f4f6fb;
+
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(11, 18, 41, .05), 0 4px 14px rgba(11, 18, 41, .05);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    margin: 0;
+    font-family: "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4 {
+    margin: 0;
+    font-family: "Playfair Display", Georgia, serif;
+    line-height: 1.25;
+    color: var(--navy-900);
+}
+
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--navy-600); outline-offset: 2px; }
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 8px;
+    z-index: 100;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--navy-800);
+    font-weight: 600;
+}
+.skip-link:focus { left: 12px; }
+
+
+/* ============================================================
+   2. PAGE SHELL
+   ============================================================ */
+.app { display: flex; min-height: 100vh; min-height: 100dvh; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 28px calc(32px + env(safe-area-inset-bottom));
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+
+/* ============================================================
+   3. TOP BAR
+   ============================================================ */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 60px;
+    padding: env(safe-area-inset-top) 28px 0;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+}
+
+.topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.topbar-title {
+    overflow: hidden;
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--navy-900);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.topbar-badge {
+    padding: 3px 12px;
+    border: 1px solid var(--navy-200);
+    border-radius: 999px;
+    background: var(--navy-50);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy-700);
+}
+
+.menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: -10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    font-size: 26px;
+    color: var(--navy-800);
+    cursor: pointer;
+}
+
+
+/* ============================================================
+   4. PAGE HEADER  (breadcrumb + title)
+   ============================================================ */
+.crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: var(--muted);
+}
+.crumbs a { color: var(--navy-600); text-decoration: none; font-weight: 600; }
+.crumbs a:hover { text-decoration: underline; }
+.crumbs i { font-size: 11px; }
+
+.page-intro { margin-bottom: 20px; }
+.page-intro h2 { font-size: 28px; }
+.page-intro p { margin: 6px 0 0; color: var(--muted); }
+
+.page-intro-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+
+/* ============================================================
+   5. CARDS  (every card: head, body, foot)
+   ============================================================ */
+.card {
+    margin-bottom: 20px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+}
+.card-head h3 { font-size: 18px; }
+.card-sub { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.card-body { padding: 18px 20px; }
+.card-foot { padding: 12px 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+.card-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.card-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--navy-50);
+    color: var(--navy-700);
+    font-size: 18px;
+}
+
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.empty i { display: block; margin-bottom: 8px; font-size: 34px; color: var(--navy-300); }
+.empty h3 { margin-bottom: 4px; font-size: 18px; }
+.empty p { margin: 0; }
+
+
+/* ============================================================
+   6. TABS  (switch between sections without scrolling)
+   ============================================================ */
+.tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 50px;
+    padding: 0 16px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.tab:hover { color: var(--navy-700); }
+.tab[aria-selected="true"] { color: var(--navy-900); border-bottom-color: var(--gold); }
+
+.tabbed .card-head { border-top: 0; }
+
+
+/* ============================================================
+   7. BUTTONS
+   ============================================================ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.btn-primary { background: var(--navy-700); color: #fff; }
+.btn-primary:hover { background: var(--navy-800); }
+.btn-ghost { background: #fff; color: var(--navy-700); border-color: var(--navy-200); }
+.btn-ghost:hover { background: var(--navy-50); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sm { min-height: 40px; padding: 0 14px; font-size: 15px; }
+
+
+/* ============================================================
+   8. CONTROLS  (select, switch, two-choice switch)
+   ============================================================ */
+.control { display: inline-flex; align-items: center; gap: 8px; }
+.control label { font-size: 15px; font-weight: 600; color: var(--navy-800); white-space: nowrap; }
+
+.select {
+    min-height: 44px;
+    padding: 0 38px 0 12px;
+    border: 1px solid #aab5d3;
+    border-radius: 10px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2313224f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+    font: inherit;
+    font-size: 16px;                 /* 16px stops iPhone zoom */
+    color: var(--ink);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* On / off switch */
+.switch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track {
+    position: relative;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--navy-200);
+    transition: background .15s;
+}
+.switch-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(11, 18, 41, .3);
+    transition: transform .15s;
+}
+.switch input:checked + .switch-track { background: var(--navy-700); }
+.switch input:checked + .switch-track::after { transform: translateX(18px); }
+.switch input:focus-visible + .switch-track { outline: 3px solid var(--navy-600); outline-offset: 2px; }
+.switch-label { font-size: 15px; font-weight: 600; color: var(--navy-800); }
+
+/* Two-choice switch: "Last 4 terms | All terms" */
+.seg { display: inline-flex; padding: 3px; border: 1px solid var(--navy-200); border-radius: 10px; background: var(--navy-50); }
+.seg button {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy-700);
+    cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 3px rgba(11, 18, 41, .18); color: var(--navy-900); }
+
+
+/* ============================================================
+   9. TABLES, BADGES, PAGER
+   ============================================================ */
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+
+.data-table th {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--navy-50);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    color: var(--muted);
+}
+.data-table td,
+.data-table tbody th {
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    font-size: 16px;
+    font-weight: 400;
+    text-align: left;
+    vertical-align: middle;
+    color: var(--ink);
+}
+.data-table tbody th { font-weight: 600; }
+.data-table tbody tr:last-child td,
+.data-table tbody tr:last-child th { border-bottom: 0; }
+
+/* Level badges: deep navy = Excellent, light navy = Good, gold = Needs improvement */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.badge-high { background: var(--navy-800); color: #fff; }
+.badge-mid  { background: var(--navy-100); color: var(--navy-800); }
+.badge-low  { background: var(--gold-soft); color: var(--gold-ink); box-shadow: inset 0 0 0 1px rgba(201, 162, 39, .5); }
+
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.pager-info { font-size: 14px; color: var(--muted); }
+.pager-buttons { display: flex; gap: 8px; }
+
+
+/* ============================================================
+   10. INFO ELEMENTS  (notes, legend, change arrows, "view as table")
+   ============================================================ */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--navy-50);
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--navy-200);
+    border-radius: 10px;
+    background: var(--navy-50);
+    font-size: 15px;
+    color: var(--navy-800);
+}
+.note i { margin-top: 2px; }
+
+/* Up / down / same arrows: icon + words, never color alone */
+.trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.trend.up   { background: var(--navy-100); color: var(--navy-800); }
+.trend.down { background: var(--gold-soft); color: var(--gold-ink); }
+.trend.same { background: var(--navy-50); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* Color key under a chart */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); }
+.legend li { display: inline-flex; align-items: center; gap: 7px; }
+.key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.key--high { background: var(--navy-800); }
+.key--mid  { background: var(--navy-500); }
+.key--low  { background: var(--gold); }
+.key--prev { background: var(--navy-200); }
+.shape--up   { color: var(--navy-800); }
+.shape--same { color: var(--navy-500); }
+.shape--down { color: var(--gold-ink); }
+
+.disclosure { border-top: 1px solid var(--line); }
+.disclosure > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 0 20px;
+    font-weight: 600;
+    color: var(--navy-700);
+    list-style: none;
+    cursor: pointer;
+}
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::after { content: "\f282"; font-family: "bootstrap-icons"; font-size: 14px; }
+.disclosure[open] > summary::after { transform: rotate(180deg); }
+
+
+/* ============================================================
+   11. STAT CARDS AND OVERVIEW LAYOUT
+   ============================================================ */
+.overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.overview--single { grid-template-columns: 1fr; }
+.overview .hero { margin-bottom: 0; }
+
+.side { display: grid; gap: 12px; align-content: start; }
+
+.stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.stat-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--navy-50);
+    font-size: 19px;
+    color: var(--navy-700);
+}
+.stat-icon--gold { background: var(--gold-soft); color: var(--gold-ink); }
+
+.stat-body { min-width: 0; }
+.stat-label { font-size: 14px; font-weight: 600; color: var(--muted); }
+.stat-value {
+    margin-top: 2px;
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--navy-900);
+    overflow-wrap: anywhere;
+}
+.stat-value small { font-family: "Source Sans 3", system-ui, sans-serif; font-size: 15px; font-weight: 500; color: var(--muted); }
+.stat-value--text { font-size: 18px; }
+.stat-note { margin-top: 3px; font-size: 14px; color: var(--muted); }
+.stat-na { margin-top: 4px; font-size: 18px; font-weight: 600; color: var(--muted); }
+
+
+/* ============================================================
+   12. RATING HERO  (big navy banner)
+   ============================================================ */
+.hero {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+    padding: 26px 28px;
+    border: 1px solid rgba(201, 162, 39, .45);
+    border-radius: 16px;
+    background: linear-gradient(155deg, var(--navy-900) 0%, var(--navy-700) 100%);
+    box-shadow: 0 10px 30px rgba(19, 34, 79, .2);
+    color: #fff;
+}
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+}
+.hero > * { position: relative; }
+
+.hero-grid { display: grid; grid-template-columns: auto 1fr; gap: 22px 36px; align-items: center; }
+.hero-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.hero-title { font-family: "Source Sans 3", system-ui, sans-serif; font-size: 16px; font-weight: 600; color: var(--gold-bright); }
+.hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .14);
+    font-size: 13px;
+    font-weight: 600;
+}
+.hero-period { margin: 4px 0 0; font-size: 15px; color: rgba(255, 255, 255, .78); }
+
+.hero-score { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
+.hero-number { font-family: "Playfair Display", Georgia, serif; font-size: 64px; font-weight: 700; line-height: 1; }
+.hero-outof { font-size: 17px; color: rgba(255, 255, 255, .75); }
+
+.stars { position: relative; display: inline-block; margin-top: 10px; font-size: 26px; line-height: 1; }
+.stars-back { color: rgba(255, 255, 255, .22); }
+.stars-front { position: absolute; top: 0; left: 0; overflow: hidden; white-space: nowrap; color: var(--gold-bright); }
+
+.hero-verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(143, 166, 230, .25);
+    font-size: 17px;
+    font-weight: 700;
+    color: #dbe4fb;
+}
+.hero[data-level="high"] .hero-verdict { background: rgba(255, 255, 255, .2); color: #fff; }
+.hero[data-level="low"]  .hero-verdict { background: rgba(224, 187, 74, .24); color: #f6e2a0; }
+
+.hero-meaning { margin: 10px 0 0; color: rgba(255, 255, 255, .88); }
+
+/* Score meter: gold = needs improvement, blue = good, white = excellent */
+.meter { position: relative; display: flex; height: 10px; margin: 24px 0 12px; border-radius: 999px; }
+.meter-zone { display: block; height: 100%; }
+.meter-zone--low  { width: 70%; border-radius: 999px 0 0 999px; background: var(--gold-bright); }
+.meter-zone--mid  { width: 20%; background: #8fa6e6; }
+.meter-zone--high { width: 10%; border-radius: 0 999px 999px 0; background: #fff; }
+.meter-marker {
+    position: absolute;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    border: 4px solid var(--navy-900);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--gold-bright), 0 2px 8px rgba(0, 0, 0, .35);
+}
+
+.hero-guide { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 14px; color: rgba(255, 255, 255, .85); }
+.hero-guide li { display: inline-flex; align-items: center; gap: 6px; }
+.hero-guide i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.hero-guide .g-low  { background: var(--gold-bright); }
+.hero-guide .g-mid  { background: #8fa6e6; }
+.hero-guide .g-high { background: #fff; }
+.hero-note { margin: 14px 0 0; font-size: 15px; color: rgba(255, 255, 255, .8); }
+
+
+/* ============================================================
+   13. CHARTS
+   ============================================================ */
+.chart-wrap { position: relative; height: 300px; }
+.chart-wrap--bars { height: auto; min-height: 200px; }   /* JavaScript sets the real height */
+
+
+/* ============================================================
+   14. RESPONSIVE
+   ============================================================ */
+@media (max-width: 991.98px) {
+    .menu-toggle { display: inline-flex; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .overview { grid-template-columns: 1fr; }
+    .side { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+
+@media (max-width: 575.98px) {
+    .topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+    .topbar-title { font-size: 18px; }
+
+    .page { padding: 16px max(16px, env(safe-area-inset-left)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right)); }
+    .page-intro h2 { font-size: 23px; }
+
+    .card-head, .card-body { padding-left: 16px; padding-right: 16px; }
+    .card-foot, .disclosure > summary, .pager { padding-left: 16px; padding-right: 16px; }
+    .data-table th, .data-table td, .data-table tbody th { padding-left: 16px; padding-right: 16px; }
+
+    .tabs { padding: 0 4px; }
+    .tab { flex: 1; justify-content: center; padding: 0 10px; font-size: 15px; }
+
+    .tools { width: 100%; }
+    .control { width: 100%; }
+    .control .select { flex: 1; }
+    .seg { width: 100%; }
+    .seg button { flex: 1; }
+
+    .hero { padding: 20px 18px; }
+    .hero-number { font-size: 54px; }
+    .chart-wrap { height: 250px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}

@@ -12,6 +12,7 @@ from .forms import (
     InstructorFirstLoginForm,
     StudentUpdateForm,
     InstructorUpdateForm,
+    StudentProfileForm,
 )
 from .models import User
 from evaluation.models import Evaluation, EvaluationPeriod
@@ -19,6 +20,8 @@ from django.http import JsonResponse
 from django.contrib.auth import update_session_auth_hash
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
+from django.contrib.auth.forms import PasswordChangeForm
+from academics.utils import get_open_period, instructor_cards_for_student
 from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.contrib import messages
@@ -28,6 +31,7 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.db.models import Avg, Count
+from django.utils import timezone
 from evaluation.models import Evaluation, EvaluationPeriod
 
 
@@ -295,41 +299,59 @@ def create_instructor(request):
 @login_required
 @no_cache
 def student_dashboard(request):
+    """
+    Student home page.
 
-    if request.user.role != 'student':
+    Shows ONLY the instructors who teach the student's own section in the
+    semester of the open Evaluation Period (both evaluated and not yet
+    evaluated), the student's progress, and their own evaluation history.
+    """
+    student = request.user
+
+    if student.role != 'student':
         return redirect('login')
 
-    active_period = EvaluationPeriod.objects.filter(is_active=True).first()
+    period = get_open_period()
+    today = timezone.now().date()
 
-    if not active_period:
-        return render(request, 'users/student_dashboard.html', {
-            'active_period': None,
-            'evaluated_teachers': [],
-            'pending_teachers': []
-        })
+    cards = []
+    if period and student.section_id:
+        cards = instructor_cards_for_student(student, period)
 
-    evaluations = Evaluation.objects.filter(
-        student=request.user,
-        period=active_period
+    # What should the page tell the student?
+    if not student.section_id:
+        state = 'no_section'          # admin has not placed the student in a section
+    elif not period:
+        state = 'no_period'           # no open evaluation period
+    elif not cards:
+        state = 'no_assignments'      # section has no teaching assignment this semester
+    else:
+        state = 'ready'
+
+    pending_cards = [c for c in cards if not c['is_evaluated']]
+    evaluated_cards = [c for c in cards if c['is_evaluated']]
+    total = len(cards)
+
+    history = (
+        Evaluation.objects
+        .filter(student=student)
+        .select_related('teacher', 'period')
+        .order_by('-created_at')[:50]
     )
 
-    evaluated_ids = set(evaluations.values_list('teacher_id', flat=True))
-
-    teachers = User.objects.filter(role='instructor')
-
-    teacher_list = [
-        {
-            'teacher': t,
-            'is_evaluated': t.id in evaluated_ids
-        }
-        for t in teachers
-    ]
-
-    evaluated_teachers = [t for t in teacher_list if t['is_evaluated']]
-
     return render(request, 'users/student_dashboard.html', {
-        'active_period': active_period,
-        'evaluated_teachers': evaluated_teachers,
+        'state': state,
+        'active_period': period,
+        'days_left': (period.end_date - today).days if period else None,
+
+        'pending_cards': pending_cards,
+        'evaluated_cards': evaluated_cards,
+        'total_instructors': total,
+        'evaluated_count': len(evaluated_cards),
+        'pending_count': len(pending_cards),
+        'progress_percent': round(len(evaluated_cards) / total * 100) if total else 0,
+
+        'history': history,
     })
 
 # ─────────────────────────────────────────────
@@ -909,16 +931,48 @@ def delete_instructor(request, pk):
 @no_cache
 def student_update_profile(request):
 
+    if request.user.role != 'student':
+        return redirect('login')
+
     if request.method == "POST":
 
-        request.user.first_name = request.POST.get("first_name")
-        request.user.middle_name = request.POST.get("middle_name")
-        request.user.last_name = request.POST.get("last_name")
-        request.user.email = request.POST.get("email")
+        form = StudentProfileForm(request.POST, instance=request.user)
 
-        request.user.save()
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+        else:
+            for errors in form.errors.values():
+                for error in errors:
+                    messages.error(request, error)
 
-        messages.success(request, "Profile updated successfully.")
+    return redirect(reverse("student_dashboard") + "#profile")
+
+
+@login_required
+@no_cache
+def student_change_password(request):
+
+    if request.user.role != 'student':
+        return redirect('login')
+
+    if request.method == "POST":
+
+        form = PasswordChangeForm(request.user, request.POST)
+
+        if form.is_valid():
+
+            if form.cleaned_data['old_password'] == form.cleaned_data['new_password1']:
+                messages.error(request, "Your new password must be different from your current password.")
+            else:
+                user = form.save()
+                update_session_auth_hash(request, user)   # keep the student logged in
+                messages.success(request, "Password changed successfully.")
+
+        else:
+            for errors in form.errors.values():
+                for error in errors:
+                    messages.error(request, error)
 
     return redirect(reverse("student_dashboard") + "#profile")
 

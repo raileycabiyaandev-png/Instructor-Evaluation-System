@@ -57,6 +57,16 @@
                     Dashboard
                 </button>
 
+                <button class="sb-link" data-view="history">
+                    <span class="sb-icon">
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                            <circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/>
+                            <path d="M7.5 4v3.7l2.4 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    My Evaluations
+                </button>
+
                 <button class="sb-link" data-view="profile">
                     <span class="sb-icon">
                         <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -108,6 +118,16 @@
         <div class="page-scroll">
             <div class="page-wrap">
 
+                <!-- Messages from the system (success / errors) -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="page-msg {{ message.tags }}">
+                        <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
                 <!-- ══════════════════════════════════
                      DASHBOARD
                 ══════════════════════════════════ -->
@@ -117,8 +137,14 @@
                     <div class="greeting">
                         <h1 class="greeting-title">Welcome back, {{ request.user.first_name }}.</h1>
                         <p class="greeting-sub">
-                            {% if active_period %}
-                                Evaluation is currently open. Complete your instructor evaluations before the period ends.
+                            {% if state == 'ready' and pending_count %}
+                                You have {{ pending_count }} instructor{{ pending_count|pluralize }} left to evaluate. Scan their QR code to begin.
+                            {% elif state == 'ready' %}
+                                You have evaluated all of your instructors for this period. Thank you!
+                            {% elif state == 'no_section' %}
+                                Your account is not assigned to a section yet.
+                            {% elif state == 'no_assignments' %}
+                                No instructors are assigned to your section for this semester yet.
                             {% else %}
                                 No evaluation period is active right now. Check back later.
                             {% endif %}
@@ -154,12 +180,10 @@
                                                 <span class="meta-val">{{ active_period.get_term_display }}</span>
                                             </div>
                                             <div class="col-6 col-md-3 period-meta-cell">
-                                                <span class="meta-lbl">Status</span>
-                                                <span class="meta-val">
-                                                    <span class="pill-active">
-                                                        <span class="pulse-dot"></span>
-                                                        Active
-                                                    </span>
+                                                <span class="meta-lbl">Closes On</span>
+                                                <span class="meta-val">{{ active_period.end_date|date:"M d, Y" }}</span>
+                                                <span class="meta-sub {% if days_left <= 2 %}urgent{% endif %}">
+                                                    {% if days_left == 0 %}Closes today{% elif days_left == 1 %}1 day left{% else %}{{ days_left }} days left{% endif %}
                                                 </span>
                                             </div>
                                         </div>
@@ -175,13 +199,29 @@
                             </div>
                             {% endif %}
 
-                            <!-- Scan QR (only when period is active) -->
-                            {% if active_period %}
+                            {% if state == 'no_section' %}
+                            <div class="state-box">
+                                <i class="bi bi-person-lines-fill"></i>
+                                <div>
+                                    <h4>No section assigned yet</h4>
+                                    <p>We show only the instructors who teach your section. Please ask your administrator to place you in a section.</p>
+                                </div>
+                            </div>
+                            {% elif state == 'no_assignments' %}
+                            <div class="state-box">
+                                <i class="bi bi-journal-x"></i>
+                                <div>
+                                    <h4>No instructors assigned to {{ request.user.section.name }}</h4>
+                                    <p>Your administrator has not assigned instructors to your section for this semester yet. Please check back later.</p>
+                                </div>
+                            </div>
+                            {% endif %}
 
+                            {% if state == 'ready' %}
+
+                            <!-- General scan (any of MY instructors) -->
                             <div class="scan-card">
                                 <div class="scan-icon-box">
-                                    <!-- Academic scan-point glyph: corner scan brackets
-                                         framing a graduation cap, in gold on navy. -->
                                     <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M5 13V8.5A3.5 3.5 0 0 1 8.5 5H13" stroke="#e8c97a" stroke-width="2" stroke-linecap="round"/>
                                         <path d="M35 13V8.5A3.5 3.5 0 0 0 31.5 5H27" stroke="#e8c97a" stroke-width="2" stroke-linecap="round"/>
@@ -194,46 +234,114 @@
                                 </div>
                                 <div class="scan-body">
                                     <div class="scan-title">Scan Instructor QR Code</div>
+                                    <p class="scan-desc">Ask your instructor to show their QR code, then scan it to start the evaluation.</p>
                                 </div>
                                 <a href="{% url 'scan_qr_page' %}" class="scan-btn">
                                     <i class="bi bi-camera-fill"></i>
                                     Scan QR Code
                                 </a>
                             </div>
+
+                            <!-- NOT EVALUATED YET -->
+                            {% if pending_cards %}
+                            <div class="inst-group-title">To evaluate <span class="count">{{ pending_count }}</span></div>
+                            <div class="inst-grid">
+                                {% for item in pending_cards %}
+                                <div class="inst-card pending">
+                                    <div class="inst-top">
+                                        <div class="side-avatar">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
+                                        <div style="min-width:0;">
+                                            <div class="inst-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
+                                            <div class="inst-dept">{{ item.teacher.department.name|default:"—" }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="inst-subjects">
+                                        {% for subject in item.subjects %}<span class="subject-chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}
+                                    </div>
+                                    <div class="inst-foot">
+                                        <span class="chip-pending"><i class="bi bi-hourglass-split" style="font-size:10px;"></i> Not evaluated</span>
+                                        <a href="{% url 'scan_qr_page' %}?teacher={{ item.teacher.id }}" class="inst-scan">
+                                            <i class="bi bi-qr-code-scan"></i> Scan QR
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="all-done">
+                                <i class="bi bi-trophy-fill"></i>
+                                All done! You evaluated every instructor of your section for this period.
+                            </div>
+                            {% endif %}
+
+                            <!-- ALREADY EVALUATED -->
+                            {% if evaluated_cards %}
+                            <div class="inst-group-title">Evaluated <span class="count">{{ evaluated_count }}</span></div>
+                            <div class="inst-grid">
+                                {% for item in evaluated_cards %}
+                                <div class="inst-card evaluated">
+                                    <div class="inst-top">
+                                        <div class="side-avatar">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
+                                        <div style="min-width:0;">
+                                            <div class="inst-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
+                                            <div class="inst-dept">{{ item.teacher.department.name|default:"—" }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="inst-subjects">
+                                        {% for subject in item.subjects %}<span class="subject-chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}
+                                    </div>
+                                    <div class="inst-foot">
+                                        <span class="chip-evaluated"><i class="bi bi-check-circle-fill" style="font-size:10px;"></i> Evaluated</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
                             {% endif %}
 
                         </div>
 
-                        <!-- ── Side column: Evaluation Status ── -->
+                        <!-- ── Side column ── -->
                         <div class="dash-side">
-                            <div class="side-panel">
-                                <div class="side-panel-head">
-                                    <span class="side-panel-title">Evaluation Status</span>
-                                    {% if evaluated_teachers %}
-                                    <span class="side-count">{{ evaluated_teachers|length }} evaluated</span>
-                                    {% endif %}
-                                </div>
+                            <div class="side-stack">
 
-                                {% if evaluated_teachers %}
-                                <div class="side-list">
-                                    {% for item in evaluated_teachers %}
-                                    <div class="side-row">
-                                        <div class="side-row-top">
-                                            <div class="side-avatar">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
-                                            <div style="flex:1;min-width:0;">
-                                                <div class="t-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
-                                                <div class="t-dept">{{ item.teacher.department.code|default:"—" }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="side-row-status">
-                                            <i class="bi bi-check-circle-fill" style="font-size:10px;"></i>
-                                            Evaluated
+                                <!-- Progress -->
+                                {% if state == 'ready' %}
+                                <div class="side-panel">
+                                    <div class="side-panel-head">
+                                        <span class="side-panel-title">My Progress</span>
+                                        <span class="side-count">{{ progress_percent }}%</span>
+                                    </div>
+                                    <div class="progress-body">
+                                        <div class="progress-figure">{{ evaluated_count }} <small>of {{ total_instructors }} evaluated</small></div>
+                                        <div class="progress-track"><div class="progress-fill" style="width: {{ progress_percent }}%;"></div></div>
+                                        <div class="progress-note">
+                                            {% if pending_count %}{{ pending_count }} instructor{{ pending_count|pluralize }} left.{% else %}Everything is complete.{% endif %}
                                         </div>
                                     </div>
-                                    {% endfor %}
                                 </div>
-                                
                                 {% endif %}
+
+                                <!-- My class -->
+                                <div class="side-panel class-panel">
+                                    <div class="side-panel-head">
+                                        <span class="side-panel-title">My Class</span>
+                                    </div>
+                                    <div class="profile-row">
+                                        <span class="p-label">Section</span>
+                                        <span class="p-value">{{ request.user.section.name|default:"Not assigned" }}</span>
+                                    </div>
+                                    <div class="profile-row">
+                                        <span class="p-label">Program</span>
+                                        <span class="p-value">{{ request.user.get_program_display|default:"—" }}</span>
+                                    </div>
+                                    <div class="profile-row">
+                                        <span class="p-label">Department</span>
+                                        <span class="p-value">{{ request.user.section.department.name|default:"—" }}</span>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
@@ -243,7 +351,55 @@
 
 
                 <!-- ══════════════════════════════════
-                     Profile Updating
+                     MY EVALUATIONS (history)
+                ══════════════════════════════════ -->
+                <div class="view" id="view-history">
+
+                    <div class="greeting">
+                        <h1 class="greeting-title">My Evaluations</h1>
+                        <p class="greeting-sub">Evaluations you submitted. Your comments stay anonymous to instructors.</p>
+                    </div>
+
+                    {% if history %}
+                    <div class="hist-wrap">
+                        <div class="hist-scroll">
+                            <table class="hist-table">
+                                <thead>
+                                    <tr>
+                                        <th>Instructor</th>
+                                        <th>Evaluation Period</th>
+                                        <th>Date Submitted</th>
+                                        <th>Your Average</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in history %}
+                                    <tr>
+                                        <td><div class="h-name">{{ e.teacher.first_name }} {{ e.teacher.last_name }}</div></td>
+                                        <td>
+                                            {{ e.period.get_term_display }}
+                                            <div class="h-sub">S.Y. {{ e.period.school_year }} · {{ e.period.get_semester_display }}</div>
+                                        </td>
+                                        <td>{{ e.created_at|date:"M d, Y" }}</td>
+                                        <td class="hist-score"><i class="bi bi-star-fill"></i>{{ e.average_score }} / 5</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="eval-empty">
+                        <i class="bi bi-clipboard-check"></i>
+                        <p>You have not submitted any evaluation yet.</p>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+
+                <!-- ══════════════════════════════════
+                     PROFILE
                 ══════════════════════════════════ -->
                 <div class="view" id="view-profile">
 
@@ -251,77 +407,101 @@
                         <div class="hero-avatar">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
                         <div class="hero-text">
                             <div class="hero-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
-                            <div class="hero-role">Student Account</div>
+                            <div class="hero-role">Student Account{% if request.user.section %} · {{ request.user.section.name }}{% endif %}</div>
                         </div>
                     </div>
 
-                    {% if messages %}
-                        {% for message in messages %}
-                        <div class="pf-alert">
-                            <i class="bi bi-check-circle-fill"></i>
-                            {{ message }}
-                        </div>
-                        {% endfor %}
-                    {% endif %}
+                    <div class="profile-grid">
 
-                    <div class="profile-panel">
-                        <div class="profile-panel-head">
-                            <div>
+                        <!-- Edit details -->
+                        <div class="profile-panel">
+                            <div class="profile-panel-head">
                                 <div class="panel-head-title">Edit Your Details</div>
                             </div>
+
+                            <form method="post" action="{% url 'student_update_profile' %}" class="profile-form" id="profileForm">
+                                {% csrf_token %}
+
+                                <div class="pf-row pf-two-col">
+                                    <div>
+                                        <label class="pf-label" for="id_first_name">First Name</label>
+                                        <input type="text" id="id_first_name" name="first_name" class="pf-input"
+                                               value="{{ request.user.first_name }}" required>
+                                    </div>
+                                    <div>
+                                        <label class="pf-label" for="id_last_name">Last Name</label>
+                                        <input type="text" id="id_last_name" name="last_name" class="pf-input"
+                                               value="{{ request.user.last_name }}" required>
+                                    </div>
+                                </div>
+
+                                <div class="pf-row">
+                                    <label class="pf-label" for="id_middle_name">Middle Name</label>
+                                    <input type="text" id="id_middle_name" name="middle_name" class="pf-input"
+                                           value="{{ request.user.middle_name }}">
+                                </div>
+
+                                <div class="pf-row">
+                                    <label class="pf-label" for="id_email">Email Address</label>
+                                    <input type="email" id="id_email" name="email" class="pf-input"
+                                           value="{{ request.user.email }}" required>
+                                    <div class="pf-help">This is also the email you use to log in.</div>
+                                </div>
+
+                                <div class="pf-row">
+                                    <label class="pf-label">Program &amp; Section</label>
+                                    <input type="text" class="pf-input" disabled
+                                           value="{{ request.user.get_program_display|default:'—' }} · {{ request.user.section.name|default:'No section yet' }}">
+                                    <div class="pf-help">Your program and section are set by the administrator.</div>
+                                </div>
+
+                                <div class="pf-actions">
+                                    <button type="submit" class="pf-save-btn" id="pfSaveBtn" disabled>
+                                        <i class="bi bi-check2-circle"></i>
+                                        Save Changes
+                                    </button>
+                                    <span class="pf-hint" id="pfHint">No changes to save yet.</span>
+                                </div>
+                            </form>
                         </div>
 
-                        <form method="post" action="{% url 'student_update_profile' %}" class="profile-form" id="profileForm">
-                            {% csrf_token %}
+                        <!-- Change password -->
+                        <div class="profile-panel">
+                            <div class="profile-panel-head">
+                                <div class="panel-head-title">Change Password</div>
+                            </div>
 
-                            <div class="pf-row pf-two-col">
-                                <div>
-                                    <label class="pf-label" for="id_first_name">First Name</label>
-                                    <input type="text" id="id_first_name" name="first_name" class="pf-input"
-                                           value="{{ request.user.first_name }}" required>
+                            <form method="post" action="{% url 'student_change_password' %}" class="profile-form">
+                                {% csrf_token %}
+
+                                <div class="pf-row">
+                                    <label class="pf-label" for="id_old_password">Current Password</label>
+                                    <input type="password" id="id_old_password" name="old_password" class="pf-input"
+                                           autocomplete="current-password" required>
                                 </div>
-                                <div>
-                                    <label class="pf-label" for="id_last_name">Last Name</label>
-                                    <input type="text" id="id_last_name" name="last_name" class="pf-input"
-                                           value="{{ request.user.last_name }}" required>
+
+                                <div class="pf-row">
+                                    <label class="pf-label" for="id_new_password1">New Password</label>
+                                    <input type="password" id="id_new_password1" name="new_password1" class="pf-input"
+                                           autocomplete="new-password" required>
+                                    <div class="pf-help">At least 8 characters. Not too common and not only numbers.</div>
                                 </div>
-                            </div>
 
-                            <div class="pf-row">
-                                <label class="pf-label" for="id_middle_name">Middle Name</label>
-                                <input type="text" id="id_middle_name" name="middle_name" class="pf-input"
-                                       value="{{ request.user.middle_name }}">
-                            </div>
-
-                            <div class="pf-row">
-                                <label class="pf-label" for="id_email">Email Address</label>
-                                <input type="email" id="id_email" name="email" class="pf-input"
-                                       value="{{ request.user.email }}" required>
-                            </div>
-
-                            <div class="pf-row pf-two-col">
-                    
-                                <div>
-                                    <label class="pf-label" for="id_program">Program</label>
-                                    <select id="id_program" name="program" class="pf-input">
-                                        <option value="" {% if not request.user.program %}selected{% endif %}>—</option>
-                                        <option value="it" {% if request.user.program == 'it' %}selected{% endif %}>BSIT</option>
-                                        <option value="cs" {% if request.user.program == 'cs' %}selected{% endif %}>BSCS</option>
-                                        <option value="hm" {% if request.user.program == 'hm' %}selected{% endif %}>BSHM</option>
-                                        <option value="ad" {% if request.user.program == 'ad' %}selected{% endif %}>BSAD</option>
-                                        <option value="ac" {% if request.user.program == 'ac' %}selected{% endif %}>BSA</option>
-                                    </select>
+                                <div class="pf-row">
+                                    <label class="pf-label" for="id_new_password2">Confirm New Password</label>
+                                    <input type="password" id="id_new_password2" name="new_password2" class="pf-input"
+                                           autocomplete="new-password" required>
                                 </div>
-                            </div>
 
-                            <div class="pf-actions">
-                                <button type="submit" class="pf-save-btn" id="pfSaveBtn" disabled>
-                                    <i class="bi bi-check2-circle"></i>
-                                    Save Changes
-                                </button>
-                                <span class="pf-hint" id="pfHint">No changes to save yet.</span>
-                            </div>
-                        </form>
+                                <div class="pf-actions">
+                                    <button type="submit" class="pf-save-btn">
+                                        <i class="bi bi-key-fill"></i>
+                                        Update Password
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
                     </div>
 
                 </div>
@@ -338,11 +518,12 @@
 
 var VIEW_TITLES = {
     dashboard: 'Dashboard',
+    history: 'My Evaluations',
     profile: 'Profile'
 };
 
 var DEFAULT_VIEW = 'dashboard';
-var VALID_VIEWS = ['dashboard', 'profile'];
+var VALID_VIEWS = ['dashboard', 'history', 'profile'];
 
 
 function showView(view) {

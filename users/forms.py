@@ -332,3 +332,34 @@ class InstructorUpdateForm(forms.ModelForm):
         self.fields['department'].queryset = active_departments(self.instance.department_id)
         self.fields['department'].empty_label = '— Select department —'
         self.fields['department'].required = True
+
+
+# =========================
+# STUDENT EDITS OWN PROFILE
+# (name + email only. Program and section are set by the Admin.)
+# =========================
+class StudentProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'middle_name', 'last_name', 'email']
+
+    def clean_first_name(self):
+        value = self.cleaned_data['first_name'].strip()
+        if not value:
+            raise forms.ValidationError("First name is required.")
+        return value
+
+    def clean_last_name(self):
+        value = self.cleaned_data['last_name'].strip()
+        if not value:
+            raise forms.ValidationError("Last name is required.")
+        return value
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip()
+
+        taken = User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists()
+        if taken:
+            raise forms.ValidationError("That email address is already used by another account.")
+
+        return email

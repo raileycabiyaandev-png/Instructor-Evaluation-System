@@ -56,8 +56,15 @@
                     <p>
                         {{ teacher.department.code|default:"INSTRUCTOR" }}
                         •
-                        {{ period.name|default:"Evaluation Period" }}
+                        S.Y. {{ period.school_year }} {{ period.get_semester_display }} — {{ period.get_term_display }}
                     </p>
+
+                    {% if subjects %}
+                    <p>
+                        Teaches your section:
+                        {% for subject in subjects %}{{ subject.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </p>
+                    {% endif %}
 
                 </div>
 
@@ -229,6 +236,7 @@
                         <textarea
                             name="comment"
                             id="comment"
+                            maxlength="1000"
                             placeholder="Provide additional feedback, observations, or recommendations..."></textarea>
 
                     </div>

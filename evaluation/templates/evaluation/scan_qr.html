@@ -259,14 +259,16 @@
     <p>Point your camera at the teacher's QR code<br>to begin your evaluation</p>
   </div>
 
-  <!-- Teacher context (shown if coming from dashboard with query params) -->
-  <div class="teacher-context" id="teacherContext" style="display:none;">
+  <!-- Teacher context (shown when the student came from an instructor card) -->
+  {% if expected_teacher %}
+  <div class="teacher-context" id="teacherContext" style="display:flex;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <div>
-      <span>Scanning for teacher — </span>
-      <strong id="teacherContextText">loading...</strong>
+      <span>Scanning for instructor — </span>
+      <strong id="teacherContextText">{{ expected_teacher.get_full_name }}</strong>
     </div>
   </div>
+  {% endif %}
 
   <!-- Status messages -->
   <div class="scan-status" id="scanStatus"></div>
@@ -292,17 +294,8 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
-  // Read query params passed from the dashboard
-  const params = new URLSearchParams(window.location.search);
-  const expectedTeacherId = params.get('teacher');
-  const expectedPeriodId  = params.get('period');
-
-  // Show teacher context badge if params are present
-  if (expectedTeacherId) {
-    document.getElementById('teacherContext').style.display = 'flex';
-    document.getElementById('teacherContextText').textContent =
-      'Teacher ID #' + expectedTeacherId;
-  }
+  // The instructor the student chose on the dashboard (empty if they used the general Scan button)
+  const expectedTeacherId = "{% if expected_teacher %}{{ expected_teacher.id }}{% endif %}";
 
   const statusEl = document.getElementById('scanStatus');
 
@@ -318,13 +311,29 @@
 
     scanning = false;
 
-    showStatus('QR code detected — redirecting…', 'success');
-
     try {
         const url = new URL(decodedText, window.location.origin);
 
+        // Only accept QR codes made by this system (they point to /evaluation/qr/)
+        if (url.pathname !== '/evaluation/qr/') {
+            showStatus('This is not an evaluation QR code.', 'error');
+            setTimeout(() => { scanning = true; }, 1500);
+            return;
+        }
+
+        // If the student chose an instructor, the QR code must belong to that instructor
+        const scannedTeacherId = url.searchParams.get('teacher');
+        if (expectedTeacherId && scannedTeacherId !== expectedTeacherId) {
+            showStatus('This QR code belongs to a different instructor. Scan the one you selected.', 'error');
+            setTimeout(() => { scanning = true; }, 2000);
+            return;
+        }
+
+        showStatus('QR code detected — redirecting…', 'success');
+
         setTimeout(() => {
-            window.location.href = url.toString();
+            // stay on the website the student is using (works on localhost, ngrok, or a real domain)
+            window.location.href = window.location.origin + url.pathname + url.search;
         }, 600);
 
     } catch (e) {

@@ -20,6 +20,9 @@ from collections import defaultdict
 import json
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
+from academics.utils import get_open_period, subjects_taught_to_student
 
 def no_cache(view_func): # prevent caching 
     def wrapper(request, *args, **kwargs):
@@ -54,6 +57,51 @@ def admin_required(view_func):
             return redirect('login')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+def student_required(view_func):
+    """Blocks everyone except students from the student pages."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated or request.user.role != 'student':
+            return redirect('login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def student_notice(request, kind, **extra):
+    """
+    One friendly full-page message for students.
+    kind: closed | already | no_section | not_assigned
+    """
+    notices = {
+        'closed': {
+            'icon': 'bi-calendar-x',
+            'tone': 'danger',
+            'title': 'Evaluation Closed',
+            'message': 'There is no open evaluation period right now. Please check back when your administrator opens the next one.',
+        },
+        'already': {
+            'icon': 'bi-check-circle-fill',
+            'tone': 'success',
+            'title': 'Already Submitted',
+            'message': 'You already evaluated this instructor for the current evaluation period. Thank you!',
+        },
+        'no_section': {
+            'icon': 'bi-person-lines-fill',
+            'tone': 'warning',
+            'title': 'No Section Assigned Yet',
+            'message': 'Your account is not assigned to a section yet, so we cannot tell which instructors you may evaluate. Please contact your administrator.',
+        },
+        'not_assigned': {
+            'icon': 'bi-shield-exclamation',
+            'tone': 'warning',
+            'title': 'Instructor Not In Your Section',
+            'message': 'This instructor is not assigned to your section for the current semester, so you cannot evaluate them. If you think this is a mistake, contact your administrator.',
+        },
+    }
+    context = dict(notices[kind])
+    context.update(extra)
+    return render(request, 'evaluation/student_notice.html', context)
+
 
 RATING_FIELDS = [
     ('teaching_effectiveness', 'Teaching Effectiveness'),
@@ -190,22 +238,44 @@ def delete_evaluation(request, pk):
         'period': period
     })
 
+def _check_student_may_evaluate(request, teacher_id, period_id):
+    """
+    The 4 safety checks used by every student evaluation page.
+    Returns (teacher, period, subjects, None) when allowed,
+    or (None, None, None, response) with the page to show when NOT allowed.
+    """
+    student = request.user
+    teacher = get_object_or_404(User, id=teacher_id, role='instructor')
+
+    # 1. Is an evaluation period open (and is it the one in the address)?
+    period = get_open_period()
+    if period is None or period.pk != period_id:
+        return None, None, None, student_notice(request, 'closed')
+
+    # 2. Does the student have a section?
+    if not student.section_id:
+        return None, None, None, student_notice(request, 'no_section')
+
+    # 3. Does this instructor teach the student's section this semester?
+    subjects = subjects_taught_to_student(student, teacher, period)
+    if not subjects:
+        return None, None, None, student_notice(
+            request, 'not_assigned', teacher_name=teacher.get_full_name()
+        )
+
+    return teacher, period, subjects, None
+
+
 @login_required
+@student_required
 def submit_evaluation(request, teacher_id, pk):
 
     if request.method != 'POST':
         return HttpResponse("Invalid request", status=405)
 
-    teacher = get_object_or_404(
-        User,
-        id=teacher_id,
-        role='instructor'
-    )
-
-    period = get_object_or_404(
-        EvaluationPeriod,
-        id=pk
-    )
+    teacher, period, subjects, blocked = _check_student_may_evaluate(request, teacher_id, pk)
+    if blocked:
+        return blocked
 
     # prevent duplicate evaluation
     if Evaluation.objects.filter(
@@ -213,8 +283,7 @@ def submit_evaluation(request, teacher_id, pk):
         teacher=teacher,
         period=period
     ).exists():
-        messages.warning(request, "Already evaluated this instructor.")
-        return redirect('student_dashboard')
+        return student_notice(request, 'already')
 
     ratings = {
         field: safe_rating(request.POST.get(field))
@@ -225,41 +294,50 @@ def submit_evaluation(request, teacher_id, pk):
         messages.error(request, "Complete all ratings.")
         return redirect('evaluate_teacher_page', teacher_id=teacher.id, pk=period.id)
 
-    Evaluation.objects.create(
-        student=request.user,
-        teacher=teacher,
-        period=period,
-        comment=request.POST.get('comment', '').strip(),
-        **ratings
-    )
+    try:
+        Evaluation.objects.create(
+            student=request.user,
+            teacher=teacher,
+            period=period,
+            comment=request.POST.get('comment', '').strip()[:1000],
+            **ratings
+        )
+    except IntegrityError:
+        # two clicks at the same time: the database blocked the 2nd copy
+        return student_notice(request, 'already')
+    except ValidationError:
+        messages.error(request, "Your evaluation could not be saved. Please try again.")
+        return redirect('evaluate_teacher_page', teacher_id=teacher.id, pk=period.id)
 
-    messages.success(request, "Evaluation submitted successfully.")
+    messages.success(
+        request,
+        f"Thank you! Your evaluation of {teacher.get_full_name()} was submitted."
+    )
     return redirect('student_dashboard')
 
 @login_required
+@student_required
 @no_cache
 def evaluate_teacher_page(request, teacher_id, pk):
     """
     Displays the star-rating evaluation form for a specific teacher
-    and period.  Access is blocked if the period is closed or the
-    student has already submitted.
+    and period.  Access is blocked if the period is closed, the instructor
+    does not teach the student's section, or the student already submitted.
     """
-    period  = get_object_or_404(EvaluationPeriod, pk=pk)
-    teacher = get_object_or_404(User, id=teacher_id, role='instructor')
- 
-    # 🚫 Period closed — hard redirect
-    if not period.is_active:
-        return redirect('evaluation_closed')
- 
+    teacher, period, subjects, blocked = _check_student_may_evaluate(request, teacher_id, pk)
+    if blocked:
+        return blocked
+
     already_evaluated = Evaluation.objects.filter(
         student=request.user,
         teacher=teacher,
         period=period,
     ).exists()
- 
+
     return render(request, 'evaluation/evaluate_teacher.html', {
         'teacher':           teacher,
         'period':            period,
+        'subjects':          subjects,
         'ratings':           RATING_FIELDS,
         'already_evaluated': already_evaluated,
     })
@@ -351,47 +429,71 @@ def delete_qr(request, qr_id):
     return redirect('qr_list')
 
 @login_required
+@student_required
 def evaluation_closed_page(request):
-    return render(request, 'evaluation/evaluation_closed.html')
+    return student_notice(request, 'closed')
 
 @login_required
+@student_required
+@no_cache
 def scan_qr_page(request):
-    return render(request, 'evaluation/scan_qr.html')
+    """
+    The camera page. When the student arrives from an instructor card
+    (?teacher=ID) we show that instructor's name and the page warns if a
+    different instructor's QR code is scanned.
+    """
+    period = get_open_period()
+
+    if period is None:
+        return student_notice(request, 'closed')
+
+    if not request.user.section_id:
+        return student_notice(request, 'no_section')
+
+    expected_teacher = None
+    teacher_id = request.GET.get('teacher', '')
+
+    if teacher_id.isdigit():
+        candidate = User.objects.filter(id=int(teacher_id), role='instructor').first()
+        if candidate and subjects_taught_to_student(request.user, candidate, period):
+            expected_teacher = candidate
+
+    return render(request, 'evaluation/scan_qr.html', {
+        'expected_teacher': expected_teacher,
+    })
 
 @login_required
+@student_required
 def qr_redirect_handler(request):
 
-    teacher_id = request.GET.get('teacher')
+    teacher_id = request.GET.get('teacher', '')
 
-    if not teacher_id:
+    if not teacher_id.isdigit():
         messages.error(request, "Invalid QR code.")
         return redirect('student_dashboard')
 
     teacher = get_object_or_404(
         User,
-        id=teacher_id,
+        id=int(teacher_id),
         role='instructor'
     )
 
-    # =========================
-    # GET ACTIVE PERIOD
-    # =========================
-    period = EvaluationPeriod.objects.filter(
-        is_active=True
-    ).first()
-
-    # =========================
     # NO ACTIVE PERIOD
-    # =========================
+    period = get_open_period()
     if not period:
-        return render(
-            request,
-            'evaluation/evaluation_closed.html'
+        return student_notice(request, 'closed')
+
+    # NO SECTION YET
+    if not request.user.section_id:
+        return student_notice(request, 'no_section')
+
+    # INSTRUCTOR DOES NOT TEACH THIS STUDENT'S SECTION
+    if not subjects_taught_to_student(request.user, teacher, period):
+        return student_notice(
+            request, 'not_assigned', teacher_name=teacher.get_full_name()
         )
 
-    # =========================
     # ALREADY EVALUATED
-    # =========================
     already = Evaluation.objects.filter(
         student=request.user,
         teacher=teacher,
@@ -399,10 +501,7 @@ def qr_redirect_handler(request):
     ).exists()
 
     if already:
-        return render(
-            request,
-            'evaluation/already_submitted.html'
-        )
+        return student_notice(request, 'already')
 
     return redirect(
         'evaluate_teacher_page',

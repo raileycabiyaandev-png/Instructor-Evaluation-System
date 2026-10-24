@@ -32,5 +32,10 @@ urlpatterns = [
         name='student_update_profile'
     ),
     path("instructor/instructor_update_profile/", views.instructor_update_profile, name="faculty_update_profile"),
+    path(
+        'student/change-password/',
+        views.student_change_password,
+        name='student_change_password'
+    ),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]

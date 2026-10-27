@@ -14,8 +14,8 @@
     3. Top bar                10. Info elements (notes, legend, trend)
     4. Page header            11. Stat cards and overview layout
     5. Cards (anatomy)        12. Rating hero
-    6. Tabs                   13. Charts
-    7. Buttons                14. Responsive
+    6. Tabs                   13. Panel head, page top, flags
+    7. Buttons                14. Charts       15. Responsive
    ============================================================ */
 
 
@@ -246,6 +246,7 @@ h1, h2, h3, h4 {
 .tab {
     display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;
     gap: 8px;
     min-height: 50px;
     padding: 0 16px;
@@ -262,6 +263,19 @@ h1, h2, h3, h4 {
 .tab[aria-selected="true"] { color: var(--navy-900); border-bottom-color: var(--gold); }
 
 .tabbed .card-head { border-top: 0; }
+
+/* Small number on a tab, e.g. "Updates 3" */
+.tab-count {
+    min-width: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--navy-100);
+    font-size: 13px;
+    text-align: center;
+    color: var(--navy-800);
+}
+.tab-count--gold { background: var(--gold-soft); color: var(--gold-ink); }
+
 
 
 /* ============================================================
@@ -622,14 +636,41 @@ h1, h2, h3, h4 {
 
 
 /* ============================================================
-   13. CHARTS
+   13. PANEL HEAD, PAGE TOP, FLAGS
+   ============================================================ */
+
+/* One line under the tabs that says what you are looking at (replaces a repeated title) */
+.panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--navy-50);
+}
+.panel-desc { margin: 0; max-width: 62ch; font-size: 15px; color: var(--muted); }
+.panel-desc strong { color: var(--navy-900); }
+
+/* Breadcrumb on the left, action on the right */
+.page-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.page-top .crumbs { margin: 0; }
+
+/* Small warning inside a stat card */
+.flag { display: inline-flex; align-items: flex-start; gap: 6px; font-weight: 600; color: var(--gold-ink); }
+.flag i { margin-top: 3px; }
+
+
+/* ============================================================
+   14. CHARTS
    ============================================================ */
 .chart-wrap { position: relative; height: 300px; }
 .chart-wrap--bars { height: auto; min-height: 200px; }   /* JavaScript sets the real height */
 
 
 /* ============================================================
-   14. RESPONSIVE
+   15. RESPONSIVE
    ============================================================ */
 @media (max-width: 991.98px) {
     .menu-toggle { display: inline-flex; }
@@ -646,11 +687,11 @@ h1, h2, h3, h4 {
     .page-intro h2 { font-size: 23px; }
 
     .card-head, .card-body { padding-left: 16px; padding-right: 16px; }
-    .card-foot, .disclosure > summary, .pager { padding-left: 16px; padding-right: 16px; }
+    .card-foot, .disclosure > summary, .pager, .panel-head { padding-left: 16px; padding-right: 16px; }
     .data-table th, .data-table td, .data-table tbody th { padding-left: 16px; padding-right: 16px; }
 
     .tabs { padding: 0 4px; }
-    .tab { flex: 1; justify-content: center; padding: 0 10px; font-size: 15px; }
+    .tab { flex: 1 0 auto; justify-content: center; padding: 0 12px; font-size: 15px; }
 
     .tools { width: 100%; }
     .control { width: 100%; }

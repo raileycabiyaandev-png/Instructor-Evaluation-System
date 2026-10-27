@@ -15,7 +15,6 @@
 
 
     <div class="page-header">
-        <p class="page-subtitle">Academic departments that teachers, subjects and sections belong to.</p>
         <button type="button" class="btn-primary" data-open-modal="addModal">+ Add Department</button>
     </div>
 
@@ -30,7 +29,7 @@
                 <thead>
                     <tr>
                         <th>Code</th>
-                        <th>Name</th>
+                        <th>Department</th>
                         <th>Subjects</th>
                         <th>Sections</th>
                         <th>Teachers</th>
@@ -42,7 +41,7 @@
                 {% for d in departments %}
                     <tr>
                         <td><span class="department-badge">{{ d.code }}</span></td>
-                        <td>{{ d.name }}</td>
+                        <td><b>{{ d.name }}</b></td>
                         <td><span class="count-pill">{{ d.subject_total }}</span></td>
                         <td><span class="count-pill">{{ d.section_total }}</span></td>
                         <td><span class="count-pill">{{ d.teacher_total }}</span></td>

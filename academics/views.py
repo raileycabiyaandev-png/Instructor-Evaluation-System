@@ -1,8 +1,3 @@
-# academics/views.py
-#
-# Admin-only pages for Academic Management:
-# Departments, Subjects, Sections (+ their students) and Teaching Assignments.
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, ProtectedError
@@ -25,6 +20,7 @@ from .utils import (
 
 
 # ─────────────────────────────────────────────
+
 # SMALL HELPERS (shared by all four screens)
 # ─────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, F
 import json
+import random
 from .forms import (
     LoginForm,
     StudentCreateForm,
@@ -13,6 +14,7 @@ from .forms import (
     StudentUpdateForm,
     InstructorUpdateForm,
     StudentProfileForm,
+    InstructorProfileForm,
 )
 from .models import User
 from evaluation.models import Evaluation, EvaluationPeriod
@@ -32,7 +34,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.db.models import Avg, Count
 from django.utils import timezone
-from evaluation.models import Evaluation, EvaluationPeriod
+from evaluation.models import Evaluation, EvaluationPeriod, QRCode
+from django.db.models import Q
 
 
 def no_cache(view_func): # prevent caching 
@@ -402,6 +405,111 @@ def average_rating(evaluations):
         2
     )
 
+MIN_RESPONSES = 3
+FORECAST_MIN_PERIODS = 3
+
+
+def _finished_q(today):
+    """
+    One rule for "this period is finished" (so every teacher page agrees):
+      - its end date has passed, OR
+      - it has started but is not open any more (the admin closed it).
+    """
+    return Q(end_date__lt=today) | Q(is_active=False, start_date__lte=today)
+
+
+def _period_state(period, today):
+    """'upcoming' (not started), 'open' (students can evaluate) or 'finished'."""
+    if period.is_active and period.end_date >= today:
+        return "open"
+    if not period.is_active and period.start_date > today:
+        return "upcoming"
+    return "finished"
+
+
+def _period_history(instructor, finished_periods):
+    """
+    Real average rating of this teacher in each FINISHED period, oldest first.
+    Periods without any response are skipped.
+    """
+    rows = []
+    previous = None
+
+    for period in finished_periods:
+        evaluations = Evaluation.objects.filter(teacher=instructor, period=period)
+        responses = evaluations.count()
+        if responses == 0:
+            continue
+
+        rating = average_rating(evaluations)
+        diff = None if previous is None else round(rating - previous, 2)
+
+        rows.append({
+            "period": period,
+            "label": _period_label(period),
+            "rating": rating,
+            "responses": responses,
+            "diff": diff,
+            "trend": None if diff is None else _trend(diff),
+            "diff_text": "" if diff is None else f"{diff:+.2f}",
+        })
+        previous = rating
+
+    return rows
+
+
+def _build_notifications(instructor, current_period, history, today):
+    """
+    Short messages made from REAL data (nothing is stored or invented).
+    There is no "read / unread" yet because that needs a new database table.
+    """
+    items = []
+
+    if current_period:
+        days = (current_period.end_date - today).days
+        when = "today" if days <= 0 else f"in {days} day(s)"
+        items.append({
+            "kind": "info",
+            "icon": "bi-broadcast",
+            "title": "An evaluation is open",
+            "text": f"{_period_label(current_period)} closes {when} "
+                    f"({current_period.end_date:%b %d, %Y}). Students can rate you until then.",
+        })
+
+    if history:
+        last = history[-1]
+        items.append({
+            "kind": "success",
+            "icon": "bi-check2-circle",
+            "title": "Latest final results",
+            "text": f"{last['label']}: {last['rating']:.2f} / 5 from "
+                    f"{last['responses']} response(s). These scores are final.",
+        })
+
+        if last["diff"] is not None:
+            if last["diff"] > 0:
+                kind, icon, word = "success", "bi-graph-up-arrow", f"went up by {last['diff']:.2f}"
+            elif last["diff"] < 0:
+                kind, icon, word = "warning", "bi-graph-down-arrow", f"went down by {abs(last['diff']):.2f}"
+            else:
+                kind, icon, word = "info", "bi-dash-circle", "did not change"
+            items.append({
+                "kind": kind,
+                "icon": icon,
+                "title": "Compared with the period before",
+                "text": f"Your rating {word} compared with {history[-2]['label']}.",
+            })
+
+    if not QRCode.objects.filter(instructor=instructor).exists():
+        items.append({
+            "kind": "warning",
+            "icon": "bi-qr-code",
+            "title": "Your QR code is not ready",
+            "text": "The administrator has not created your QR code yet. Please ask them to create it.",
+        })
+
+    return items
+
 @login_required
 @no_cache
 def instructor_dashboard(request):
@@ -411,30 +519,16 @@ def instructor_dashboard(request):
 
     instructor = request.user
 
-    # ─────────────────────────────────────────────
-    # 1. ACTIVE TAB
-    # ─────────────────────────────────────────────
     active_tab = request.GET.get('tab', 'dashboard')
 
-    # ─────────────────────────────────────────────
-    # 2. FILTERS
-    # ─────────────────────────────────────────────
     selected_school_year = request.GET.get('school_year', '')
     selected_semester = request.GET.get('semester', '')
     selected_term = request.GET.get('term', '')
 
-    # ─────────────────────────────────────────────
-    # 3. CURRENT ACTIVE PERIOD
-    # ─────────────────────────────────────────────
-    current_period = (
-        EvaluationPeriod.objects
-        .filter(is_active=True)
-        .first()
-    )
+    current_period = get_open_period()
+    today = timezone.now().date()
 
-    # ─────────────────────────────────────────────
-    # 4. DASHBOARD: CURRENT PERIOD RESULTS
-    # ─────────────────────────────────────────────
+
     current_period_evaluations = Evaluation.objects.none()
 
     current_total_responses = 0
@@ -488,9 +582,6 @@ def instructor_dashboard(request):
                 "values": list(current_category_averages.values()),
             }
 
-    # ─────────────────────────────────────────────
-    # 5. DASHBOARD STATE
-    # ─────────────────────────────────────────────
     if current_period:
         if current_total_responses > 0:
             dashboard_state = "current_results"
@@ -499,14 +590,9 @@ def instructor_dashboard(request):
     else:
         dashboard_state = "recent_performance"
 
-    # ─────────────────────────────────────────────
-    # 6. COMPLETED PERIODS (FIXED TERM ORDER)
-    #    Same shape as your original chart_trend,
-    #    so the Results tab keeps working.
-    # ─────────────────────────────────────────────
     completed_list = sorted(
         EvaluationPeriod.objects
-        .filter(evaluations__teacher=instructor, is_active=False)
+        .filter(_finished_q(today), evaluations__teacher=instructor)
         .distinct(),
         key=period_sort_key
     )
@@ -533,9 +619,6 @@ def instructor_dashboard(request):
         "values": trend_values,
     }
 
-    # ─────────────────────────────────────────────
-    # 7. MOST RECENT COMPLETED PERIOD
-    # ─────────────────────────────────────────────
     recent_period = completed_list[-1] if completed_list else None
 
     if trend_values:
@@ -543,9 +626,6 @@ def instructor_dashboard(request):
     else:
         recent_overall_average = None
 
-    # ─────────────────────────────────────────────
-    # 8. PERFORMANCE INDICATOR
-    # ─────────────────────────────────────────────
     if len(trend_values) >= 2:
 
         latest = trend_values[-1]
@@ -646,9 +726,17 @@ def instructor_dashboard(request):
         if graph_values[i] is not None
     ]
 
-    if len(rated_points) >= 2:
-        prev_label, prev_value = rated_points[-2]
-        last_label, last_value = rated_points[-1]
+    # The up / down message uses FINISHED terms only. A term that is still
+    # open has an incomplete score and must not be called "improving".
+    done_points = [
+        (graph_labels[i], graph_values[i])
+        for i in range(len(graph_values))
+        if graph_values[i] is not None and graph_statuses[i] == "completed"
+    ]
+
+    if len(done_points) >= 2:
+        prev_label, prev_value = done_points[-2]
+        last_label, last_value = done_points[-1]
         graph_diff = round(last_value - prev_value, 2)
 
         if graph_diff > 0:
@@ -672,12 +760,19 @@ def instructor_dashboard(request):
                 "title": "Steady",
                 "text": f"No change from {prev_label} to {last_label}",
             }
-    elif len(rated_points) == 1:
+    elif len(done_points) == 1:
         graph_summary = {
             "css": "same",
             "icon": "bi-hourglass-split",
             "title": "First Rating",
-            "text": "Only one term has ratings so far. A trend appears after the next term.",
+            "text": "Only one finished term has ratings so far. A trend appears after the next term.",
+        }
+    elif rated_points:
+        graph_summary = {
+            "css": "same",
+            "icon": "bi-hourglass-split",
+            "title": "Term still open",
+            "text": "No term is finished yet. A trend appears after a term closes.",
         }
     else:
         graph_summary = {
@@ -695,6 +790,18 @@ def instructor_dashboard(request):
         "period_label": graph_period_label,
         "summary": graph_summary,
         "has_data": len(rated_points) > 0,
+    }
+
+    history = _period_history(instructor, completed_list)      # oldest -> newest
+    history_rows = list(reversed(history))                     # newest first for the table
+
+    notifications = _build_notifications(instructor, current_period, history, today)
+
+    forecast = {
+        "have": len(history),
+        "need": FORECAST_MIN_PERIODS,
+        "ready": len(history) >= FORECAST_MIN_PERIODS,
+        "percent": min(100, round(len(history) / FORECAST_MIN_PERIODS * 100)),
     }
 
     # ─────────────────────────────────────────────
@@ -816,6 +923,11 @@ def instructor_dashboard(request):
             "selected_school_year": selected_school_year,
             "selected_semester": selected_semester,
             "selected_term": selected_term,
+            "history_rows": history_rows,
+            "notifications": notifications,
+            "forecast": forecast,
+            "min_responses": MIN_RESPONSES,
+            "current_low_sample": 0 < current_total_responses < MIN_RESPONSES,
         }
     )
 
@@ -979,13 +1091,24 @@ def student_change_password(request):
 @login_required
 @no_cache
 def instructor_update_profile(request):
+
+    if request.user.role != 'instructor':
+        return redirect('login')
+
     if request.method == "POST":
-        request.user.first_name = request.POST.get("first_name")
-        request.user.last_name  = request.POST.get("last_name")
-        request.user.email      = request.POST.get("email")
-        request.user.save()
-        messages.success(request, "Profile updated successfully.")
-    return redirect("instructor_dashboard")
+
+        form = InstructorProfileForm(request.POST, instance=request.user)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+        else:
+            for errors in form.errors.values():
+                for error in errors:
+                    messages.error(request, error)
+
+    # ?tab=profile so the message is shown on the Profile view
+    return redirect(reverse("instructor_dashboard") + "?tab=profile")
 
 @login_required
 @require_POST
@@ -1136,12 +1259,15 @@ def _get_scores(teacher, period):
 
 
 @login_required
+@no_cache
 def instructor_evaluation_results(request):
     teacher = request.user
     if teacher.role != "instructor":
         raise PermissionDenied
 
+    get_open_period()          # closes periods whose end date has passed
     today = timezone.now().date()
+
     all_periods = EvaluationPeriod.objects.all()
 
     # ── Filter options (real data only) ──
@@ -1152,7 +1278,7 @@ def instructor_evaluation_results(request):
     )
 
     latest_released = (
-        all_periods.filter(end_date__lt=today, evaluations__teacher=teacher)
+        all_periods.filter(_finished_q(today), evaluations__teacher=teacher)
         .distinct()
         .order_by("-start_date")
         .first()
@@ -1178,25 +1304,29 @@ def instructor_evaluation_results(request):
         period = all_periods.filter(**selected).first()
         if period is None:
             state = "not_found"
-        elif period.status == "draft":
+        elif _period_state(period, today) == "upcoming":
             state = "not_open"
-        elif period.status == "active":
+        elif _period_state(period, today) == "open":
             state = "in_progress"      # results are NOT released yet
-        else:                          # closed = finalized/released
+        else:                          # finished = finalized/released
             current = _get_scores(teacher, period)
             state = "released" if current else "no_responses"
 
     rows = []
     overall_change = None
     chart = None
+    low_sample = False
+    feedback = None
 
+    # Everything below needs real, released scores, so it all stays INSIDE this "if"
     if state == "released":
+
         previous_period = (
             all_periods.filter(
                 start_date__lt=period.start_date,
-                end_date__lt=today,
                 evaluations__teacher=teacher,
             )
+            .filter(_finished_q(today))
             .distinct()
             .order_by("-start_date")
             .first()
@@ -1230,6 +1360,9 @@ def instructor_evaluation_results(request):
             "previous_label": _period_label(previous_period) if previous else None,
         }
 
+        low_sample = current["total"] < MIN_RESPONSES
+        feedback = _get_feedback(teacher, period, current["total"])
+
     context = {
         "active_tab": "results",
         "state": state,
@@ -1247,5 +1380,60 @@ def instructor_evaluation_results(request):
         "overall_change": overall_change,
         "rows": rows,
         "results_chart": chart,
+        "low_sample": low_sample,
+        "min_responses": MIN_RESPONSES,
+        "feedback": feedback,
     }
     return render(request, "users/instructor_evaluation_results.html", context)
+
+
+
+def _get_feedback(teacher, period, total_responses):
+    """
+    Written comments for ONE teacher in ONE finished period.
+
+    Privacy rules:
+      - only the comment text is read (never the student, never the date),
+      - the comments are mixed in a fixed random order, so the order cannot
+        reveal who sent them first,
+      - nothing is shown when fewer than MIN_RESPONSES students evaluated.
+    """
+    if total_responses < MIN_RESPONSES:
+        return {"hidden": True, "needed": MIN_RESPONSES, "comments": [], "count": 0}
+
+    texts = [
+        text.strip()
+        for text in Evaluation.objects.filter(teacher=teacher, period=period)
+        .exclude(comment="")
+        .values_list("comment", flat=True)
+        if text and text.strip()
+    ]
+    random.Random(f"{teacher.pk}-{period.pk}").shuffle(texts)
+
+    return {
+        "hidden": False,
+        "needed": MIN_RESPONSES,
+        "comments": texts,
+        "count": len(texts),
+        "total": total_responses,
+    }
+
+
+@login_required
+@no_cache
+def instructor_qr(request):
+    """The teacher's OWN QR code (read only). Only the admin creates it."""
+    if request.user.role != "instructor":
+        raise PermissionDenied
+
+    qr = QRCode.objects.filter(instructor=request.user).first()
+
+    # The record can exist while the image file is missing from the disk
+    file_ok = bool(qr and qr.qr_image and qr.qr_image.storage.exists(qr.qr_image.name))
+
+    return render(request, "users/instructor_qr.html", {
+        "active_tab": "qr",
+        "qr": qr if file_ok else None,
+        "qr_missing_file": bool(qr) and not file_ok,
+        "open_period": get_open_period(),
+    })

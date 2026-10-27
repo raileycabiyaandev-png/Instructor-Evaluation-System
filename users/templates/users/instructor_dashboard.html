@@ -1,3 +1,4 @@
+<!-- users/Instructor Dashboard -->
 {% extends "instructor_base.html" %}
 {% load static %}
 
@@ -7,6 +8,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
 {% endblock %}
 
 {% block extra_head %}
@@ -24,27 +26,41 @@
 
         <div class="page-intro">
             <h2>Welcome back, {{ request.user.first_name }}</h2>
-            <p>See how students rate you and how your scores change over time.</p>
+            <p>{% now "l, F j, Y" %}</p>
         </div>
 
-        <!-- 1. Slim status bar: is an evaluation open? -->
+
+        <!-- 1. Status bar: is an evaluation open? -->
         {% if current_period %}
         <div class="status-bar status-bar--active">
             <span class="status-pill"><i class="bi bi-broadcast" aria-hidden="true"></i> Evaluation open</span>
             <div class="status-text">
                 <strong>{{ current_period }}</strong>
-                <span>{{ current_period.school_year }} &middot; {{ current_period.get_semester_display }} &middot; {{ current_period.get_term_display }}. Scores can still change until it closes.</span>
+                {% if current_period.end_date %}<span>Open until {{ current_period.end_date|date:"M d, Y" }}</span>{% endif %}
             </div>
-            <a class="btn btn-ghost btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+            <div class="status-actions">
+                {% if notifications %}
+                <button type="button" class="btn btn-ghost btn-sm" data-goto="updates">
+                    <i class="bi bi-bell" aria-hidden="true"></i> {{ notifications|length }} update{{ notifications|length|pluralize }}
+                </button>
+                {% endif %}
+                <a class="btn btn-primary btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+            </div>
         </div>
         {% else %}
         <div class="status-bar">
             <span class="status-pill"><i class="bi bi-pause-circle" aria-hidden="true"></i> No evaluation open</span>
             <div class="status-text">
-                <strong>Nothing to evaluate right now</strong>
-                <span>Your latest finished results and your history are shown below.</span>
+                <strong>Showing your latest finished results</strong>
             </div>
-            <a class="btn btn-ghost btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+            <div class="status-actions">
+                {% if notifications %}
+                <button type="button" class="btn btn-ghost btn-sm" data-goto="updates">
+                    <i class="bi bi-bell" aria-hidden="true"></i> {{ notifications|length }} update{{ notifications|length|pluralize }}
+                </button>
+                {% endif %}
+                <a class="btn btn-primary btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+            </div>
         </div>
         {% endif %}
 
@@ -60,7 +76,13 @@
                     <div class="stat-body">
                         <div class="stat-label">Student responses</div>
                         <div class="stat-value">{{ current_total_responses }}</div>
-                        <div class="stat-note">Received this period</div>
+                        <div class="stat-note">
+                            {% if current_low_sample %}
+                            <span class="flag"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Fewer than {{ min_responses }}. The score can change a lot.</span>
+                            {% else %}
+                            Received this period
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -115,28 +137,34 @@
                     <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Categories
                 </button>
                 {% endif %}
+
                 <button type="button" class="tab" role="tab" id="tab-trend" data-tab="trend" aria-controls="panel-trend" aria-selected="{% if current_period and dashboard_state == 'current_results' %}false{% else %}true{% endif %}">
                     <i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Trend
                 </button>
-                {% if performance_graph.has_data %}
+
+                {% if performance_graph.has_data or history_rows %}
                 <button type="button" class="tab" role="tab" id="tab-history" data-tab="history" aria-controls="panel-history" aria-selected="false">
                     <i class="bi bi-clock-history" aria-hidden="true"></i> History
                 </button>
                 {% endif %}
+
+                {% if notifications %}
+                <button type="button" class="tab" role="tab" id="tab-updates" data-tab="updates" aria-controls="panel-updates" aria-selected="false">
+                    <i class="bi bi-bell" aria-hidden="true"></i> Updates <span class="tab-count tab-count--gold">{{ notifications|length }}</span>
+                </button>
+                {% endif %}
+
+                <button type="button" class="tab" role="tab" id="tab-forecast" data-tab="forecast" aria-controls="panel-forecast" aria-selected="false">
+                    <i class="bi bi-stars" aria-hidden="true"></i> Forecast
+                </button>
             </div>
 
 
             <!-- TAB: scores by category -->
             {% if current_period and dashboard_state == "current_results" %}
             <div class="tab-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories">
-                <div class="card-head">
-                    <div class="card-title">
-                        <span class="card-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
-                        <div>
-                            <h3>Your score in each category</h3>
-                            <p class="card-sub">Average of all student ratings, out of 5 &middot; {{ current_period.get_term_display }}, {{ current_period.school_year }}</p>
-                        </div>
-                    </div>
+                <div class="panel-head">
+                    <p class="panel-desc">Average of all student ratings in <strong>{{ current_period.get_term_display }}, {{ current_period.school_year }}</strong>. Scores are out of 5.</p>
                     <div class="tools">
                         <div class="control">
                             <label for="sortCategory">Sort by</label>
@@ -154,9 +182,9 @@
                         <canvas id="categoryChart" role="img" aria-label="Bar chart of your score in each category, out of 5. The same numbers are in the table below."></canvas>
                     </div>
                     <ul class="legend">
-                        <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
-                        <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
-                        <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
+                        <li><i class="key key--high" aria-hidden="true"></i> Excellent</li>
+                        <li><i class="key key--mid" aria-hidden="true"></i> Good</li>
+                        <li><i class="key key--low" aria-hidden="true"></i> Needs improvement</li>
                     </ul>
                 </div>
 
@@ -191,14 +219,8 @@
 
             <!-- TAB: trend line -->
             <div class="tab-panel" role="tabpanel" id="panel-trend" aria-labelledby="tab-trend" {% if current_period and dashboard_state == "current_results" %}hidden{% endif %}>
-                <div class="card-head">
-                    <div class="card-title">
-                        <span class="card-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
-                        <div>
-                            <h3>How your rating changes over time</h3>
-                            <p class="card-sub">Your average rating in each term, from 1 to 5 &middot; {% if performance_graph.period_label %}{{ performance_graph.period_label }}{% else %}latest semester{% endif %}</p>
-                        </div>
-                    </div>
+                <div class="panel-head">
+                    <p class="panel-desc">Your average rating in each term, from 1 to 5. These are <strong>real student ratings</strong>, not predictions.{% if performance_graph.period_label %} {{ performance_graph.period_label }}.{% endif %}</p>
                     <div class="tools">
                         <!-- Shown by JavaScript only when there are more than 4 terms -->
                         <div class="seg" id="rangeControl" role="group" aria-label="How many terms to show" hidden>
@@ -222,34 +244,100 @@
                         {% endif %}
                     </div>
                     <ul class="legend">
-                        <li><span class="shape--up" aria-hidden="true">▲</span> Score went up</li>
-                        <li><span class="shape--down" aria-hidden="true">▼</span> Score went down</li>
-                        <li><span class="shape--same" aria-hidden="true">●</span> First score, or no change</li>
-                        <li><span aria-hidden="true">○</span> Empty dot: this term is not finished</li>
+                        <li><span class="shape--up" aria-hidden="true">▲</span> Went up</li>
+                        <li><span class="shape--down" aria-hidden="true">▼</span> Went down</li>
+                        <li><span class="shape--same" aria-hidden="true">●</span> First score or no change</li>
+                        <li><span aria-hidden="true">○</span> Term not finished</li>
                     </ul>
                 </div>
             </div>
 
 
-            <!-- TAB: history table with pages -->
-            {% if performance_graph.has_data %}
+            <!-- TAB: history (two tables, one at a time, with pages) -->
+            {% if performance_graph.has_data or history_rows %}
             <div class="tab-panel" role="tabpanel" id="panel-history" aria-labelledby="tab-history" hidden>
-                <div class="card-head">
-                    <div class="card-title">
-                        <span class="card-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
-                        <div>
-                            <h3>Rating history</h3>
-                            <p class="card-sub">Every term, newest first</p>
+                <div class="panel-head">
+                    <p class="panel-desc">Real student ratings, newest first.</p>
+                    {% if history_rows and performance_graph.has_data %}
+                    <div class="seg" id="historySwitch" role="group" aria-label="Choose a table">
+                        <button type="button" data-show="all" aria-pressed="true">All periods</button>
+                        <button type="button" data-show="term" aria-pressed="false">Latest semester</button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if history_rows %}
+                <div class="history-block" id="historyAll">
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead><tr><th scope="col">Period</th><th scope="col">Rating</th><th scope="col">Responses</th><th scope="col">Change</th></tr></thead>
+                            <tbody id="histBody">
+                            {% for row in history_rows %}
+                                <tr>
+                                    <th scope="row">{{ row.label }}</th>
+                                    <td>{{ row.rating|floatformat:2 }} / 5</td>
+                                    <td>{{ row.responses }}</td>
+                                    <td>
+                                        {% if row.diff is None %}
+                                            <span class="muted-text">First finished period</span>
+                                        {% else %}
+                                            <span class="trend {{ row.trend }}">
+                                                {% if row.trend == "up" %}<i class="bi bi-caret-up-fill" aria-hidden="true"></i>{% elif row.trend == "down" %}<i class="bi bi-caret-down-fill" aria-hidden="true"></i>{% else %}<i class="bi bi-dash" aria-hidden="true"></i>{% endif %}
+                                                {{ row.diff_text }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pager" id="histPager" hidden>
+                        <span class="pager-info" data-pager-info aria-live="polite"></span>
+                        <div class="pager-buttons">
+                            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
                         </div>
                     </div>
                 </div>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead><tr><th scope="col">Term</th><th scope="col">Rating</th><th scope="col">Responses</th><th scope="col">Status</th></tr></thead>
-                        <tbody id="ptTableBody"></tbody>
-                    </table>
+                {% endif %}
+
+                {% if performance_graph.has_data %}
+                <div class="history-block" id="historyTerm" {% if history_rows %}hidden{% endif %}>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead><tr><th scope="col">Term</th><th scope="col">Rating</th><th scope="col">Responses</th><th scope="col">Status</th></tr></thead>
+                            <tbody id="ptTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pager" id="ptPager" hidden>
+                        <span class="pager-info" data-pager-info aria-live="polite"></span>
+                        <div class="pager-buttons">
+                            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
                 </div>
-                <div class="pager" id="ptPager" hidden>
+                {% endif %}
+            </div>
+            {% endif %}
+
+
+            <!-- TAB: updates (notifications) -->
+            {% if notifications %}
+            <div class="tab-panel" role="tabpanel" id="panel-updates" aria-labelledby="tab-updates" hidden>
+                <div class="panel-head">
+                    <p class="panel-desc">Short updates made from your real evaluation data.</p>
+                </div>
+                <ul class="notif-list" id="notifList">
+                    {% for n in notifications %}
+                    <li class="notif notif--{{ n.kind }}">
+                        <i class="bi {{ n.icon }}" aria-hidden="true"></i>
+                        <div><strong>{{ n.title }}</strong><span>{{ n.text }}</span></div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="pager" id="notifPager" hidden>
                     <span class="pager-info" data-pager-info aria-live="polite"></span>
                     <div class="pager-buttons">
                         <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
@@ -258,6 +346,32 @@
                 </div>
             </div>
             {% endif %}
+
+
+            <!-- TAB: AI forecast (not active yet) -->
+            <div class="tab-panel" role="tabpanel" id="panel-forecast" aria-labelledby="tab-forecast" hidden>
+                <div class="panel-head">
+                    <p class="panel-desc">A forecast is a <strong>prediction</strong>, so it is always labelled and kept apart from your real scores.</p>
+                    <span class="badge badge-mid">Not active yet</span>
+                </div>
+                <div class="card-body">
+                    <p class="forecast-text">Improvement suggestions will appear here together with the forecast.</p>
+
+                    <div class="progress" role="progressbar" aria-label="Finished periods collected"
+                         aria-valuemin="0" aria-valuemax="{{ forecast.need }}" aria-valuenow="{{ forecast.have }}">
+                        <span style="width: {{ forecast.percent }}%;"></span>
+                    </div>
+                    <p class="forecast-note">
+                        {% if forecast.ready %}
+                            <i class="bi bi-check-circle" aria-hidden="true"></i>
+                            <span>You have {{ forecast.have }} finished period{{ forecast.have|pluralize }} with responses. That is enough history once the AI feature is switched on.</span>
+                        {% else %}
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span>Not enough history yet: {{ forecast.have }} of {{ forecast.need }} finished periods with responses.</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
 
         </section>
 
@@ -391,7 +505,7 @@ var charts = {};      // so the tabs can resize a chart when it becomes visible
     function color(i) { return COLORS[kind(i)] || C.line; }
     function live(i)  { return g.statuses[i + offset] === 'ongoing'; }
 
-    /* History table: newest term first, 5 rows per page */
+    /* Term-by-term table: newest term first, 5 rows per page */
     var body = document.getElementById('ptTableBody');
     if (body) {
         g.labels.map(function (label, i) { return i; }).reverse().forEach(function (i) {
@@ -409,7 +523,7 @@ var charts = {};      // so the tabs can resize a chart when it becomes visible
             });
             body.appendChild(tr);
         });
-        Instructor.paginate(body, document.getElementById('ptPager'), 5);
+        Instructor.paginate(body, document.getElementById('ptPager'), 5, 'terms');
     }
 
     /* Writes the score above each point */
@@ -511,13 +625,46 @@ var charts = {};      // so the tabs can resize a chart when it becomes visible
 })();
 
 
-/* ── 3. Tabs ── */
+/* ── 3. History and updates: pages ── */
+(function () {
+    var hist  = document.getElementById('histBody');
+    var notif = document.getElementById('notifList');
+    if (hist)  Instructor.paginate(hist,  document.getElementById('histPager'),  5, 'periods');
+    if (notif) Instructor.paginate(notif, document.getElementById('notifPager'), 5, 'updates');
+
+    /* "All periods | Latest semester" switch */
+    var sw = document.getElementById('historySwitch');
+    if (!sw) return;
+    var all  = document.getElementById('historyAll');
+    var term = document.getElementById('historyTerm');
+    sw.querySelectorAll('button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var showAll = btn.dataset.show === 'all';
+            all.hidden  = !showAll;
+            term.hidden = showAll;
+            sw.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+        });
+    });
+})();
+
+
+/* ── 4. Tabs, and the "N updates" button in the status bar ── */
 Instructor.tabs(document.querySelector('.tabbed'), function (key) {
     if (charts[key]) charts[key].resize();
 });
 
+document.querySelectorAll('[data-goto]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var tab = document.getElementById('tab-' + btn.dataset.goto);
+        if (!tab) return;
+        tab.click();
+        var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.querySelector('.tabbed').scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    });
+});
 
-/* ── 4. Profile form: turn the Save button on only after a change ── */
+
+/* ── 5. Profile form: turn the Save button on only after a change ── */
 (function () {
     var form = document.getElementById('profileForm');
     if (!form) return;

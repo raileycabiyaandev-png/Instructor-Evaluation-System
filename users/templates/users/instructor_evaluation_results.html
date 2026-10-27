@@ -1,3 +1,4 @@
+<!--   users/Instructor Evaluation Results -->
 {% extends "instructor_base.html" %}
 {% load static %}
 
@@ -7,6 +8,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_evaluation_results.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
 {% endblock %}
 
 {% block extra_head %}
@@ -17,21 +19,20 @@
 {% block content %}
 <div class="page">
 
-    <!-- Where am I? -->
-    <nav class="crumbs no-print" aria-label="Breadcrumb">
-        <a href="{% url 'instructor_dashboard' %}">Dashboard</a>
-        <i class="bi bi-chevron-right" aria-hidden="true"></i>
-        <span aria-current="page">Evaluation results</span>
-    </nav>
-
-    <!-- Page title + print button -->
-    <div class="page-intro page-intro-row">
+    <!-- Where am I? (left)  +  print button (right) -->
+    <div class="page-top no-print">
+        <nav class="crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'instructor_dashboard' %}">Dashboard</a>
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            <span aria-current="page">Evaluation results</span>
+        </nav>
         {% if state == "released" %}
-        <button type="button" class="btn btn-ghost no-print" onclick="window.print()">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="window.print()">
             <i class="bi bi-printer" aria-hidden="true"></i> Print / Save as PDF
         </button>
         {% endif %}
     </div>
+
 
     <!-- Step 1: choose a period -->
     <section class="card no-print" aria-labelledby="filterTitle">
@@ -40,7 +41,7 @@
                 <span class="card-icon"><i class="bi bi-funnel" aria-hidden="true"></i></span>
                 <div>
                     <h3 id="filterTitle">Choose a period</h3>
-                    <p class="card-sub">Select a school year, a semester and a period, then press Show results.</p>
+                    <p class="card-sub">Results appear after the period closes.</p>
                 </div>
             </div>
         </div>
@@ -75,13 +76,6 @@
                 <a href="{% url 'instructor_evaluation_results' %}" class="btn btn-ghost"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset</a>
             </div>
         </form>
-
-        {% if period_label %}
-        <div class="filters-foot">
-            <i class="bi bi-eye" aria-hidden="true"></i> Now showing:
-            <span class="chip"><i class="bi bi-calendar3" aria-hidden="true"></i> {{ period_label }}</span>
-        </div>
-        {% endif %}
     </section>
 
 
@@ -95,6 +89,7 @@
         <p><strong>Date generated:</strong> {% now "F j, Y" %}</p>
     </div>
 
+
     <!-- Step 2: overview = big rating + quick facts -->
     <div class="overview">
         {% include "instructor_rating_hero.html" with score=current.overall title="Overall rating" period_text=period_label note="The average of all anonymous student ratings in this period." %}
@@ -105,7 +100,13 @@
                 <div class="stat-body">
                     <div class="stat-label">Total evaluations</div>
                     <div class="stat-value">{{ current.total }}</div>
-                    <div class="stat-note">Anonymous student responses</div>
+                    <div class="stat-note">
+                        {% if low_sample %}
+                        <span class="flag"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Fewer than {{ min_responses }}. Read the scores with care.</span>
+                        {% else %}
+                        Anonymous student responses
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -150,28 +151,27 @@
     </div>
 
 
-    <!-- Step 3: category scores, as a chart or as a table -->
-    <section class="card tabbed" aria-label="Scores by category">
+    <!-- Step 3: the details, one section at a time: Chart | Table | Feedback -->
+    <section class="card tabbed" aria-label="Results in detail">
 
-        <div class="tabs" role="tablist" aria-label="Choose how to see the scores">
+        <div class="tabs" role="tablist" aria-label="Choose what to see">
             <button type="button" class="tab" role="tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="true">
                 <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Chart
             </button>
             <button type="button" class="tab" role="tab" id="tab-table" data-tab="table" aria-controls="panel-table" aria-selected="false">
                 <i class="bi bi-table" aria-hidden="true"></i> Table
             </button>
+            <button type="button" class="tab" role="tab" id="tab-feedback" data-tab="feedback" aria-controls="panel-feedback" aria-selected="false">
+                <i class="bi bi-chat-quote" aria-hidden="true"></i> Feedback
+                {% if feedback.comments and not feedback.hidden %}<span class="tab-count">{{ feedback.count }}</span>{% endif %}
+            </button>
         </div>
+
 
         <!-- TAB: chart -->
         <div class="tab-panel" role="tabpanel" id="panel-chart" aria-labelledby="tab-chart">
-            <div class="card-head">
-                <div class="card-title">
-                    <span class="card-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
-                    <div>
-                        <h3>Your score in each category</h3>
-                        <p class="card-sub">Average of all student ratings, out of 5 &middot; {{ period_label }}</p>
-                    </div>
-                </div>
+            <div class="panel-head">
+                <p class="panel-desc">Average of all student ratings in each category. Scores are out of 5.</p>
                 <div class="tools no-print">
                     <div class="control">
                         <label for="sortCategory">Sort by</label>
@@ -196,24 +196,19 @@
                     <canvas id="categoryChart" role="img" aria-label="Bar chart of your score in each category, out of 5{% if previous %}, with last period next to it{% endif %}. The same numbers are in the Table tab."></canvas>
                 </div>
                 <ul class="legend">
-                    <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
-                    <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
-                    <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
+                    <li><i class="key key--high" aria-hidden="true"></i> Excellent</li>
+                    <li><i class="key key--mid" aria-hidden="true"></i> Good</li>
+                    <li><i class="key key--low" aria-hidden="true"></i> Needs improvement</li>
                     {% if previous %}<li><i class="key key--prev" aria-hidden="true"></i> Last period</li>{% endif %}
                 </ul>
             </div>
         </div>
 
+
         <!-- TAB: table -->
         <div class="tab-panel" role="tabpanel" id="panel-table" aria-labelledby="tab-table" hidden>
-            <div class="card-head">
-                <div class="card-title">
-                    <span class="card-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
-                    <div>
-                        <h3>Scores in numbers</h3>
-                        <p class="card-sub">The same scores as the chart{% if previous %}, with the change from the last period{% endif %}</p>
-                    </div>
-                </div>
+            <div class="panel-head">
+                <p class="panel-desc">The same scores as the chart{% if previous %}, with the change from the last period{% endif %}.</p>
             </div>
 
             <div class="table-wrap">
@@ -254,7 +249,7 @@
                 </table>
             </div>
 
-            <div class="pager no-print" id="categoryPager" hidden>
+            <div class="pager" id="categoryPager" hidden>
                 <span class="pager-info" data-pager-info aria-live="polite"></span>
                 <div class="pager-buttons">
                     <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
@@ -263,16 +258,56 @@
             </div>
 
             {% if not previous %}
-            <div class="card-foot"><i class="bi bi-info-circle" aria-hidden="true"></i> There is no earlier finished evaluation, so there is nothing to compare with yet.</div>
+            <div class="card-foot"><i class="bi bi-info-circle" aria-hidden="true"></i> No earlier finished evaluation, so there is nothing to compare with yet.</div>
             {% endif %}
         </div>
 
-    </section>
 
-    <p class="privacy">
-        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-        These are combined averages. Student names and single answers are never shown.
-    </p>
+        <!-- TAB: anonymous feedback (always without names) -->
+        <div class="tab-panel" role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback" hidden>
+            <div class="panel-head">
+                <p class="panel-desc">Written comments are <strong>anonymous</strong>: no names, no dates, in mixed order.</p>
+            </div>
+
+            <div class="card-body">
+                {% if feedback.hidden %}
+                    <p class="feedback-hidden">
+                        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                        <span>Written comments stay hidden until at least {{ feedback.needed }} students have evaluated you. This protects the identity of students.</span>
+                    </p>
+                {% elif feedback.comments %}
+                    <p class="feedback-count">{{ feedback.count }} of {{ feedback.total }} student{{ feedback.total|pluralize }} wrote a comment.</p>
+                    <ul class="feedback-list" id="feedbackList">
+                        {% for comment in feedback.comments %}
+                        <li>{{ comment|linebreaksbr }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="feedback-hidden">
+                        <i class="bi bi-chat" aria-hidden="true"></i>
+                        <span>No student wrote a comment in this period.</span>
+                    </p>
+                {% endif %}
+            </div>
+
+            {% if feedback.comments and not feedback.hidden %}
+            <div class="pager" id="feedbackPager" hidden>
+                <span class="pager-info" data-pager-info aria-live="polite"></span>
+                <div class="pager-buttons">
+                    <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+
+        <div class="card-foot privacy">
+            <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+            <span>These are combined averages. Student names and single answers are never shown.</span>
+        </div>
+
+    </section>
 
     {% else %}
 
@@ -324,7 +359,10 @@
     var rows  = Instructor.readCategoryRows(table);
     var chart = Instructor.categoryChart(document.getElementById('categoryChart'), rows);
     Instructor.showInsights(rows);
-    Instructor.paginate(table.querySelector('tbody'), document.getElementById('categoryPager'), 5);
+    Instructor.paginate(table.querySelector('tbody'), document.getElementById('categoryPager'), 5, 'categories');
+
+    var comments = document.getElementById('feedbackList');
+    if (comments) Instructor.paginate(comments, document.getElementById('feedbackPager'), 5, 'comments');
 
     /* Input controls */
     var sort = document.getElementById('sortCategory');
@@ -332,10 +370,13 @@
     if (chart && sort) sort.addEventListener('change', function () { chart.setSort(sort.value); });
     if (chart && prev) prev.addEventListener('change', function () { chart.setPrevious(prev.checked); });
 
-    /* Tabs: Chart | Table */
+    /* Tabs: Chart | Table | Feedback */
     Instructor.tabs(document.querySelector('.tabbed'), function (key) {
         if (key === 'chart' && chart) chart.resize();
     });
+
+    /* Make sure the chart is the right size when printing */
+    window.addEventListener('beforeprint', function () { if (chart) chart.resize(); });
 })();
 </script>
 {% endblock %}

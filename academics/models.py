@@ -1,12 +1,4 @@
 # academics/models.py
-#
-# Academic Management models:
-#   Department  -> Subject      (one department has many subjects)
-#   Department  -> Section      (one department has many sections)
-#   Section     -> User         (one section has many students)
-#   Department  -> User         (one department has many teachers)
-#   TeachingAssignment = Teacher + Subject + Section + School Year + Semester
-
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -15,8 +7,8 @@ from users.models import User
 
 
 class Department(models.Model):
-    code = models.CharField(max_length=10, unique=True)      # e.g. IT, GENED
-    name = models.CharField(max_length=100, unique=True)     # e.g. Information Technology
+    code = models.CharField(max_length=10, unique=True)  
+    name = models.CharField(max_length=100, unique=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -27,11 +19,11 @@ class Department(models.Model):
 
 
 class Subject(models.Model):
-    code = models.CharField(max_length=20, unique=True)      # e.g. IT101
-    name = models.CharField(max_length=150)                  # e.g. Web Development
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=150)         
     department = models.ForeignKey(
         Department,
-        on_delete=models.PROTECT,   # a department with subjects cannot be deleted
+        on_delete=models.PROTECT,
         related_name='subjects',
     )
     is_active = models.BooleanField(default=True)
@@ -61,17 +53,6 @@ class Section(models.Model):
 
 
 class TeachingAssignment(models.Model):
-    """
-    One row = "this teacher teaches this subject to this section
-    during this school year + semester".
-
-    - A teacher can have many rows (many subjects / many sections).
-    - The teacher's own department is NOT checked on purpose, so a
-      General Education teacher can teach an IT section.
-    - The same subject in the same section and semester can only have
-      ONE teacher (see the unique constraint below).
-    """
-
     teacher = models.ForeignKey(
         User,
         on_delete=models.CASCADE,   # same behaviour as Evaluation.teacher

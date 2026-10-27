@@ -27,10 +27,6 @@
 
     <!-- Page title + main action -->
     <div class="page-intro page-intro-row">
-        <div>
-            <h2>Evaluation periods</h2>
-            <p>Create, open and close the times when students can evaluate their teachers.</p>
-        </div>
         <button type="button" class="btn btn-primary" id="openCreate">
             <i class="bi bi-plus-lg" aria-hidden="true"></i> Create evaluation period
         </button>
@@ -44,8 +40,7 @@
             <div class="card-title">
                 <span class="card-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
                 <div>
-                    <h3 id="listTitle">Evaluation period list</h3>
-                    <p class="card-sub">Only periods that are switched on are open to students.</p>
+                    <h3 id="listTitle">Evaluation period</h3>
                 </div>
             </div>
         </div>
@@ -144,8 +139,7 @@
         <!-- Nothing to show -->
         <div class="empty" id="evalEmpty" {% if periods %}hidden{% endif %}>
             <i class="bi bi-calendar-x" aria-hidden="true"></i>
-            <h3>{% if periods %}No period found{% else %}No evaluation periods yet{% endif %}</h3>
-            <p>{% if periods %}Try another word or another filter.{% else %}Press "Create evaluation period" to add the first one.{% endif %}</p>
+            <h3>{% if periods %}No period found{% else %}No evaluation period yet{% endif %}</h3>
         </div>
 
         <!-- Pages -->

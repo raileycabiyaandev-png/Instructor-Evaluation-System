@@ -1,0 +1,78 @@
+{% extends "instructor_base.html" %}
+{% load static %}
+
+{% block title %}My QR Code{% endblock %}
+{% block page_title %}My QR Code{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+    <div class="page-intro">
+        <h2>My QR code</h2>
+        <p>Students scan this code to open your evaluation form. Show it in class while an evaluation is open.</p>
+    </div>
+
+    {% if open_period %}
+    <div class="status-bar status-bar--active">
+        <span class="status-pill"><i class="bi bi-broadcast" aria-hidden="true"></i> Evaluation open</span>
+        <div class="status-text">
+            <strong>{{ open_period }}</strong>
+            <span>Students can scan your code until {{ open_period.end_date|date:"M d, Y" }}.</span>
+        </div>
+    </div>
+    {% else %}
+    <div class="status-bar">
+        <span class="status-pill"><i class="bi bi-pause-circle" aria-hidden="true"></i> No evaluation open</span>
+        <div class="status-text">
+            <strong>Scanning will not work right now</strong>
+            <span>Students can only evaluate you while the administrator has an evaluation period open.</span>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if qr %}
+    <section class="card qr-card" aria-labelledby="qrTitle">
+        <div class="qr-box">
+            <img src="{{ qr.qr_image.url }}" width="260" height="260" alt="Your personal QR code for student evaluations">
+        </div>
+        <div class="qr-side">
+            <h3 id="qrTitle">{{ request.user.first_name }} {{ request.user.last_name }}</h3>
+            <dl>
+                <div><dt>Department</dt><dd>{{ request.user.department.name|default:"—" }}</dd></div>
+                <div><dt>Code last updated</dt><dd>{{ qr.updated_at|date:"M d, Y" }}</dd></div>
+            </dl>
+            <div class="qr-actions no-print">
+                <a class="btn btn-primary" href="{{ qr.qr_image.url }}" download><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                <button type="button" class="btn btn-ghost" onclick="window.print()"><i class="bi bi-printer" aria-hidden="true"></i> Print</button>
+            </div>
+            <ul class="qr-tips">
+                <li>This code only opens your evaluation form. It never shows your scores or any student name.</li>
+                <li>Each student can evaluate you only once in each evaluation period.</li>
+                <li>Only the administrator can create or replace your code.</li>
+            </ul>
+        </div>
+    </section>
+
+    {% elif qr_missing_file %}
+    <section class="card empty" aria-live="polite">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <h3>Your QR code image could not be found</h3>
+        <p>Please ask the administrator to create your QR code again.</p>
+    </section>
+
+    {% else %}
+    <section class="card empty" aria-live="polite">
+        <i class="bi bi-qr-code" aria-hidden="true"></i>
+        <h3>Your QR code is not ready yet</h3>
+        <p>The administrator has not created your QR code. Please ask them to create it.</p>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}

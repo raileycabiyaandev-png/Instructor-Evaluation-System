@@ -363,3 +363,29 @@ class StudentProfileForm(forms.ModelForm):
             raise forms.ValidationError("That email address is already used by another account.")
 
         return email
+
+class InstructorProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+
+    def clean_first_name(self):
+        value = self.cleaned_data['first_name'].strip()
+        if not value:
+            raise forms.ValidationError("First name is required.")
+        return value
+
+    def clean_last_name(self):
+        value = self.cleaned_data['last_name'].strip()
+        if not value:
+            raise forms.ValidationError("Last name is required.")
+        return value
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip()
+
+        # The email is also the login name, so it must be unique
+        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("This email is already used by another account.")
+
+        return email

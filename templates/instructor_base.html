@@ -172,7 +172,9 @@ h1,h2,h3,h4{font-family:"Playfair Display",Georgia,serif;color:var(--navy-900);m
                 <a class="nav-link {% if active_tab == 'results' or request.resolver_match.url_name == 'instructor_evaluation_results' %}active{% endif %}" href="{% url 'instructor_evaluation_results' %}" {% if active_tab == 'results' or request.resolver_match.url_name == 'instructor_evaluation_results' %}aria-current="page"{% endif %}>
                     <i class="bi bi-clipboard-data nav-icon" aria-hidden="true"></i> Evaluation Results
                 </a>
-
+                    <a class="nav-link {% if active_tab == 'qr' %}active{% endif %}" href="{% url 'instructor_qr' %}" {% if active_tab == 'qr' %}aria-current="page"{% endif %}>
+                    <i class="bi bi-qr-code nav-icon" aria-hidden="true"></i> My QR Code
+                </a>
                 <button type="button" class="nav-link {% if active_tab == 'profile' %}active{% endif %}" data-view="profile" data-title="Profile" {% if active_tab == 'profile' %}aria-current="page"{% endif %}>
                     <i class="bi bi-person-circle nav-icon" aria-hidden="true"></i> Profile
                 </button>

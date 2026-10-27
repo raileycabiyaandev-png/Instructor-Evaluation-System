@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/charts/', views.chart_api, name='chart_api'),
 
     path('instructor/results/', views.instructor_evaluation_results, name='instructor_evaluation_results'),
+    path('instructor/qr/', views.instructor_qr, name='instructor_qr'),
 
     path(
         'student/update-profile/',

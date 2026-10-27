@@ -1,9 +1,10 @@
 /* ============================================================
    users/static/users/css/instructor_evaluation_results.css
    Evaluation Results page only.
-   Shared styles (cards, tabs, hero, controls) are in instructor_common.css.
+   Shared styles (cards, tabs, hero, controls, panel head) are in instructor_common.css.
 
-   1. Filter bar     2. Messages     3. Print
+   1. Filter bar     3. Messages
+   2. Footer note    4. Print / Save as PDF
    ============================================================ */
 
 
@@ -21,25 +22,16 @@
 .field .select { width: 100%; }
 .filter-actions { display: flex; gap: 10px; }
 
-.filters-foot {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--line);
-    background: var(--navy-50);
-    border-radius: 0 0 var(--radius) var(--radius);
-    font-size: 14px;
-    color: var(--muted);
-}
 
-.privacy { margin: 4px 0 8px; font-size: 14px; color: var(--muted); }
-.privacy i { margin-right: 6px; color: var(--navy-700); }
+/* ============================================================
+   2. FOOTER NOTE  (privacy line, inside the results card)
+   ============================================================ */
+.privacy { display: flex; align-items: flex-start; gap: 8px; }
+.privacy i { margin-top: 3px; color: var(--navy-700); }
 
 
 /* ============================================================
-   2. MESSAGES  (not released, no data, ...)
+   3. MESSAGES  (not released, no data, ...)
    ============================================================ */
 .state-text { max-width: 520px; margin: 0 auto 18px; }
 .print-only { display: none; }
@@ -54,24 +46,27 @@
 }
 
 @media (max-width: 575.98px) {
+    .page-top .btn { width: 100%; }
     .filters { grid-template-columns: 1fr; padding: 14px 16px; }
     .filter-actions .btn { flex: 1; }
-    .filters-foot { padding: 12px 16px; }
     .col-prev { display: none; }          /* the Change column already tells the story */
 }
 
 
 /* ============================================================
-   3. PRINT / SAVE AS PDF
+   4. PRINT / SAVE AS PDF  (everything prints, even hidden tabs and pages)
    ============================================================ */
 @media print {
-    .sidebar, .sb-overlay, .topbar, .skip-link, .no-print, .tabs, .crumbs { display: none !important; }
+    .sidebar, .sb-overlay, .topbar, .skip-link, .no-print, .tabs, .crumbs, .pager { display: none !important; }
 
     .app  { display: block; }
     body  { background: #fff; }
     .page { max-width: none; padding: 0; }
 
     .tab-panel[hidden] { display: block !important; }
+    .data-table tr[hidden] { display: table-row !important; }
+    .feedback-list li[hidden] { display: block !important; }
+
     .card, .stat, .hero { break-inside: avoid; box-shadow: none; }
     .overview { grid-template-columns: 1fr; }
 

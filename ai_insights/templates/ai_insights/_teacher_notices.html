@@ -1,0 +1,28 @@
+{% comment %} ai_insights/_teacher_notices.html  Needs: ai (from selectors.teacher_dashboard_ai). Shows nothing when there is nothing to show. {% endcomment %}
+{% if ai.released and ai.notices %}
+<section class="ai-notices" aria-label="AI updates">
+    <div class="ai-head">
+        <h4><i class="bi bi-bell" aria-hidden="true"></i> AI updates {% if ai.notices.unread %}<span class="ai-badge ai-badge--ai">{{ ai.notices.unread }} new</span>{% endif %}</h4>
+        <div class="ai-chips">
+            {% if ai.notices.unread %}
+            <form method="post" action="{% url 'ai_notices_read' %}">{% csrf_token %}<button type="submit" class="ai-chip">Mark all as read</button></form>
+            {% endif %}
+            <form method="post" action="{% url 'ai_my_report' %}" class="ai-chips">{% csrf_token %}
+                <button type="submit" name="fmt" value="pdf" class="ai-chip"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> My report (PDF)</button>
+                <button type="submit" name="fmt" value="xlsx" class="ai-chip"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Excel</button>
+            </form>
+        </div>
+    </div>
+    {% if ai.notices.items %}
+    <ul class="ai-notice-list">
+        {% for n in ai.notices.items %}
+        <li class="ai-notice ai-notice--{{ n.kind }}{% if not n.read_at %} is-new{% endif %}">
+            <i class="bi {% if n.kind == 'up' %}bi-arrow-up-circle{% elif n.kind == 'down' %}bi-arrow-down-circle{% else %}bi-stars{% endif %}" aria-hidden="true"></i>
+            <div><strong>{{ n.title }}</strong><span>{{ n.message }}</span>
+                <small>{{ n.created_at|date:"M d, Y" }}</small></div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+{% endif %}

@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'users',
     'evaluation',
     'academics',
+    'ai_insights',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -146,3 +147,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1',
     'https://*.ngrok-free.dev',
 ]
+
+import sys
+if 'test' in sys.argv:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']

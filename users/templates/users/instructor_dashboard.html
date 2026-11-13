@@ -9,10 +9,8 @@
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
-{% endblock %}
-
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
 {% endblock %}
 
 
@@ -29,352 +27,105 @@
             <p>{% now "l, F j, Y" %}</p>
         </div>
 
+        <div class="ac-stack">
 
-        <!-- 1. Status bar: is an evaluation open? -->
-        {% if current_period %}
+        <!-- 1. Which period is this? -->
+        {% if state == "open" %}
         <div class="status-bar status-bar--active">
             <span class="status-pill"><i class="bi bi-broadcast" aria-hidden="true"></i> Evaluation open</span>
             <div class="status-text">
-                <strong>{{ current_period }}</strong>
-                {% if current_period.end_date %}<span>Open until {{ current_period.end_date|date:"M d, Y" }}</span>{% endif %}
+                <strong>{{ focus }}</strong>
+                <span>Closes {{ focus.end_date|date:"M d, Y" }}{% if days_left is not None %} · {% if days_left <= 0 %}last day{% else %}{{ days_left }} day{{ days_left|pluralize }} left{% endif %}{% endif %}</span>
             </div>
             <div class="status-actions">
-                {% if notifications %}
-                <button type="button" class="btn btn-ghost btn-sm" data-goto="updates">
-                    <i class="bi bi-bell" aria-hidden="true"></i> {{ notifications|length }} update{{ notifications|length|pluralize }}
-                </button>
-                {% endif %}
                 <a class="btn btn-primary btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
             </div>
         </div>
-        {% else %}
+        {% elif state == "latest" %}
         <div class="status-bar">
             <span class="status-pill"><i class="bi bi-pause-circle" aria-hidden="true"></i> No evaluation open</span>
             <div class="status-text">
-                <strong>Showing your latest finished results</strong>
+                <strong>Showing your latest finished period</strong>
+                <span>{{ snap.label }}</span>
             </div>
             <div class="status-actions">
-                {% if notifications %}
-                <button type="button" class="btn btn-ghost btn-sm" data-goto="updates">
-                    <i class="bi bi-bell" aria-hidden="true"></i> {{ notifications|length }} update{{ notifications|length|pluralize }}
-                </button>
-                {% endif %}
                 <a class="btn btn-primary btn-sm" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
             </div>
         </div>
-        {% endif %}
-
-
-        <!-- 2. Overview: big rating on the left, quick facts on the right -->
-        {% if current_period and dashboard_state == "current_results" %}
-        <div class="overview">
-            {% include "instructor_rating_hero.html" with score=current_overall_average title="Your rating so far" period=current_period live=True note="This number can still change until the period closes." %}
-
-            <div class="side">
-                <div class="stat">
-                    <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
-                    <div class="stat-body">
-                        <div class="stat-label">Student responses</div>
-                        <div class="stat-value">{{ current_total_responses }}</div>
-                        <div class="stat-note">
-                            {% if current_low_sample %}
-                            <span class="flag"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Fewer than {{ min_responses }}. The score can change a lot.</span>
-                            {% else %}
-                            Received this period
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filled in by JavaScript from the category scores -->
-                <div class="stat" id="insightBest" hidden>
-                    <span class="stat-icon"><i class="bi bi-arrow-up-circle-fill" aria-hidden="true"></i></span>
-                    <div class="stat-body">
-                        <div class="stat-label">Your strongest area</div>
-                        <div class="stat-value stat-value--text" data-name></div>
-                        <div class="stat-note" data-score></div>
-                    </div>
-                </div>
-
-                <div class="stat" id="insightLow" hidden>
-                    <span class="stat-icon stat-icon--gold"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
-                    <div class="stat-body">
-                        <div class="stat-label">Needs the most attention</div>
-                        <div class="stat-value stat-value--text" data-name></div>
-                        <div class="stat-note" data-score></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {% elif current_period %}
-        <div class="card empty">
-            <i class="bi bi-star" aria-hidden="true"></i>
-            <h3>No ratings yet</h3>
-            <p>No student has rated you in this period yet. Check back soon.</p>
-        </div>
-
-        {% elif recent_overall_average is not None %}
-        <div class="overview overview--single">
-            {% include "instructor_rating_hero.html" with score=recent_overall_average title="Your latest finished rating" period=recent_period note="Open Detailed results to see every category and compare with other periods." %}
-        </div>
-
         {% else %}
-        <div class="card empty">
-            <i class="bi bi-inbox" aria-hidden="true"></i>
-            <h3>No finished results yet</h3>
-            <p>Your results will show here after an evaluation period is completed.</p>
-        </div>
+        <section class="card"><div class="empty"><i class="bi bi-inbox" aria-hidden="true"></i>
+            <h3>No evaluation results yet</h3>
+            <p>{% if open_period %}An evaluation is open, but you are not part of it.{% else %}There is no open evaluation and you have no finished results yet.{% endif %}</p></div></section>
         {% endif %}
 
+        <!-- 2. The numbers (same block as the Evaluation Results page) -->
+        {% include "users/_instructor_overview.html" %}
 
-        <!-- 3. Tabs: one section at a time, so the page stays short -->
-        <section class="card tabbed" aria-label="Your results in detail">
-
-            <div class="tabs" role="tablist" aria-label="Choose what to see">
-                {% if current_period and dashboard_state == "current_results" %}
-                <button type="button" class="tab" role="tab" id="tab-categories" data-tab="categories" aria-controls="panel-categories" aria-selected="true">
-                    <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Categories
-                </button>
-                {% endif %}
-
-                <button type="button" class="tab" role="tab" id="tab-trend" data-tab="trend" aria-controls="panel-trend" aria-selected="{% if current_period and dashboard_state == 'current_results' %}false{% else %}true{% endif %}">
-                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Trend
-                </button>
-
-                {% if performance_graph.has_data or history_rows %}
-                <button type="button" class="tab" role="tab" id="tab-history" data-tab="history" aria-controls="panel-history" aria-selected="false">
-                    <i class="bi bi-clock-history" aria-hidden="true"></i> History
-                </button>
-                {% endif %}
-
-                {% if notifications %}
-                <button type="button" class="tab" role="tab" id="tab-updates" data-tab="updates" aria-controls="panel-updates" aria-selected="false">
-                    <i class="bi bi-bell" aria-hidden="true"></i> Updates <span class="tab-count tab-count--gold">{{ notifications|length }}</span>
-                </button>
-                {% endif %}
-
-                <button type="button" class="tab" role="tab" id="tab-forecast" data-tab="forecast" aria-controls="panel-forecast" aria-selected="false">
-                    <i class="bi bi-stars" aria-hidden="true"></i> Forecast
-                </button>
-            </div>
-
-
-            <!-- TAB: scores by category -->
-            {% if current_period and dashboard_state == "current_results" %}
-            <div class="tab-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories">
-                <div class="panel-head">
-                    <p class="panel-desc">Average of all student ratings in <strong>{{ current_period.get_term_display }}, {{ current_period.school_year }}</strong>. Scores are out of 5.</p>
-                    <div class="tools">
-                        <div class="control">
-                            <label for="sortCategory">Sort by</label>
-                            <select id="sortCategory" class="select">
-                                <option value="default">Default order</option>
-                                <option value="high">Highest first</option>
-                                <option value="low">Lowest first</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card-body">
-                    <div class="chart-wrap chart-wrap--bars">
-                        <canvas id="categoryChart" role="img" aria-label="Bar chart of your score in each category, out of 5. The same numbers are in the table below."></canvas>
-                    </div>
-                    <ul class="legend">
-                        <li><i class="key key--high" aria-hidden="true"></i> Excellent</li>
-                        <li><i class="key key--mid" aria-hidden="true"></i> Good</li>
-                        <li><i class="key key--low" aria-hidden="true"></i> Needs improvement</li>
-                    </ul>
-                </div>
-
-                <details class="disclosure">
-                    <summary>View as table</summary>
-                    <div class="table-wrap">
-                        <table class="data-table" id="categoryTable">
-                            <thead><tr><th scope="col">Category</th><th scope="col">Score</th><th scope="col">Meaning</th></tr></thead>
-                            <tbody>
-                            {% for key, value in current_category_averages.items %}
-                                <tr data-label="{{ key }}" data-score="{{ value|stringformat:'f' }}">
-                                    <th scope="row">{{ key }}</th>
-                                    <td>{{ value }} / 5</td>
-                                    <td>
-                                        {% if value >= 4.5 %}
-                                            <span class="badge badge-high"><i class="bi bi-check-circle" aria-hidden="true"></i> Excellent</span>
-                                        {% elif value >= 3.5 %}
-                                            <span class="badge badge-mid"><i class="bi bi-dash-circle" aria-hidden="true"></i> Good</span>
-                                        {% else %}
-                                            <span class="badge badge-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs improvement</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </details>
-            </div>
-            {% endif %}
-
-
-            <!-- TAB: trend line -->
-            <div class="tab-panel" role="tabpanel" id="panel-trend" aria-labelledby="tab-trend" {% if current_period and dashboard_state == "current_results" %}hidden{% endif %}>
-                <div class="panel-head">
-                    <p class="panel-desc">Your average rating in each term, from 1 to 5. These are <strong>real student ratings</strong>, not predictions.{% if performance_graph.period_label %} {{ performance_graph.period_label }}.{% endif %}</p>
-                    <div class="tools">
-                        <!-- Shown by JavaScript only when there are more than 4 terms -->
-                        <div class="seg" id="rangeControl" role="group" aria-label="How many terms to show" hidden>
-                            <button type="button" data-range="4" aria-pressed="true">Last 4 terms</button>
-                            <button type="button" data-range="all" aria-pressed="false">All terms</button>
-                        </div>
-                        {% if performance_graph.summary.title %}
-                        <div class="pt-badge {{ performance_graph.summary.css }}">
-                            <i class="bi {{ performance_graph.summary.icon }}" aria-hidden="true"></i>
-                            <div><strong>{{ performance_graph.summary.title }}</strong>{{ performance_graph.summary.text }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card-body">
-                    <div class="chart-wrap">
-                        <canvas id="performanceTrendChart" role="img" aria-label="Line graph of your average rating in each term, from 1 to 5. The same numbers are in the History tab."></canvas>
-                        {% if not performance_graph.has_data %}
-                        <div class="chart-empty">No ratings yet for this semester. Your scores will show here as students evaluate.</div>
-                        {% endif %}
-                    </div>
-                    <ul class="legend">
-                        <li><span class="shape--up" aria-hidden="true">▲</span> Went up</li>
-                        <li><span class="shape--down" aria-hidden="true">▼</span> Went down</li>
-                        <li><span class="shape--same" aria-hidden="true">●</span> First score or no change</li>
-                        <li><span aria-hidden="true">○</span> Term not finished</li>
-                    </ul>
+        <!-- 3. AI: forecast, feedback summary, suggestions, updates -->
+        {% if state != "empty" %}
+        <section class="card" id="ai-results">
+            <div class="ac-tabbar">
+                <!-- Real links (not JavaScript): the chosen section is drawn by the server, so it always shows -->
+                <div class="ai-tabs" role="navigation" aria-label="AI results and updates">
+                    <a class="ai-tab" aria-pressed="{% if start_tab == 'feedback' %}true{% else %}false{% endif %}" href="?section=feedback#ai-results"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</a>
+                    <a class="ai-tab" aria-pressed="{% if start_tab == 'suggestions' %}true{% else %}false{% endif %}" href="?section=suggestions#ai-results"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions</a>
+                    <a class="ai-tab" aria-pressed="{% if start_tab == 'forecast' %}true{% else %}false{% endif %}" href="?section=forecast#ai-results"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</a>
+                    <a class="ai-tab" aria-pressed="{% if start_tab == 'updates' %}true{% else %}false{% endif %}" href="?section=updates#ai-results"><i class="bi bi-bell" aria-hidden="true"></i> Updates
+                        {% if ai.notices.unread %}<span class="ai-tab-count">{{ ai.notices.unread }}</span>{% endif %}</a>
                 </div>
             </div>
 
-
-            <!-- TAB: history (two tables, one at a time, with pages) -->
-            {% if performance_graph.has_data or history_rows %}
-            <div class="tab-panel" role="tabpanel" id="panel-history" aria-labelledby="tab-history" hidden>
-                <div class="panel-head">
-                    <p class="panel-desc">Real student ratings, newest first.</p>
-                    {% if history_rows and performance_graph.has_data %}
-                    <div class="seg" id="historySwitch" role="group" aria-label="Choose a table">
-                        <button type="button" data-show="all" aria-pressed="true">All periods</button>
-                        <button type="button" data-show="term" aria-pressed="false">Latest semester</button>
-                    </div>
+            {% if ai.error %}
+            <div class="ac-body"><div class="ac-panel"><p class="ac-lead">AI results could not be loaded. Your real scores above are not affected.</p></div></div>
+            {% elif start_tab == "feedback" %}
+            <div class="ac-body">
+                {% if live and ai.latest_label %}<div class="ac-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
+                    The period that is open now has no AI text yet. It is written after the period closes and your administrator runs the analysis. Below is your latest finished period.</div>{% endif %}
+                {% include "users/_instructor_ai.html" with part="feedback" fb=ai.feedback label=ai.latest_label %}
+            </div>
+            {% elif start_tab == "suggestions" %}
+            <div class="ac-body">
+                {% if live and ai.latest_label %}<div class="ac-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
+                    Suggestions are written for your latest finished period. New ones come after the open period closes.</div>{% endif %}
+                {% include "users/_instructor_ai.html" with part="suggestions" sg=ai.suggestions label=ai.latest_label %}
+            </div>
+            {% elif start_tab == "forecast" %}
+            <div class="ac-body">
+                {% include "users/_instructor_ai.html" with part="forecast" fc=ai.forecast fchart=ai.forecast_chart progress=ai.progress min_periods=ai.min_periods min_responses=ai.min_responses %}
+            </div>
+            {% else %}
+            <div class="ac-body">
+                {% if ai.notices.items %}
+                    {% if ai.notices.unread %}
+                    <form method="post" action="{% url 'ai_notices_read' %}" class="ac-actions">{% csrf_token %}
+                        <button type="submit" class="btn btn-ghost btn-sm">Mark all as read</button></form>
                     {% endif %}
-                </div>
-
-                {% if history_rows %}
-                <div class="history-block" id="historyAll">
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead><tr><th scope="col">Period</th><th scope="col">Rating</th><th scope="col">Responses</th><th scope="col">Change</th></tr></thead>
-                            <tbody id="histBody">
-                            {% for row in history_rows %}
-                                <tr>
-                                    <th scope="row">{{ row.label }}</th>
-                                    <td>{{ row.rating|floatformat:2 }} / 5</td>
-                                    <td>{{ row.responses }}</td>
-                                    <td>
-                                        {% if row.diff is None %}
-                                            <span class="muted-text">First finished period</span>
-                                        {% else %}
-                                            <span class="trend {{ row.trend }}">
-                                                {% if row.trend == "up" %}<i class="bi bi-caret-up-fill" aria-hidden="true"></i>{% elif row.trend == "down" %}<i class="bi bi-caret-down-fill" aria-hidden="true"></i>{% else %}<i class="bi bi-dash" aria-hidden="true"></i>{% endif %}
-                                                {{ row.diff_text }}
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="pager" id="histPager" hidden>
-                        <span class="pager-info" data-pager-info aria-live="polite"></span>
-                        <div class="pager-buttons">
-                            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if performance_graph.has_data %}
-                <div class="history-block" id="historyTerm" {% if history_rows %}hidden{% endif %}>
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead><tr><th scope="col">Term</th><th scope="col">Rating</th><th scope="col">Responses</th><th scope="col">Status</th></tr></thead>
-                            <tbody id="ptTableBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="pager" id="ptPager" hidden>
-                        <span class="pager-info" data-pager-info aria-live="polite"></span>
-                        <div class="pager-buttons">
-                            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
-
-
-            <!-- TAB: updates (notifications) -->
-            {% if notifications %}
-            <div class="tab-panel" role="tabpanel" id="panel-updates" aria-labelledby="tab-updates" hidden>
-                <div class="panel-head">
-                    <p class="panel-desc">Short updates made from your real evaluation data.</p>
-                </div>
-                <ul class="notif-list" id="notifList">
-                    {% for n in notifications %}
-                    <li class="notif notif--{{ n.kind }}">
-                        <i class="bi {{ n.icon }}" aria-hidden="true"></i>
-                        <div><strong>{{ n.title }}</strong><span>{{ n.text }}</span></div>
-                    </li>
+                    <ul class="ai-notice-list">
+                    {% for n in ai.notices.items %}
+                        <li class="ai-notice ai-notice--{{ n.kind }}{% if not n.read_at %} is-new{% endif %}">
+                            <i class="bi {% if n.kind == 'up' %}bi-arrow-up-circle{% elif n.kind == 'down' %}bi-arrow-down-circle{% else %}bi-stars{% endif %}" aria-hidden="true"></i>
+                            <div><strong>{{ n.title }}</strong><span>{{ n.message }}</span><small>{{ n.created_at|date:"M d, Y" }}</small></div>
+                        </li>
                     {% endfor %}
-                </ul>
-                <div class="pager" id="notifPager" hidden>
-                    <span class="pager-info" data-pager-info aria-live="polite"></span>
-                    <div class="pager-buttons">
-                        <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                        <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                    </div>
-                </div>
+                    </ul>
+                {% endif %}
+                {% if notifications %}
+                    <ul class="ai-notice-list">
+                    {% for n in notifications %}
+                        <li class="ai-notice ai-notice--{{ n.kind }}">
+                            <i class="bi {{ n.icon }}" aria-hidden="true"></i>
+                            <div><strong>{{ n.title }}</strong><span>{{ n.text }}</span></div>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+                {% if not ai.notices.items and not notifications %}<div class="ac-panel"><p class="ac-lead">No updates yet.</p></div>{% endif %}
             </div>
             {% endif %}
-
-
-            <!-- TAB: AI forecast (not active yet) -->
-            <div class="tab-panel" role="tabpanel" id="panel-forecast" aria-labelledby="tab-forecast" hidden>
-                <div class="panel-head">
-                    <p class="panel-desc">A forecast is a <strong>prediction</strong>, so it is always labelled and kept apart from your real scores.</p>
-                    <span class="badge badge-mid">Not active yet</span>
-                </div>
-                <div class="card-body">
-                    <p class="forecast-text">Improvement suggestions will appear here together with the forecast.</p>
-
-                    <div class="progress" role="progressbar" aria-label="Finished periods collected"
-                         aria-valuemin="0" aria-valuemax="{{ forecast.need }}" aria-valuenow="{{ forecast.have }}">
-                        <span style="width: {{ forecast.percent }}%;"></span>
-                    </div>
-                    <p class="forecast-note">
-                        {% if forecast.ready %}
-                            <i class="bi bi-check-circle" aria-hidden="true"></i>
-                            <span>You have {{ forecast.have }} finished period{{ forecast.have|pluralize }} with responses. That is enough history once the AI feature is switched on.</span>
-                        {% else %}
-                            <i class="bi bi-info-circle" aria-hidden="true"></i>
-                            <span>Not enough history yet: {{ forecast.have }} of {{ forecast.need }} finished periods with responses.</span>
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-
         </section>
+        {% endif %}
 
+        </div><!-- /ac-stack -->
     </div><!-- /view-dashboard -->
 
 
@@ -459,211 +210,13 @@
 
 </div>
 
-{{ performance_graph|json_script:"performance-graph-data" }}
+</div>
 {% endblock %}
 
 
 {% block extra_js %}
-<script src="{% static 'users/js/instructor_common.js' %}"></script>
+<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>
 <script>
-var charts = {};      // so the tabs can resize a chart when it becomes visible
-
-
-/* ── 1. Category chart + "strongest / needs attention" cards ── */
-(function () {
-    var rows  = Instructor.readCategoryRows(document.getElementById('categoryTable'));
-    var chart = Instructor.categoryChart(document.getElementById('categoryChart'), rows);
-    Instructor.showInsights(rows);
-    if (!chart) return;
-
-    charts.categories = chart;
-    var sort = document.getElementById('sortCategory');
-    if (sort) sort.addEventListener('change', function () { chart.setSort(sort.value); });
-})();
-
-
-/* ── 2. Trend line (data comes from "performance_graph" in views.py) ── */
-(function () {
-    var g      = Instructor.getJSON('performance-graph-data');
-    var canvas = document.getElementById('performanceTrendChart');
-    if (!g || !canvas || typeof Chart === 'undefined') return;
-
-    var C      = Instructor.COLOR;
-    var COLORS = { up: C.high, down: '#b8860b', same: C.mid };
-    var total  = g.labels.length;
-    var offset = 0;                              // how many old terms are hidden
-
-    // For every term: went up, went down, or same as the last term with a rating
-    var kinds = [], last = null;
-    g.values.forEach(function (v) {
-        if (v === null) { kinds.push(null); return; }
-        kinds.push(last === null || v === last ? 'same' : v > last ? 'up' : 'down');
-        last = v;
-    });
-
-    function kind(i)  { return kinds[i + offset]; }
-    function color(i) { return COLORS[kind(i)] || C.line; }
-    function live(i)  { return g.statuses[i + offset] === 'ongoing'; }
-
-    /* Term-by-term table: newest term first, 5 rows per page */
-    var body = document.getElementById('ptTableBody');
-    if (body) {
-        g.labels.map(function (label, i) { return i; }).reverse().forEach(function (i) {
-            var tr = document.createElement('tr');
-            [
-                g.labels[i],
-                g.values[i] === null ? '—' : g.values[i].toFixed(2) + ' / 5',
-                g.responses[i],
-                g.statuses[i] === 'ongoing' ? 'In progress' : 'Completed'
-            ].forEach(function (text, c) {
-                var cell = document.createElement(c === 0 ? 'th' : 'td');
-                if (c === 0) cell.scope = 'row';
-                cell.textContent = text;
-                tr.appendChild(cell);
-            });
-            body.appendChild(tr);
-        });
-        Instructor.paginate(body, document.getElementById('ptPager'), 5, 'terms');
-    }
-
-    /* Writes the score above each point */
-    var scoreLabels = {
-        id: 'scoreLabels',
-        afterDatasetsDraw: function (chart) {
-            var ctx = chart.ctx;
-            chart.getDatasetMeta(0).data.forEach(function (pt, i) {
-                var v = g.values[i + offset];
-                if (v === null) return;
-                ctx.save();
-                ctx.font = '700 13px "Source Sans 3", sans-serif';
-                ctx.fillStyle = C.navy;
-                ctx.textAlign = 'center';
-                ctx.fillText(v.toFixed(2), pt.x, pt.y - 14);
-                ctx.restore();
-            });
-        }
-    };
-
-    var chart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: g.labels,
-            datasets: [{
-                label: 'Average rating',
-                data: g.values,
-                borderColor: C.line,
-                borderWidth: 2.5,
-                backgroundColor: 'rgba(34, 58, 133, 0.07)',
-                fill: true,
-                tension: 0.25,
-                spanGaps: false,
-                pointRadius: 7,
-                pointHoverRadius: 9,
-                pointBorderWidth: 3,
-                // The SHAPE shows the direction too (not only color): triangle up / down, circle = same
-                pointStyle:    function (c) { var k = kind(c.dataIndex); return (k === 'up' || k === 'down') ? 'triangle' : 'circle'; },
-                pointRotation: function (c) { return kind(c.dataIndex) === 'down' ? 180 : 0; },
-                // Empty dot = term still open, filled dot = term finished
-                pointBackgroundColor: function (c) { return live(c.dataIndex) ? '#ffffff' : color(c.dataIndex); },
-                pointBorderColor:     function (c) { return live(c.dataIndex) ? color(c.dataIndex) : '#ffffff'; }
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 28, right: 16 } },
-            scales: {
-                y: {
-                    min: 1, max: 5,
-                    ticks: { stepSize: 1 },
-                    grid: { color: C.grid },
-                    border: { display: false },
-                    title: { display: true, text: 'Average rating (out of 5)', color: C.muted }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: C.navy, font: { size: 12, weight: '600' } }
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    displayColors: false,
-                    callbacks: {
-                        label: function (c) { return 'Rating: ' + c.parsed.y.toFixed(2) + ' / 5'; },
-                        afterLabel: function (c) {
-                            var i = c.dataIndex + offset;
-                            return ['Responses: ' + g.responses[i], 'Status: ' + (g.statuses[i] === 'ongoing' ? 'In progress' : 'Completed')];
-                        }
-                    }
-                }
-            }
-        },
-        plugins: [Instructor.targetLine('y', 4.5, 'Excellent 4.5'), scoreLabels]
-    });
-
-    charts.trend = { resize: function () { chart.resize(); } };
-
-    /* "Last 4 terms | All terms" switch (only when there are more than 4 terms) */
-    var control = document.getElementById('rangeControl');
-    function showRange(count) {
-        offset = count && total > count ? total - count : 0;
-        chart.data.labels = g.labels.slice(offset);
-        chart.data.datasets[0].data = g.values.slice(offset);
-        chart.update();
-        control.querySelectorAll('button').forEach(function (b) {
-            b.setAttribute('aria-pressed', (b.dataset.range === 'all' ? 0 : 4) === count ? 'true' : 'false');
-        });
-    }
-    if (control && total > 4) {
-        control.hidden = false;
-        control.querySelectorAll('button').forEach(function (b) {
-            b.addEventListener('click', function () { showRange(b.dataset.range === 'all' ? 0 : 4); });
-        });
-        showRange(4);
-    }
-})();
-
-
-/* ── 3. History and updates: pages ── */
-(function () {
-    var hist  = document.getElementById('histBody');
-    var notif = document.getElementById('notifList');
-    if (hist)  Instructor.paginate(hist,  document.getElementById('histPager'),  5, 'periods');
-    if (notif) Instructor.paginate(notif, document.getElementById('notifPager'), 5, 'updates');
-
-    /* "All periods | Latest semester" switch */
-    var sw = document.getElementById('historySwitch');
-    if (!sw) return;
-    var all  = document.getElementById('historyAll');
-    var term = document.getElementById('historyTerm');
-    sw.querySelectorAll('button').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var showAll = btn.dataset.show === 'all';
-            all.hidden  = !showAll;
-            term.hidden = showAll;
-            sw.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
-        });
-    });
-})();
-
-
-/* ── 4. Tabs, and the "N updates" button in the status bar ── */
-Instructor.tabs(document.querySelector('.tabbed'), function (key) {
-    if (charts[key]) charts[key].resize();
-});
-
-document.querySelectorAll('[data-goto]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var tab = document.getElementById('tab-' + btn.dataset.goto);
-        if (!tab) return;
-        tab.click();
-        var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        document.querySelector('.tabbed').scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
-    });
-});
-
-
 /* ── 5. Profile form: turn the Save button on only after a change ── */
 (function () {
     var form = document.getElementById('profileForm');

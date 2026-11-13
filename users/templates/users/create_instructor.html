@@ -206,7 +206,11 @@
 
 <!-- ================= MODAL (UNCHANGED - GOOD ALREADY) ================= -->
 <div id="instructorModal"
-     class="modal"
+     class="modal instructor-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="instructorModalTitle"
+     aria-hidden="true"
      data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
 
     <div class="modal-content modern-modal">
@@ -214,20 +218,21 @@
         <div class="modal-header-modern">
 
             <div>
-                <h3>Create Instructor</h3>
-                <p>Fill in instructor details to create an account</p>
+                <span class="student-eyebrow">New account</span>
+                <h3 id="instructorModalTitle">Add an instructor</h3>
+                <p>Enter the instructor’s details and department.</p>
             </div>
 
             <button type="button"
                     class="close-btn"
-                    onclick="closeModal()">
-                ×
+                    onclick="closeModal()"
+                    aria-label="Close dialog">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
             </button>
 
         </div>
 
         <form method="POST"
-              action="{% url 'create_instructor' %}"
               id="instructorForm">
 
             {% csrf_token %}
@@ -237,39 +242,46 @@
                 <div class="form-grid">
 
                     <div class="form-group">
-                        <label class="form-label">First Name</label>
+                        <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
                         {{ form.first_name }}
                         <span class="error">{{ form.first_name.errors }}</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Middle Name</label>
+                        <label class="form-label" for="{{ form.middle_name.id_for_label }}">Middle name <span>(optional)</span></label>
                         {{ form.middle_name }}
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Last Name</label>
+                        <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
                         {{ form.last_name }}
                         <span class="error">{{ form.last_name.errors }}</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Email Address</label>
+                        <label class="form-label" for="{{ form.email.id_for_label }}">Email address</label>
                         {{ form.email }}
                         <span class="error">{{ form.email.errors }}</span>
                     </div>
 
                     <div class="form-group full-width">
-                        <label class="form-label">Department</label>
+                        <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
                         {{ form.department }}
                         <span class="error">{{ form.department.errors }}</span>
                     </div>
 
                     <div class="form-group full-width">
-                        <label class="form-label">Temporary Password</label>
+                        <label class="form-label" for="{{ form.password.id_for_label }}">Temporary password</label>
                         {{ form.password }}
                         <span class="error">{{ form.password.errors }}</span>
+                        <span class="student-field-hint">The instructor will be asked to change this after their first sign-in.</span>
                     </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="form-group full-width">
+                        <span class="error">{{ form.non_field_errors }}</span>
+                    </div>
+                    {% endif %}
 
                 </div>
 
@@ -288,7 +300,7 @@
                         class="btn-primary"
                         id="submitBtn">
 
-                    Create Instructor
+                    Create instructor
                 </button>
 
             </div>
@@ -302,17 +314,29 @@
 <script>
 
 const modal = document.getElementById("instructorModal");
+const addInstructorButton = document.querySelector(".page-header .btn-primary");
 
 function openModal() {
     modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+    const firstField = modal.querySelector("input:not([type='hidden']), select, textarea");
+    if (firstField) firstField.focus();
 }
 
 function closeModal() {
     modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+    if (addInstructorButton) addInstructorButton.focus();
 }
 
 window.addEventListener("click", function (e) {
     if (e.target === modal) {
+        closeModal();
+    }
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && modal.classList.contains("show")) {
         closeModal();
     }
 });

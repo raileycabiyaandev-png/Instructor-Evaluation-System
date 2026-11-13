@@ -9,30 +9,13 @@
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_evaluation_results.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
-{% endblock %}
-
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
 {% endblock %}
 
 
 {% block content %}
-<div class="page">
-
-    <!-- Where am I? (left)  +  print button (right) -->
-    <div class="page-top no-print">
-        <nav class="crumbs" aria-label="Breadcrumb">
-            <a href="{% url 'instructor_dashboard' %}">Dashboard</a>
-            <i class="bi bi-chevron-right" aria-hidden="true"></i>
-            <span aria-current="page">Evaluation results</span>
-        </nav>
-        {% if state == "released" %}
-        <button type="button" class="btn btn-ghost btn-sm" onclick="window.print()">
-            <i class="bi bi-printer" aria-hidden="true"></i> Print / Save as PDF
-        </button>
-        {% endif %}
-    </div>
-
+<div class="page ac-stack">
 
     <!-- Step 1: choose a period -->
     <section class="card no-print" aria-labelledby="filterTitle">
@@ -41,34 +24,30 @@
                 <span class="card-icon"><i class="bi bi-funnel" aria-hidden="true"></i></span>
                 <div>
                     <h3 id="filterTitle">Choose a period</h3>
-                    <p class="card-sub">Results appear after the period closes.</p>
+                    <p class="card-sub">{% if period %}Showing: {{ period_label }}{% else %}Pick a school year, semester and term.{% endif %}</p>
                 </div>
             </div>
+            {% if state == "open" %}<span class="ac-chip ac-chip--warn">Open · not final</span>{% elif state == "finished" %}<span class="ac-chip ac-chip--good">Finished</span>{% endif %}
         </div>
 
         <form method="get" action="{% url 'instructor_evaluation_results' %}" class="filters">
+            <input type="hidden" name="tab" value="{{ tab }}">
             <div class="field">
                 <label for="f_sy">School year</label>
                 <select id="f_sy" name="school_year" class="select">
-                    {% for sy in school_years %}
-                    <option value="{{ sy }}" {% if sy == selected.school_year %}selected{% endif %}>{{ sy }}</option>
-                    {% endfor %}
+                    {% for sy in school_years %}<option value="{{ sy }}" {% if sy == selected.school_year %}selected{% endif %}>{{ sy }}</option>{% endfor %}
                 </select>
             </div>
             <div class="field">
                 <label for="f_sem">Semester</label>
                 <select id="f_sem" name="semester" class="select">
-                    {% for value, label in semester_choices %}
-                    <option value="{{ value }}" {% if value == selected.semester %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
+                    {% for value, label in semester_choices %}<option value="{{ value }}" {% if value == selected.semester %}selected{% endif %}>{{ label }}</option>{% endfor %}
                 </select>
             </div>
             <div class="field">
                 <label for="f_term">Evaluation period</label>
                 <select id="f_term" name="term" class="select">
-                    {% for value, label in term_choices %}
-                    <option value="{{ value }}" {% if value == selected.term %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
+                    {% for value, label in term_choices %}<option value="{{ value }}" {% if value == selected.term %}selected{% endif %}>{{ label }}</option>{% endfor %}
                 </select>
             </div>
             <div class="filter-actions">
@@ -78,305 +57,110 @@
         </form>
     </section>
 
-
-    {% if state == "released" %}
-
-    <!-- Only shows on paper -->
-    <div class="print-only">
-        <h2>Faculty Evaluation Report</h2>
-        <p><strong>Instructor:</strong> {{ request.user.first_name }} {{ request.user.last_name }}</p>
-        <p><strong>Evaluation period:</strong> {{ period_label }}</p>
-        <p><strong>Date generated:</strong> {% now "F j, Y" %}</p>
-    </div>
-
-
-    <!-- Step 2: overview = big rating + quick facts -->
-    <div class="overview">
-        {% include "instructor_rating_hero.html" with score=current.overall title="Overall rating" period_text=period_label note="The average of all anonymous student ratings in this period." %}
-
-        <div class="side">
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
-                <div class="stat-body">
-                    <div class="stat-label">Total evaluations</div>
-                    <div class="stat-value">{{ current.total }}</div>
-                    <div class="stat-note">
-                        {% if low_sample %}
-                        <span class="flag"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Fewer than {{ min_responses }}. Read the scores with care.</span>
-                        {% else %}
-                        Anonymous student responses
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></span>
-                <div class="stat-body">
-                    <div class="stat-label">Compared with the last period</div>
-                    {% if overall_change %}
-                    <div style="margin-top:6px;">
-                        <span class="trend {{ overall_change.trend }}">
-                            {% if overall_change.trend == "up" %}<i class="bi bi-caret-up-fill" aria-hidden="true"></i>{% elif overall_change.trend == "down" %}<i class="bi bi-caret-down-fill" aria-hidden="true"></i>{% else %}<i class="bi bi-dash" aria-hidden="true"></i>{% endif %}
-                            {{ overall_change.text }}
-                        </span>
-                    </div>
-                    <div class="stat-note">Last period: {{ previous_label }}</div>
-                    {% else %}
-                    <div class="stat-na">Not available</div>
-                    <div class="stat-note">No earlier finished evaluation yet</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Filled in by JavaScript from the category table -->
-            <div class="stat" id="insightBest" hidden>
-                <span class="stat-icon"><i class="bi bi-arrow-up-circle-fill" aria-hidden="true"></i></span>
-                <div class="stat-body">
-                    <div class="stat-label">Your strongest area</div>
-                    <div class="stat-value stat-value--text" data-name></div>
-                    <div class="stat-note" data-score></div>
-                </div>
-            </div>
-
-            <div class="stat" id="insightLow" hidden>
-                <span class="stat-icon stat-icon--gold"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
-                <div class="stat-body">
-                    <div class="stat-label">Needs the most attention</div>
-                    <div class="stat-value stat-value--text" data-name></div>
-                    <div class="stat-note" data-score></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Step 3: the details, one section at a time: Chart | Table | Feedback -->
-    <section class="card tabbed" aria-label="Results in detail">
-
-        <div class="tabs" role="tablist" aria-label="Choose what to see">
-            <button type="button" class="tab" role="tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="true">
-                <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Chart
-            </button>
-            <button type="button" class="tab" role="tab" id="tab-table" data-tab="table" aria-controls="panel-table" aria-selected="false">
-                <i class="bi bi-table" aria-hidden="true"></i> Table
-            </button>
-            <button type="button" class="tab" role="tab" id="tab-feedback" data-tab="feedback" aria-controls="panel-feedback" aria-selected="false">
-                <i class="bi bi-chat-quote" aria-hidden="true"></i> Feedback
-                {% if feedback.comments and not feedback.hidden %}<span class="tab-count">{{ feedback.count }}</span>{% endif %}
-            </button>
-        </div>
-
-
-        <!-- TAB: chart -->
-        <div class="tab-panel" role="tabpanel" id="panel-chart" aria-labelledby="tab-chart">
-            <div class="panel-head">
-                <p class="panel-desc">Average of all student ratings in each category. Scores are out of 5.</p>
-                <div class="tools no-print">
-                    <div class="control">
-                        <label for="sortCategory">Sort by</label>
-                        <select id="sortCategory" class="select">
-                            <option value="default">Default order</option>
-                            <option value="high">Highest first</option>
-                            <option value="low">Lowest first</option>
-                        </select>
-                    </div>
-                    {% if previous %}
-                    <label class="switch">
-                        <input type="checkbox" id="togglePrevious" checked>
-                        <span class="switch-track" aria-hidden="true"></span>
-                        <span class="switch-label">Show last period</span>
-                    </label>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card-body">
-                <div class="chart-wrap chart-wrap--bars">
-                    <canvas id="categoryChart" role="img" aria-label="Bar chart of your score in each category, out of 5{% if previous %}, with last period next to it{% endif %}. The same numbers are in the Table tab."></canvas>
-                </div>
-                <ul class="legend">
-                    <li><i class="key key--high" aria-hidden="true"></i> Excellent</li>
-                    <li><i class="key key--mid" aria-hidden="true"></i> Good</li>
-                    <li><i class="key key--low" aria-hidden="true"></i> Needs improvement</li>
-                    {% if previous %}<li><i class="key key--prev" aria-hidden="true"></i> Last period</li>{% endif %}
-                </ul>
-            </div>
-        </div>
-
-
-        <!-- TAB: table -->
-        <div class="tab-panel" role="tabpanel" id="panel-table" aria-labelledby="tab-table" hidden>
-            <div class="panel-head">
-                <p class="panel-desc">The same scores as the chart{% if previous %}, with the change from the last period{% endif %}.</p>
-            </div>
-
-            <div class="table-wrap">
-                <table class="data-table" id="categoryTable">
-                    <thead>
-                        <tr>
-                            <th scope="col">Category</th>
-                            <th scope="col">Score</th>
-                            {% if previous %}
-                            <th scope="col" class="col-prev">Last period</th>
-                            <th scope="col">Change</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in rows %}
-                        <tr data-label="{{ row.label }}" data-score="{{ row.score|stringformat:'f' }}"{% if previous %} data-previous="{{ row.previous|stringformat:'f' }}"{% endif %}>
-                            <th scope="row">{{ row.label }}</th>
-                            <td>
-                                <span class="badge badge-{{ row.level }}">
-                                    {% if row.level == "high" %}<i class="bi bi-check-circle" aria-hidden="true"></i>{% elif row.level == "mid" %}<i class="bi bi-dash-circle" aria-hidden="true"></i>{% else %}<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{% endif %}
-                                    {{ row.score|floatformat:2 }} / 5
-                                    {% if row.level == "high" %}Excellent{% elif row.level == "mid" %}Good{% else %}Needs improvement{% endif %}
-                                </span>
-                            </td>
-                            {% if previous %}
-                            <td class="col-prev">{{ row.previous|floatformat:2 }} / 5</td>
-                            <td>
-                                <span class="trend {{ row.trend }}">
-                                    {% if row.trend == "up" %}<i class="bi bi-caret-up-fill" aria-hidden="true"></i>{% elif row.trend == "down" %}<i class="bi bi-caret-down-fill" aria-hidden="true"></i>{% else %}<i class="bi bi-dash" aria-hidden="true"></i>{% endif %}
-                                    {{ row.diff_text }}
-                                </span>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="pager" id="categoryPager" hidden>
-                <span class="pager-info" data-pager-info aria-live="polite"></span>
-                <div class="pager-buttons">
-                    <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                    <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                </div>
-            </div>
-
-            {% if not previous %}
-            <div class="card-foot"><i class="bi bi-info-circle" aria-hidden="true"></i> No earlier finished evaluation, so there is nothing to compare with yet.</div>
-            {% endif %}
-        </div>
-
-
-        <!-- TAB: anonymous feedback (always without names) -->
-        <div class="tab-panel" role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback" hidden>
-            <div class="panel-head">
-                <p class="panel-desc">Written comments are <strong>anonymous</strong>: no names, no dates, in mixed order.</p>
-            </div>
-
-            <div class="card-body">
-                {% if feedback.hidden %}
-                    <p class="feedback-hidden">
-                        <i class="bi bi-shield-lock" aria-hidden="true"></i>
-                        <span>Written comments stay hidden until at least {{ feedback.needed }} students have evaluated you. This protects the identity of students.</span>
-                    </p>
-                {% elif feedback.comments %}
-                    <p class="feedback-count">{{ feedback.count }} of {{ feedback.total }} student{{ feedback.total|pluralize }} wrote a comment.</p>
-                    <ul class="feedback-list" id="feedbackList">
-                        {% for comment in feedback.comments %}
-                        <li>{{ comment|linebreaksbr }}</li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="feedback-hidden">
-                        <i class="bi bi-chat" aria-hidden="true"></i>
-                        <span>No student wrote a comment in this period.</span>
-                    </p>
-                {% endif %}
-            </div>
-
-            {% if feedback.comments and not feedback.hidden %}
-            <div class="pager" id="feedbackPager" hidden>
-                <span class="pager-info" data-pager-info aria-live="polite"></span>
-                <div class="pager-buttons">
-                    <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                    <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-
-        <div class="card-foot privacy">
-            <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-            <span>These are combined averages. Student names and single answers are never shown.</span>
-        </div>
-
-    </section>
+    {% if state == "no_periods" %}
+    <section class="card"><div class="empty"><i class="bi bi-calendar-x" aria-hidden="true"></i><h3>No evaluation periods yet</h3><p>Your administrator has not created an evaluation period.</p></div></section>
+    {% elif state == "not_found" %}
+    <section class="card"><div class="empty"><i class="bi bi-search" aria-hidden="true"></i><h3>That period does not exist</h3><p>Choose another school year, semester or term.</p></div></section>
+    {% elif state == "not_open" %}
+    <section class="card"><div class="empty"><i class="bi bi-hourglass-top" aria-hidden="true"></i><h3>This period has not started</h3><p>{{ period_label }} opens on {{ period.start_date|date:"M d, Y" }}.</p></div></section>
+    {% elif state == "no_responses" %}
+    <section class="card"><div class="empty"><i class="bi bi-inbox" aria-hidden="true"></i><h3>No answers for this period</h3><p>{{ period_label }} has no student answers for you.</p></div></section>
 
     {% else %}
 
-    <!-- Nothing to show yet: say why in simple words -->
-    <section class="card empty" aria-live="polite">
-        {% if state == "no_periods" %}
-            <i class="bi bi-calendar-x" aria-hidden="true"></i>
-            <h3>No evaluation periods yet</h3>
-            <p class="state-text">The administrator has not created an evaluation period yet.</p>
-        {% elif state == "not_found" %}
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <h3>No period matches your choice</h3>
-            <p class="state-text">There is no evaluation period for that school year, semester and period. Please try another choice.</p>
-        {% elif state == "not_open" %}
-            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-            <h3>This evaluation has not opened yet</h3>
-            <p class="state-text">{{ period_label }} is not open for students yet, so there are no results.</p>
-        {% elif state == "in_progress" %}
-            <i class="bi bi-lock-fill" aria-hidden="true"></i>
-            <h3>Results are not released yet</h3>
-            <p class="state-text">{{ period_label }} is still open for students. Results come out after the period closes, so the scores are final.</p>
-        {% elif state == "no_responses" %}
-            <i class="bi bi-inbox" aria-hidden="true"></i>
-            <h3>No student responses</h3>
-            <p class="state-text">{{ period_label }} is closed, but no student sent an evaluation for you.</p>
-        {% endif %}
+    <!-- Tabs: each one is a link, so the page can show the next page of a table or of comments -->
+    <div class="ac-tabbar no-print">
+        <div class="ai-tabs" role="navigation" aria-label="Result sections">
+            <a class="ai-tab" aria-pressed="{% if tab == 'overview' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=overview"><i class="bi bi-speedometer2" aria-hidden="true"></i> Overview</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'history' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=history"><i class="bi bi-clock-history" aria-hidden="true"></i> Performance history</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'ai' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai"><i class="bi bi-stars" aria-hidden="true"></i> AI analysis</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'comments' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=comments"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Comments</a>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="{% url 'instructor_reports' %}?period={{ period.pk }}"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Download report</a>
+    </div>
 
-        {% if has_released and state != "no_periods" %}
-        <a href="{% url 'instructor_evaluation_results' %}" class="btn btn-ghost">
-            <i class="bi bi-clock-history" aria-hidden="true"></i> Show my latest released results
-        </a>
-        {% endif %}
+    {% if tab == "overview" %}
+        {% include "users/_instructor_overview.html" %}
+
+    {% elif tab == "history" %}
+    <section class="card">
+        <div class="ac-body">
+            <div class="ac-panel">
+                <h3 class="ac-sec">Every area over time</h3>
+                {% include "ai_insights/_line_chart.html" with chart=history_chart title="Line chart of each of the five areas in every finished period." %}
+            </div>
+            <div class="ac-panel">
+                <h3 class="ac-sec">All finished periods <small class="ac-hint">({{ history_total }})</small></h3>
+                <div class="table-wrap"><table class="ac-table">
+                    <thead><tr><th scope="col">Period</th><th scope="col">Answers</th><th scope="col">Overall</th><th scope="col">Change</th>
+                        <th scope="col">Teaching</th><th scope="col">Communication</th><th scope="col">Class mgmt</th><th scope="col">Punctuality</th><th scope="col">Engagement</th></tr></thead>
+                    <tbody>
+                    {% for r in pager %}
+                    <tr>
+                        <th scope="row">{{ r.short }}{% if r.low_sample %} <span class="ac-pill ac-pill--warn">few answers</span>{% endif %}</th>
+                        <td>{{ r.responses }}</td>
+                        <td><b>{{ r.overall|floatformat:2 }}</b></td>
+                        <td>{% if r.diff is None %}—{% else %}<span class="{% if r.diff > 0 %}ac-up{% elif r.diff < 0 %}ac-down{% endif %}">{{ r.diff|stringformat:"+.2f" }}</span>{% endif %}</td>
+                        <td>{{ r.categories.teaching_effectiveness|floatformat:2 }}</td>
+                        <td>{{ r.categories.communication_skills|floatformat:2 }}</td>
+                        <td>{{ r.categories.classroom_management|floatformat:2 }}</td>
+                        <td>{{ r.categories.punctuality|floatformat:2 }}</td>
+                        <td>{{ r.categories.student_engagement|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table></div>
+                {% include "ai_insights/_pager.html" with pager=pager keep=keep %}
+            </div>
+        </div>
     </section>
 
+    {% elif tab == "ai" %}
+    {% if state == "open" %}<div class="ac-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
+        This period is still open. Its AI text is written after it closes and your administrator runs the analysis. The forecast below is based on your finished periods.</div>{% endif %}
+    <section class="card" id="ai-results">
+        <div class="ac-tabbar">
+            <div class="ai-tabs" role="navigation" aria-label="AI analysis">
+                <a class="ai-tab" aria-pressed="{% if section == 'feedback' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai&amp;section=feedback#ai-results"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</a>
+                <a class="ai-tab" aria-pressed="{% if section == 'suggestions' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai&amp;section=suggestions#ai-results"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions</a>
+                <a class="ai-tab" aria-pressed="{% if section == 'forecast' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai&amp;section=forecast#ai-results"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</a>
+            </div>
+        </div>
+        <div class="ac-body">
+            {% if section == "feedback" %}
+                {% if period_ai %}{% include "users/_instructor_ai.html" with part="feedback" fb=period_ai.feedback label=period_label %}
+                {% else %}<div class="ac-panel"><p class="ac-lead">The summary appears after this period closes.</p></div>{% endif %}
+            {% elif section == "suggestions" %}
+                {% if period_ai %}{% include "users/_instructor_ai.html" with part="suggestions" sg=period_ai.suggestions label=period_label %}
+                {% else %}<div class="ac-panel"><p class="ac-lead">Suggestions appear after this period closes.</p></div>{% endif %}
+            {% else %}
+                {% include "users/_instructor_ai.html" with part="forecast" fc=ai.forecast fchart=ai.forecast_chart progress=ai.progress min_periods=ai.min_periods min_responses=ai.min_responses %}
+            {% endif %}
+        </div>
+    </section>
+
+    {% elif tab == "comments" %}
+    <section class="card">
+        <div class="ac-body">
+            {% if state == "open" %}
+            <div class="ac-panel"><p class="ac-lead">Comments are shown after the period closes, so no one can guess who wrote what while students are still answering.</p></div>
+            {% elif feedback.hidden %}
+            <div class="ac-panel"><p class="ac-lead">Comments stay hidden until at least {{ feedback.needed }} students have answered. This protects student privacy.</p></div>
+            {% elif not feedback.count %}
+            <div class="ac-panel"><p class="ac-lead">Students did not write any comment in this period.</p></div>
+            {% else %}
+            <p class="ac-hint">{{ feedback.count }} anonymous comment{{ feedback.count|pluralize }} from {{ feedback.total }} students, in mixed order.</p>
+            <ul class="ac-comments">{% for c in pager %}<li class="ac-comment">{{ c }}</li>{% endfor %}</ul>
+            {% include "ai_insights/_pager.html" with pager=pager keep=keep %}
+            {% endif %}
+        </div>
+    </section>
     {% endif %}
 
+    {% endif %}
 </div>
 {% endblock %}
 
-
 {% block extra_js %}
-<script src="{% static 'users/js/instructor_common.js' %}"></script>
-<script>
-/* The chart and the cards are built from the table, so they always match it. */
-(function () {
-    var table = document.getElementById('categoryTable');
-    if (!table) return;
-
-    var rows  = Instructor.readCategoryRows(table);
-    var chart = Instructor.categoryChart(document.getElementById('categoryChart'), rows);
-    Instructor.showInsights(rows);
-    Instructor.paginate(table.querySelector('tbody'), document.getElementById('categoryPager'), 5, 'categories');
-
-    var comments = document.getElementById('feedbackList');
-    if (comments) Instructor.paginate(comments, document.getElementById('feedbackPager'), 5, 'comments');
-
-    /* Input controls */
-    var sort = document.getElementById('sortCategory');
-    var prev = document.getElementById('togglePrevious');
-    if (chart && sort) sort.addEventListener('change', function () { chart.setSort(sort.value); });
-    if (chart && prev) prev.addEventListener('change', function () { chart.setPrevious(prev.checked); });
-
-    /* Tabs: Chart | Table | Feedback */
-    Instructor.tabs(document.querySelector('.tabbed'), function (key) {
-        if (key === 'chart' && chart) chart.resize();
-    });
-
-    /* Make sure the chart is the right size when printing */
-    window.addEventListener('beforeprint', function () { if (chart) chart.resize(); });
-})();
-</script>
+<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>
 {% endblock %}

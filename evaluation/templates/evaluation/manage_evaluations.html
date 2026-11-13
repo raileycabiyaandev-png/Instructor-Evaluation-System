@@ -45,31 +45,6 @@
             </div>
         </div>
 
-        <!-- Search + filter + sort -->
-        <div class="card-body">
-            <div class="tools">
-                <label class="search">
-                    <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="search" id="searchEvaluation" placeholder="Search evaluation" aria-label="Search evaluation">
-                </label>
-
-                <div class="seg" id="statusFilter" role="group" aria-label="Show which periods">
-                    <button type="button" data-filter="all" aria-pressed="true">All <span class="tab-count" data-count="all">0</span></button>
-                    <button type="button" data-filter="active" aria-pressed="false">Active <span class="tab-count" data-count="active">0</span></button>
-                    <button type="button" data-filter="draft" aria-pressed="false">Draft <span class="tab-count" data-count="draft">0</span></button>
-                </div>
-
-                <div class="control">
-                    <label for="sortEvaluation">Sort by</label>
-                    <select id="sortEvaluation" class="select">
-                        <option value="newest">Newest first</option>
-                        <option value="oldest">Oldest first</option>
-                        <option value="active">Active first</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
         <div class="table-wrap">
             <table class="data-table period-table" id="evaluationTable">
                 <thead>
@@ -110,16 +85,6 @@
                                     <i class="bi bi-pencil" aria-hidden="true"></i> Edit
                                 </a>
 
-                                <form action="{% url 'toggle_active' p.id %}" method="POST" class="toggle-form">
-                                    {% csrf_token %}
-                                    <label class="switch">
-                                        <input type="checkbox" onchange="this.form.submit()" {% if p.is_active %}checked{% endif %}
-                                               aria-label="Switch {{ p.school_year }} {{ p.get_semester_display }} {{ p.get_term_display }} on or off">
-                                        <span class="switch-track" aria-hidden="true"></span>
-                                        <span class="switch-label">{% if p.is_active %}On{% else %}Off{% endif %}</span>
-                                    </label>
-                                </form>
-
                                 <form action="{% url 'delete_evaluation' p.id %}" method="POST" class="delete-form"
                                       data-name="{{ p.school_year }}, {{ p.get_semester_display }}, {{ p.get_term_display }}">
                                     {% csrf_token %}
@@ -128,6 +93,15 @@
                                     </button>
                                 </form>
 
+                                <form action="{% url 'toggle_active' p.id %}" method="POST" class="toggle-form">
+                                    {% csrf_token %}
+                                    <label class="switch">
+                                        <input type="checkbox" onchange="this.form.submit()" {% if p.is_active %}checked{% endif %}
+                                               aria-label="Switch {{ p.school_year }} {{ p.get_semester_display }} {{ p.get_term_display }} on or off">
+                                        <span class="switch-track" aria-hidden="true"></span>
+                                        <span class="switch-label">{% if p.is_active %}Start{% else %}Stop{% endif %}</span>
+                                    </label>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -213,10 +187,6 @@
 
                     <div class="form-field full-width">
                         <span class="form-label-text" style="font-size:15px;font-weight:600;color:var(--navy-800);">Evaluation status</span>
-                        <label class="toggle-label">
-                            {{ form.is_active }}
-                            <span class="toggle-text">Open this period to students</span>
-                        </label>
                     </div>
 
                 </div>
@@ -224,7 +194,7 @@
 
             <div class="eval-modal__footer">
                 <button type="button" class="btn btn-ghost" id="cancelCreate">Cancel</button>
-                <button type="submit" class="btn btn-primary" id="submitBtn"><i class="bi bi-check2-circle" aria-hidden="true"></i> Save evaluation</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn"><i class="bi bi-check2-circle" aria-hidden="true"></i> Create </button>
             </div>
         </form>
 

@@ -1,0 +1,21 @@
+<div class="field">
+    <label for="f-priority">Priority</label>
+    <select id="f-priority" name="priority" class="select">
+        <option value="">Any</option>
+        {% for value, label in data.priorities.items %}<option value="{{ value }}" {% if value == data.priority %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>
+<div class="field">
+    <label for="f-category">Category</label>
+    <select id="f-category" name="category" class="select">
+        <option value="">All categories</option>
+        {% for value, label in data.categories %}<option value="{{ value }}" {% if value == data.category %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>
+<div class="field">
+    <label for="f-source">Text type</label>
+    <select id="f-source" name="source" class="select">
+        <option value="">Any</option>
+        {% for value, label in data.sources.items %}<option value="{{ value }}" {% if value == data.source %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>

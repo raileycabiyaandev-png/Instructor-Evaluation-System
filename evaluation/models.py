@@ -36,9 +36,6 @@ class EvaluationPeriod(models.Model):
     end_date = models.DateField()
     is_active = models.BooleanField(default=False)
 
-    # =========================
-    # STATUS HELPERS (NEW)
-    # =========================
     @property
     def is_closed(self):
         return self.end_date < timezone.now().date()
@@ -73,7 +70,6 @@ class Evaluation(models.Model):
         related_name='received_evaluations'
     )
 
-    # ✅ NEW FIELD
     period = models.ForeignKey(
         EvaluationPeriod,
         on_delete=models.CASCADE,
@@ -91,7 +87,6 @@ class Evaluation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # ✅ Prevent duplicate PER PERIOD
         unique_together = ('student', 'teacher', 'period')
 
     def clean(self):

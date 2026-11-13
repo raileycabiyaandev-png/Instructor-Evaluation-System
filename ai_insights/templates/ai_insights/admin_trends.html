@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Performance Trends | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}AI Performance Trends{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+
+    {% include "ai_insights/_admin_filters.html" with action=request.path %}
+
+    {% if not data.shown %}
+    <section class="card"><div class="empty"><i class="bi bi-graph-up" aria-hidden="true"></i>
+        <h3>No evaluations match these filters</h3><p>Try other filters.</p></div></section>
+    {% else %}
+
+    <section class="card ac-head">
+        <div><h2 class="ac-title">{{ data.shown_label }}</h2>
+            <p class="ac-sub">{% if filters.instructor %}{{ filters.instructor.last_name }}, {{ filters.instructor.first_name }}{% elif filters.department %}{{ filters.department.name }}{% else %}All departments{% endif %}</p></div>
+        <div class="ac-status">{% include "ai_insights/_generate_panel.html" with next="ai_admin_trends" %}</div>
+    </section>
+
+    <div class="ac-kpis">
+        <div class="ac-kpi"><span class="ac-kpi-label">Evaluations</span><span class="ac-kpi-value">{{ data.stats.shown_evaluations }}</span><span class="ac-kpi-note">{{ data.row_count }} instructor{{ data.row_count|pluralize }}</span></div>
+        <div class="ac-kpi ac-kpi--gold"><span class="ac-kpi-label">Average score</span><span class="ac-kpi-value">{% if data.stats.latest is not None %}{{ data.stats.latest|floatformat:2 }}{% else %}–{% endif %}</span><span class="ac-kpi-note">real, out of 5</span></div>
+        <div class="ac-kpi {% if data.stats.change is not None and data.stats.change < 0 %}ac-kpi--bad{% elif data.stats.change is not None and data.stats.change > 0 %}ac-kpi--good{% endif %}"><span class="ac-kpi-label">Change</span>
+            <span class="ac-kpi-value">{% if data.stats.change is not None %}{{ data.stats.change|stringformat:"+.2f" }}{% else %}–{% endif %}</span><span class="ac-kpi-note">since the period before</span></div>
+        <div class="ac-kpi"><span class="ac-kpi-label">AI forecasts</span><span class="ac-kpi-value">{{ data.stats.with_forecast }}</span>
+            <span class="ac-kpi-note">{% if data.forecast_ready %}for the next period{% else %}Needs {{ data.min_periods }} periods{% endif %}</span></div>
+    </div>
+
+    <section class="card" data-ai-tabs data-ai-start="table">
+        <div class="card-head">
+            <div class="ai-tabs" role="group" aria-label="Sections">
+                <button type="button" class="ai-tab" data-ai-tab="table">Instructors</button>
+                <button type="button" class="ai-tab" data-ai-tab="categories">Categories</button>
+                <button type="button" class="ai-tab" data-ai-tab="history">History &amp; forecast</button>
+                <button type="button" class="ai-tab" data-ai-tab="compare">Compare</button>
+                {% if filters.instructor %}
+                <button type="button" class="ai-tab" data-ai-tab="detail">Forecast detail</button>
+                <button type="button" class="ai-tab" data-ai-tab="insights">Feedback &amp; suggestions</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- instructors -->
+        <div class="ac-body" data-ai-panel="table">
+            <div class="table-wrap">
+            <table class="ac-table">
+                <thead><tr><th>Instructor</th><th class="num">Evaluations</th><th class="num">Average</th><th>Trend</th><th>Strongest</th><th>Weakest</th><th>AI forecast</th><th></th></tr></thead>
+                <tbody>
+                {% for r in data.pager %}
+                    <tr>
+                        <td><b>{{ r.name }}</b><small>{{ r.department }}</small></td>
+                        <td class="num">{{ r.responses }}</td>
+                        <td class="num"><b>{{ r.overall|floatformat:2 }}</b></td>
+                        <td>{% if r.change is None %}<span class="ac-pill">First period</span>{% else %}<span class="ac-pill {% if r.trend == 'improving' %}ac-pill--good{% elif r.trend == 'declining' %}ac-pill--bad{% endif %}">{{ r.trend|capfirst }} {{ r.change|stringformat:"+.2f" }}</span>{% endif %}</td>
+                        <td>{{ r.strongest|default:"–" }}</td><td>{{ r.weakest|default:"–" }}</td>
+                        <td><span class="ac-forecast">{{ r.forecast_text }}</span></td>
+                        <td><a class="btn btn-ghost btn-sm" href="{% url 'ai_admin_instructor' r.teacher.pk %}">View details</a></td>
+                    </tr>
+                {% empty %}<tr><td colspan="8" class="ac-empty">No instructor has enough evaluations in this period.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% include "ai_insights/_pager.html" with pager=data.pager keep=keep %}
+            {% if data.skipped %}<p class="ac-hint">{{ data.skipped }} instructor{{ data.skipped|pluralize }} with fewer than {{ data.min_responses }} evaluations not shown.</p>{% endif %}
+        </div>
+
+        <!-- categories: table + radar -->
+        <div class="ac-body" data-ai-panel="categories" hidden>
+            <div class="table-wrap">
+            <table class="ac-table">
+                <thead><tr><th>Instructor</th>{% for c in data.category_labels %}<th class="num">{{ c }}</th>{% endfor %}</tr></thead>
+                <tbody>{% for r in data.pager %}
+                    <tr><td><b>{{ r.name }}</b></td>
+                        {% for c in r.categories %}<td class="num"><span class="ac-score {% if c.score >= 4.2 %}ac-score--hi{% elif c.score < 3.5 %}ac-score--lo{% else %}ac-score--mid{% endif %}">{{ c.score|floatformat:2 }}</span></td>{% endfor %}</tr>
+                {% empty %}<tr><td colspan="6" class="ac-empty">No scores yet.</td></tr>{% endfor %}</tbody>
+            </table>
+            </div>
+            <div class="ac-panel"><h4>Category profile</h4>{% include "ai_insights/_radar_chart.html" with chart=data.radar title="Radar chart of the five category scores" %}</div>
+        </div>
+
+        <!-- history -->
+        <div class="ac-body" data-ai-panel="history" hidden>
+            <div class="ac-grid ac-grid--2">
+                <div class="ac-panel"><h4>Real score and forecast</h4>
+                    {% include "ai_insights/_line_chart.html" with chart=data.history_chart title="Solid line: real score by period. Dashed line: AI forecast" %}
+                    {% if not data.forecast_ready %}<p class="ac-hint">No forecast: needs {{ data.min_periods }} finished periods with {{ data.min_responses }}+ evaluations each.</p>{% endif %}</div>
+                <div class="ac-panel"><h4>Each category over time</h4>
+                    {% include "ai_insights/_line_chart.html" with chart=data.cat_chart title="Real score of each category by period" %}</div>
+            </div>
+        </div>
+
+        <!-- compare -->
+        <div class="ac-body" data-ai-panel="compare" hidden>
+            <div class="ac-grid ac-grid--2">
+                <div class="ac-panel"><h4>Departments</h4>
+                    <ul class="ac-bars">
+                        {% for d in data.dept_bars %}<li><span>{{ d.label }}<small class="ac-hint">{{ d.instructors }} instructor{{ d.instructors|pluralize }}</small></span>
+                            <span class="ac-bar-track"><i class="ac-bar-fill" style="width: {{ d.width }}%"></i></span><b>{{ d.value|floatformat:2 }}</b></li>
+                        {% empty %}<li class="ac-empty">Nothing to compare.</li>{% endfor %}
+                    </ul></div>
+                <div class="ac-panel"><h4>Departments over time</h4>
+                    {% include "ai_insights/_line_chart.html" with chart=data.dept_chart title="Average score of each department by period" %}</div>
+            </div>
+            {% for dept in data.dept_compare %}
+            <div class="ac-panel"><h4>{{ dept.name }} <small class="ac-hint">average {{ dept.average|floatformat:2 }}</small></h4>
+                <ul class="ac-bars">
+                    {% for r in dept.rows %}<li><span>{{ r.name }}<small class="ac-hint">{{ r.responses }} evaluation{{ r.responses|pluralize }}</small></span>
+                        <span class="ac-bar-track"><i class="ac-bar-fill" style="width: {{ r.width }}%"></i></span><b>{{ r.value|floatformat:2 }}</b></li>{% endfor %}
+                </ul></div>
+            {% endfor %}
+        </div>
+
+        {% if filters.instructor %}
+        <!-- one instructor: forecast -->
+        <div class="ac-body" data-ai-panel="detail" hidden>
+            {% with d=data.detail %}
+            {% if d.chart %}
+                {% with r=d.row %}
+                <div class="ac-kpis">
+                    <div class="ac-kpi"><span class="ac-kpi-label">Last real score</span><span class="ac-kpi-value">{{ r.last_actual|floatformat:2 }}</span></div>
+                    <div class="ac-kpi ac-kpi--gold"><span class="ac-kpi-label">AI forecast</span><span class="ac-kpi-value">{{ r.predicted|floatformat:2 }}</span><span class="ac-kpi-note">{{ r.target_label }}</span></div>
+                    <div class="ac-kpi"><span class="ac-kpi-label">Typical range</span><span class="ac-kpi-value">{{ r.low|floatformat:1 }}–{{ r.high|floatformat:1 }}</span></div>
+                    <div class="ac-kpi"><span class="ac-kpi-label">Reliability</span><span class="ac-kpi-value">{{ r.reliability|capfirst }}</span><span class="ac-kpi-note">{{ r.periods_used }} periods</span></div>
+                </div>
+                {% endwith %}
+                <table class="ac-table">
+                    <thead><tr><th>Category</th><th class="num">Last real</th><th class="num">AI forecast</th><th class="num">Range</th></tr></thead>
+                    <tbody>{% for c in d.categories %}<tr><td>{{ c.label }}</td><td class="num">{{ c.last_actual|floatformat:2 }}</td><td class="num"><span class="ac-forecast">{{ c.value|floatformat:2 }}</span></td><td class="num">{{ c.low|floatformat:2 }}–{{ c.high|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+                </table>
+            {% else %}
+                <p class="ac-empty">{% if d.row and d.row.message %}{{ d.row.message }}{% else %}No reliable forecast: needs {{ data.min_periods }} finished periods with {{ data.min_responses }}+ evaluations each.{% endif %}</p>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- one instructor: AI feedback summary + suggestions -->
+        <div data-ai-panel="insights" hidden>
+            {% with feedback=one.feedback suggestions=one.suggestions label=one.label %}
+            <div class="ac-body">
+                {% include "users/_instructor_ai.html" with part="feedback" fb=feedback label=label %}
+                {% include "users/_instructor_ai.html" with part="suggestions" sg=suggestions label=label %}
+            </div>
+            {% endwith %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>{% endblock %}

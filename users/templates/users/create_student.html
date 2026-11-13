@@ -2,74 +2,87 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
 <link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}?v=20261110-students-1">
 {% endblock %}
 
-{% block page_title %}Student Lists{% endblock %}
+{% block page_title %}Students{% endblock %}
 
 {% block content %}
 
-<div class="page-container">
+<div class="page-container student-page">
 
     <!-- PAGE HEADER -->
     <div class="page-header">
-
-        <button class="btn-primary" onclick="openModal()">
-            + Add Student
+        <div class="student-page-heading">
+            <span class="student-eyebrow"><i class="bi bi-mortarboard" aria-hidden="true"></i> Academic records</span>
+        </div>
+        <button class="btn-primary student-add-button" type="button" onclick="openModal()">
+            <i class="bi bi-person-plus" aria-hidden="true"></i>
+            Add student
         </button>
-
     </div>
 
     <!-- SUCCESS MESSAGE -->
     {% if messages %}
         {% for message in messages %}
-            <div class="alert {{ message.tags }}">
+            <div class="alert {{ message.tags }}" role="status">
                 {{ message }}
             </div>
         {% endfor %}
     {% endif %}
 
     <!-- STUDENT TABLE -->
-    <div class="card">
-
+    <div class="card student-records-card">
         <div class="card-header-area">
-
-            <div>
-                <span class="table-badge">
-                    Records
-                </span>
+            <div class="student-records-heading">
+                <span class="table-badge"><i class="bi bi-people" aria-hidden="true"></i> Directory</span>
+                <p><span id="studentCount">{{ students|length }}</span> student{{ students|length|pluralize }}</p>
             </div>
+            <label class="student-search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <span class="visually-hidden">Search students</span>
+                <input
+                    type="search"
+                    id="searchInput"
+                    placeholder="Search by name, email, or program"
+                    class="search-input"
+                    autocomplete="off"
+                >
+            </label>
+        </div>
 
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search student..."
-                class="search-input"
-            >
-
+        <div class="student-list-tools">
+            <div class="student-filters" role="group" aria-label="Filter students by account status">
+                <button type="button" class="student-filter is-active" data-status-filter="all" aria-pressed="true">
+                    All <span id="allStudentCount">{{ students|length }}</span>
+                </button>
+                <button type="button" class="student-filter" data-status-filter="active" aria-pressed="false">
+                    Active <span id="activeStudentCount">0</span>
+                </button>
+                <button type="button" class="student-filter" data-status-filter="inactive" aria-pressed="false">
+                    Inactive <span id="inactiveStudentCount">0</span>
+                </button>
+            </div>
+            <p class="student-result-summary" id="studentResultSummary" aria-live="polite"></p>
         </div>
 
         <div class="table-wrapper">
-
             <table class="custom-table" id="studentTable">
-
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Program</th>
-                        <th>Section</th>
-                        <th>Status</th>
-                        <th class="text-right">Actions</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Section</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-right">Actions</th>
                     </tr>
                 </thead>
-
                 <tbody>
-
     {% for student in students %}
-    <tr>
+    <tr data-student-row data-active="{% if student.is_active %}true{% else %}false{% endif %}">
 
-        <td>
+        <td data-label="Student">
             <div class="user-info">
 
                 <div class="user-avatar">
@@ -93,14 +106,14 @@
             </div>
         </td>
 
-        <td>
+        <td data-label="Program">
             <span class="department-badge">
                 {{ student.get_program_display }}
             </span>
             
         </td>
 
-        <td>
+        <td data-label="Section">
             {% if student.section %}
                 {{ student.section.name }}
             {% else %}
@@ -108,7 +121,7 @@
             {% endif %}
         </td>
 
-        <td>
+        <td data-label="Status">
             {% if student.is_active %}
                 <span class="status-badge active">Active</span>
             {% else %}
@@ -116,7 +129,7 @@
             {% endif %}
         </td>
 
-        <td class="actions-column">
+        <td class="actions-column" data-label="Actions">
 
             <div class="action-group">
 
@@ -181,22 +194,31 @@
 
     </tr>
 
-    {% empty %}
-
-    <tr>
-        <td colspan="5" class="empty">
-            No students available.
-        </td>
-    </tr>
-
     {% endfor %}
-
-</tbody>
-
+                </tbody>
             </table>
-
         </div>
 
+        <div class="student-empty-state" id="studentEmpty" {% if students %}hidden{% endif %}>
+            <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
+            <h3 id="studentEmptyTitle">{% if students %}No students match{% else %}No students yet{% endif %}</h3>
+            <p id="studentEmptyMessage">{% if students %}Try another search or status filter.{% else %}Add a student to start building your directory.{% endif %}</p>
+        </div>
+
+        <nav class="student-pagination" id="studentPagination" aria-label="Student list pages" hidden>
+            <span id="studentPageInfo" aria-live="polite"></span>
+            <div class="student-page-buttons">
+                <button type="button" class="student-page-button" id="studentPrev" aria-label="Previous page">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    Previous
+                </button>
+                <span class="student-page-number" id="studentPageNumber" aria-current="page"></span>
+                <button type="button" class="student-page-button" id="studentNext" aria-label="Next page">
+                    Next
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </nav>
     </div>
 
 </div>
@@ -207,7 +229,11 @@
 
 <div
     id="studentModal"
-    class="modal"
+    class="modal student-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="studentModalTitle"
+    aria-hidden="true"
     data-has-errors="{% if form.errors %}1{% else %}0{% endif %}">
 
     <div class="modal-content modern-modal">
@@ -216,12 +242,13 @@
         <div class="modal-header-modern">
 
             <div>
-                <h3>Create Student</h3>
-                <p>Fill in student details to create an account</p>
+                <span class="student-eyebrow">New account</span>
+                <h3 id="studentModalTitle">Add a student</h3>
+                <p>Enter the student’s details and academic placement.</p>
             </div>
 
-            <button class="close-btn" onclick="closeModal()">
-                ×
+            <button class="close-btn" type="button" onclick="closeModal()" aria-label="Close dialog">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
             </button>
 
         </div>
@@ -238,41 +265,41 @@
 
                     <!-- FIRST NAME -->
                     <div class="form-group">
-                        <label class="form-label">First Name</label>
+                        <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
                         {{ form.first_name }}
                         <span class="error">{{ form.first_name.errors }}</span>
                     </div>
 
                     <!-- MIDDLE NAME -->
                     <div class="form-group">
-                        <label class="form-label">Middle Name</label>
+                        <label class="form-label" for="{{ form.middle_name.id_for_label }}">Middle name <span>(optional)</span></label>
                         {{ form.middle_name }}
                     </div>
 
                     <!-- LAST NAME -->
                     <div class="form-group">
-                        <label class="form-label">Last Name</label>
+                        <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
                         {{ form.last_name }}
                         <span class="error">{{ form.last_name.errors }}</span>
                     </div>
 
                     <!-- EMAIL -->
                     <div class="form-group">
-                        <label class="form-label">Email Address</label>
+                        <label class="form-label" for="{{ form.email.id_for_label }}">Email address</label>
                         {{ form.email }}
                         <span class="error">{{ form.email.errors }}</span>
                     </div>
 
                     <!-- PROGRAM -->
                     <div class="form-group full-width">
-                        <label class="form-label">Program</label>
+                        <label class="form-label" for="{{ form.program.id_for_label }}">Program</label>
                         {{ form.program }}
                         <span class="error">{{ form.program.errors }}</span>
                     </div>
 
                     <!-- SECTION -->
                     <div class="form-group full-width">
-                        <label class="form-label">Section (optional)</label>
+                        <label class="form-label" for="{{ form.section.id_for_label }}">Section <span>(optional)</span></label>
                         {{ form.section }}
                         <span class="error">{{ form.section.errors }}</span>
                     </div>
@@ -286,9 +313,10 @@
 
                     <!-- PASSWORD -->
                     <div class="form-group full-width">
-                        <label class="form-label">Temporary Password</label>
+                        <label class="form-label" for="{{ form.password.id_for_label }}">Temporary password</label>
                         {{ form.password }}
                         <span class="error">{{ form.password.errors }}</span>
+                        <span class="student-field-hint">The student will be asked to change this after their first sign-in.</span>
                     </div>
 
                 </div>
@@ -306,10 +334,10 @@
                 </button>
 
                 <button type="submit"
-                        class="btn-primary"
+                        class="btn-primary student-submit-button"
                         id="submitBtn">
 
-                    Create Student
+                    Add student
                 </button>
 
             </div>
@@ -322,67 +350,129 @@
 
 <script>
 
-    // OPEN MODAL
+    const studentModal = document.getElementById("studentModal");
+    const addStudentButton = document.querySelector(".student-add-button");
+
     function openModal() {
-        document.getElementById("studentModal").classList.add("show");
+        studentModal.classList.add("show");
+        studentModal.setAttribute("aria-hidden", "false");
+        const firstField = studentModal.querySelector("input:not([type='hidden']), select, textarea");
+        if (firstField) firstField.focus();
     }
 
-    // CLOSE MODAL
     function closeModal() {
-        document.getElementById("studentModal").classList.remove("show");
+        studentModal.classList.remove("show");
+        studentModal.setAttribute("aria-hidden", "true");
+        if (addStudentButton) addStudentButton.focus();
     }
 
-    // CLOSE OUTSIDE
-    window.onclick = function(event) {
-
-        let modal = document.getElementById("studentModal");
-
-        if (event.target === modal) {
+    window.addEventListener("click", function(event) {
+        if (event.target === studentModal) {
             closeModal();
         }
-    };
+    });
 
-    // SEARCH
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape" && studentModal.classList.contains("show")) {
+            closeModal();
+        }
+    });
+
     const searchInput = document.getElementById("searchInput");
+    const studentTable = document.getElementById("studentTable");
+    const studentRows = studentTable
+        ? Array.from(studentTable.querySelectorAll("[data-student-row]"))
+        : [];
+    const studentFilters = Array.from(document.querySelectorAll("[data-status-filter]"));
+    const studentPagination = document.getElementById("studentPagination");
+    const studentEmpty = document.getElementById("studentEmpty");
+    const studentPageSize = 10;
+    let activeStatus = "all";
+    let currentPage = 1;
+
+    function updateStudentList() {
+        const query = searchInput.value.trim().toLocaleLowerCase();
+        const matchingRows = studentRows.filter(function(row) {
+            const matchesSearch = row.textContent.toLocaleLowerCase().includes(query);
+            const matchesStatus = activeStatus === "all" || row.dataset.active === (activeStatus === "active" ? "true" : "false");
+            return matchesSearch && matchesStatus;
+        });
+        const pageCount = Math.max(1, Math.ceil(matchingRows.length / studentPageSize));
+        currentPage = Math.min(currentPage, pageCount);
+        const firstIndex = (currentPage - 1) * studentPageSize;
+        const visibleRows = matchingRows.slice(firstIndex, firstIndex + studentPageSize);
+
+        studentRows.forEach(function(row) {
+            row.hidden = !visibleRows.includes(row);
+        });
+
+        const start = matchingRows.length ? firstIndex + 1 : 0;
+        const end = Math.min(firstIndex + studentPageSize, matchingRows.length);
+        document.getElementById("studentResultSummary").textContent =
+            matchingRows.length
+                ? "Showing " + start + "–" + end + " of " + matchingRows.length + " matching students"
+                : "No matching students";
+        document.getElementById("studentPageInfo").textContent =
+            matchingRows.length + " student" + (matchingRows.length === 1 ? "" : "s");
+        document.getElementById("studentPageNumber").textContent =
+            currentPage + " / " + pageCount;
+        document.getElementById("studentPrev").disabled = currentPage <= 1;
+        document.getElementById("studentNext").disabled = currentPage >= pageCount;
+        studentPagination.hidden = matchingRows.length <= studentPageSize;
+        studentEmpty.hidden = matchingRows.length > 0;
+
+        if (studentRows.length) {
+            document.getElementById("studentEmptyTitle").textContent = "No students match";
+            document.getElementById("studentEmptyMessage").textContent = "Try another search or status filter.";
+        }
+    }
 
     if (searchInput) {
-
-        searchInput.addEventListener("keyup", function() {
-
-            let value = this.value.toLowerCase();
-
-            let rows = document.querySelectorAll(
-                "#studentTable tbody tr"
-            );
-
-            rows.forEach((row) => {
-
-                row.style.display =
-                    row.innerText.toLowerCase().includes(value)
-                    ? ""
-                    : "none";
-            });
+        searchInput.addEventListener("input", function() {
+            currentPage = 1;
+            updateStudentList();
         });
     }
 
-    // PREVENT DOUBLE SUBMIT
+    studentFilters.forEach(function(button) {
+        button.addEventListener("click", function() {
+            activeStatus = button.dataset.statusFilter;
+            currentPage = 1;
+            studentFilters.forEach(function(filter) {
+                const selected = filter === button;
+                filter.classList.toggle("is-active", selected);
+                filter.setAttribute("aria-pressed", selected ? "true" : "false");
+            });
+            updateStudentList();
+        });
+    });
+
+    document.getElementById("studentPrev").addEventListener("click", function() {
+        currentPage -= 1;
+        updateStudentList();
+    });
+    document.getElementById("studentNext").addEventListener("click", function() {
+        currentPage += 1;
+        updateStudentList();
+    });
+
+    const activeCount = studentRows.filter(function(row) { return row.dataset.active === "true"; }).length;
+    document.getElementById("activeStudentCount").textContent = activeCount;
+    document.getElementById("inactiveStudentCount").textContent = studentRows.length - activeCount;
+    updateStudentList();
+
     document
         .getElementById("studentForm")
         .addEventListener("submit", function() {
-
             document
                 .getElementById("submitBtn")
                 .disabled = true;
         });
 
-    // OPEN MODAL IF FORM HAS ERRORS
-    const modal = document.getElementById("studentModal");
-
-    if (modal.dataset.hasErrors === "1") {
+    if (studentModal.dataset.hasErrors === "1") {
         openModal();
     }
 
 </script>
 
 {% endblock %}
-

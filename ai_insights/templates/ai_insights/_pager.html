@@ -1,0 +1,18 @@
+{% comment %} ai_insights/_pager.html  Needs: pager (a Django page) and keep (current filters as a web-address part). {% endcomment %}
+{% if pager.paginator.num_pages > 1 %}
+<nav class="ai-pager" aria-label="Pages">
+    <span class="ai-pager-info">Showing {{ pager.start_index }}–{{ pager.end_index }} of {{ pager.paginator.count }}</span>
+    <div class="ai-pager-links">
+        {% if pager.has_previous %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ pager.previous_page_number }}" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+        {% else %}<span class="off" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>{% endif %}
+        {% for n in pager.paginator.page_range %}
+            {% if n == pager.number %}<span class="current" aria-current="page">{{ n }}</span>
+            {% elif n <= 2 or n > pager.paginator.num_pages|add:"-2" or n >= pager.number|add:"-1" and n <= pager.number|add:"1" %}
+            <a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ n }}">{{ n }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ pager.next_page_number }}" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+        {% else %}<span class="off" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>{% endif %}
+    </div>
+</nav>
+{% endif %}

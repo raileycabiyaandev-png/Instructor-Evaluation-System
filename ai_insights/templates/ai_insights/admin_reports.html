@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Reports | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}AI Reports{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+
+    <section class="card" aria-label="Filters">
+        {% include "ai_insights/_admin_filters.html" with action=request.path %}
+    </section>
+
+    <section class="card" aria-labelledby="repTitle">
+        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i></span>
+            <div><h3 id="repTitle">Download a report</h3><p class="card-sub">Reports use saved results only. Student comments and names are never copied into them.</p></div></div></div>
+        <div class="card-body">
+            {% if period %}
+            <p class="ai-lead">The report will cover <b>{{ period_text }}</b>
+                {% if filters.instructor %}for <b>{{ filters.instructor.last_name }}, {{ filters.instructor.first_name }}</b>{% elif filters.department %}for the <b>{{ filters.department.name }}</b> department{% else %}for the whole school{% endif %}.
+                Choose the filters above, press Apply, then download.</p>
+            {% else %}
+            <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>No finished evaluation period with answers matches these filters yet.</span></p>
+            {% endif %}
+            <form method="post" action="{% url 'ai_admin_report_download' %}" class="ai-report-form">
+                {% csrf_token %}
+                <input type="hidden" name="school_year" value="{{ filters.school_year }}">
+                <input type="hidden" name="semester" value="{{ filters.semester }}">
+                <input type="hidden" name="period" value="{% if filters.period %}{{ filters.period.pk }}{% endif %}">
+                <input type="hidden" name="department" value="{% if filters.department %}{{ filters.department.pk }}{% endif %}">
+                <input type="hidden" name="instructor" value="{% if filters.instructor %}{{ filters.instructor.pk }}{% endif %}">
+                <div class="field"><label for="r-kind">Report level</label>
+                    <select id="r-kind" name="kind" class="select">
+                        {% for value, label in kinds.items %}<option value="{{ value }}" {% if value == level %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select></div>
+                <div class="field"><label for="r-fmt">File type</label>
+                    <select id="r-fmt" name="fmt" class="select"><option value="pdf">PDF (with charts)</option><option value="xlsx">Excel (.xlsx, tables)</option></select></div>
+                <div class="field ai-limits-action"><button type="submit" class="btn btn-primary"><i class="bi bi-download" aria-hidden="true"></i> Download</button></div>
+            </form>
+            <ul class="ai-points">
+                <li><b>School report</b> ignores the department and instructor filters.</li>
+                <li><b>Department report</b> uses the department filter (all departments if none is chosen).</li>
+                <li><b>Instructor report</b> needs an instructor in the filters.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-head"><div class="card-title"><div><h3>Recent downloads</h3></div></div></div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th scope="col">When</th><th scope="col">Report</th><th scope="col">File</th><th scope="col">By</th></tr></thead>
+                <tbody>{% for h in history %}
+                    <tr><td>{{ h.created_at|date:"M d, Y H:i" }}</td><td>{{ h.title }}</td><td>{{ h.fmt|upper }}</td><td>{{ h.user.get_full_name|default:h.user.email }}</td></tr>
+                {% empty %}<tr><td colspan="4" class="ai-admin-empty">No report downloaded yet.</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,37 +1,50 @@
+# ============================================================
+# .gitignore - tells Git which files it must NEVER upload
+# ============================================================
 
-# Environment variables and secrets
+# --- Secrets (passwords, keys). Never upload these. ---
 .env
 .env.*
 !.env.example
 
-# Python virtual environments
+# --- Python virtual environments (big, and each person makes their own) ---
 env/
 venv/
 .venv/
 
-# Python cache files
+# --- Python cache files (made automatically, not real code) ---
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Django local database
+# --- Local database (holds real student and teacher data) ---
 db.sqlite3
 db.sqlite3-journal
 
-# User-uploaded files and generated media
+# --- Uploaded and generated files ---
 media/
-
-# Generated QR codes (if they can be recreated)
 qr_codes/
+staticfiles/
 
-# Logs
+# --- Downloaded AI model files (very large) ---
+.cache/
+huggingface/
+*.pt
+*.safetensors
+
+# --- Demo and test-only scripts (fake data, may hold test passwords) ---
+ai_demo_data.py
+ai_test_data_2026.py
+project/test_settings.py
+
+# --- Logs ---
 *.log
 
-# Test and coverage files
+# --- Test and coverage reports ---
 .coverage
 htmlcov/
 
-# Editor and operating-system files
+# --- Editor and operating-system files ---
 .vscode/
 .idea/
 .DS_Store

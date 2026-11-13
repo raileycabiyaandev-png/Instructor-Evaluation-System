@@ -1,0 +1,30 @@
+{% comment %} ai_insights/_line_chart.html  Needs: chart (from ai_insights.charts.line_chart), title (text for screen readers). {% endcomment %}
+{% if chart %}
+<figure class="ai-chart-fig">
+    <ul class="ai-chart-legend">
+        {% for l in chart.lines %}<li><i style="background: {{ l.color }};{% if l.dashed %} background: repeating-linear-gradient(90deg, {{ l.color }} 0 4px, transparent 4px 7px);{% endif %}"></i>{{ l.name }}</li>{% endfor %}
+    </ul>
+    <svg class="ai-svg" viewBox="0 0 {{ chart.w }} {{ chart.h }}" role="img" aria-label="{{ title }}" preserveAspectRatio="xMidYMid meet">
+        {% for t in chart.ticks %}
+        <line x1="{{ chart.left }}" x2="{{ chart.right }}" y1="{{ t.y }}" y2="{{ t.y }}" class="ai-svg-grid"/>
+        <text x="{{ chart.left|add:'-8' }}" y="{{ t.y }}" class="ai-svg-tick" text-anchor="end" dominant-baseline="middle">{{ t.label }}</text>
+        {% endfor %}
+        {% for x in chart.xlabels %}{% if x.show %}
+        <text x="{{ x.x }}" y="{{ chart.label_y }}" class="ai-svg-x" text-anchor="end" transform="rotate(-30 {{ x.x }} {{ chart.label_y }})">{{ x.text }}</text>
+        {% endif %}{% endfor %}
+        {% for l in chart.lines %}
+        {% for p in l.paths %}<path d="{{ p }}" fill="none" stroke="{{ l.color }}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"{% if l.dashed %} stroke-dasharray="6 5"{% endif %}/>{% endfor %}
+        {% for d in l.dots %}<circle cx="{{ d.x }}" cy="{{ d.y }}" r="4.2" fill="#fff" stroke="{{ l.color }}" stroke-width="2.4"><title>{{ d.tip }}</title></circle>{% endfor %}
+        {% endfor %}
+    </svg>
+    <details class="ai-details">
+        <summary>Show the numbers</summary>
+        <div class="table-wrap"><table class="data-table">
+            <thead><tr><th scope="col"></th>{% for label in chart.labels %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+            <tbody>{% for row in chart.table %}<tr><th scope="row">{{ row.name }}</th>{% for v in row.values %}<td>{% if v is None %}–{% else %}{{ v|floatformat:2 }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+        </table></div>
+    </details>
+</figure>
+{% else %}
+<p class="ai-empty">Not enough finished evaluations to draw this chart yet.</p>
+{% endif %}

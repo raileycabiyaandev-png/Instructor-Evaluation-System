@@ -1,0 +1,56 @@
+{% comment %} ai_insights/_admin_filters.html
+   Filter bar used by the admin AI pages. Needs: filters (from ai_insights.filters.parse_filters)
+   and action (the page address). It sends the choices with GET, so a filtered page can be bookmarked. {% endcomment %}
+<form method="get" action="{{ action }}" class="ai-filters" aria-label="Filters">
+    <div class="field">
+        <label for="f-year">School year</label>
+        <select id="f-year" name="school_year" class="select">
+            <option value="">All school years</option>
+            {% for value in filters.year_options %}
+            <option value="{{ value }}" {% if value == filters.school_year %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="field">
+        <label for="f-sem">Semester</label>
+        <select id="f-sem" name="semester" class="select">
+            <option value="">Both semesters</option>
+            {% for value, label in filters.semester_options %}
+            <option value="{{ value }}" {% if value == filters.semester %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% if not hide_period %}<div class="field">
+        <label for="f-period">Evaluation period</label>
+        <select id="f-period" name="period" class="select">
+            <option value="">All periods</option>
+            {% for value, label in filters.period_options %}
+            <option value="{{ value }}" {% if filters.period and value == filters.period.pk %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>{% endif %}
+    {% if not hide_people %}<div class="field">
+        <label for="f-dept">Department</label>
+        <select id="f-dept" name="department" class="select">
+            <option value="">All departments</option>
+            {% for value, label in filters.department_options %}
+            <option value="{{ value }}" {% if filters.department and value == filters.department.pk %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="field">
+        <label for="f-instructor">Instructor</label>
+        <select id="f-instructor" name="instructor" class="select">
+            <option value="">All instructors</option>
+            {% for value, label in filters.instructor_options %}
+            <option value="{{ value }}" {% if filters.instructor and value == filters.instructor.pk %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    {% if extra %}{% include extra %}{% endif %}
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        {% if filters.any_active %}<a href="{{ action }}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+    </div>
+</form>

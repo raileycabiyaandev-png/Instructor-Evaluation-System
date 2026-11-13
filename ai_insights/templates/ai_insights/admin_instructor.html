@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ data.teacher.last_name }} | AI Analytics{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}Instructor AI Report{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+
+    <section class="card">
+        <div class="card-body ai-person">
+            <div>
+                <h3>{{ data.teacher.first_name }} {{ data.teacher.last_name }}</h3>
+                <p class="ai-who">{{ data.department }}{% if data.label %} · latest finished period: {{ data.label }}{% endif %}</p>
+            </div>
+            <div class="ai-person-actions">
+                <a class="btn btn-outline btn-sm" href="{% url 'ai_admin_forecasting' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to forecasting</a>
+                <form method="post" action="{% url 'ai_admin_report_download' %}" class="ai-inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="kind" value="instructor">
+                    <input type="hidden" name="instructor" value="{{ data.teacher.pk }}">
+                    <button class="btn btn-primary btn-sm" name="fmt" value="pdf" type="submit"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF</button>
+                    <button class="btn btn-primary btn-sm" name="fmt" value="xlsx" type="submit"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Excel</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <div class="ai-tiles ai-tiles--page">
+        <div class="ai-tile"><b>{% if data.latest %}{{ data.latest.overall|floatformat:2 }}{% else %}—{% endif %}</b><span>Last real score (out of 5)</span></div>
+        <div class="ai-tile ai-tile--gold"><b>{% if data.forecast.state == "ok" %}{{ data.forecast.row.predicted_overall|floatformat:2 }}{% else %}—{% endif %}</b><span>AI prediction</span></div>
+        <div class="ai-tile"><b>{{ data.quality.periods_used }}</b><span>Periods used</span></div>
+        <div class="ai-tile"><b>{{ data.quality.total_responses }}</b><span>Student responses</span></div>
+    </div>
+
+    <section class="card" data-ai-tabs data-ai-start="summary">
+        <div class="card-head">
+            <div class="ai-tabs" role="group" aria-label="Sections">
+                <button type="button" class="ai-tab" data-ai-tab="summary"><i class="bi bi-graph-up" aria-hidden="true"></i> Scores</button>
+                <button type="button" class="ai-tab" data-ai-tab="forecast"><i class="bi bi-magic" aria-hidden="true"></i> Forecast</button>
+                <button type="button" class="ai-tab" data-ai-tab="feedback"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback &amp; advice</button>
+                <button type="button" class="ai-tab" data-ai-tab="alerts"><i class="bi bi-bell" aria-hidden="true"></i> Alerts <span class="ai-tab-count">{{ data.alerts|length }}</span></button>
+            </div>
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="summary">
+            {% if data.series %}
+            <h4 class="ai-h4">Real scores in each finished period</h4>
+            {% include "ai_insights/_line_chart.html" with chart=data.trend_chart title="Real scores of this instructor in each finished period" %}
+            {% else %}
+            <p class="ai-empty">No finished period has at least {{ data.min_responses }} responses yet, so there is nothing to draw.</p>
+            {% endif %}
+            {% if data.quality.skipped %}
+            <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>Left out: {% for s in data.quality.skipped %}{{ s.label }} ({{ s.reason }}){% if not forloop.last %}; {% endif %}{% endfor %}.</span></p>
+            {% endif %}
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="forecast" hidden>
+            {% with f=data.forecast %}
+            {% if f.state == "ok" %}
+                <p class="ai-note"><i class="bi bi-stars" aria-hidden="true"></i>
+                    <span>Solid line = real scores. Dashed gold line = AI prediction for <strong>{{ f.row.target_label }}</strong>:
+                    <strong>{{ f.row.predicted_overall|floatformat:2 }}</strong> (typical range {{ f.row.range_low|floatformat:2 }} to {{ f.row.range_high|floatformat:2 }}).</span></p>
+                {% include "ai_insights/_line_chart.html" with chart=data.forecast_chart title="Real scores and the AI prediction for the next period" %}
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">Category</th><th scope="col">Last real</th><th scope="col">Predicted</th><th scope="col">Typical range</th></tr></thead>
+                        <tbody>{% for c in f.categories %}
+                            <tr><th scope="row">{{ c.label }}</th><td>{{ c.last_actual|floatformat:2 }}</td><td><strong>{{ c.value|floatformat:2 }}</strong> <span class="ai-tag">prediction</span></td><td>{{ c.low|floatformat:2 }} to {{ c.high|floatformat:2 }}</td></tr>
+                        {% endfor %}</tbody>
+                    </table>
+                </div>
+            {% elif f.state == "not_generated" %}
+                <p class="ai-empty">No forecast has been generated yet. Use "Generate AI analysis" on the AI Overview page.</p>
+            {% else %}
+                <p class="ai-empty">{{ f.message|default:"There is not enough data for a reliable forecast." }}</p>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <div data-ai-panel="feedback" hidden>
+            {% with feedback=data.feedback suggestions=data.suggestions label=data.label %}
+            <div class="ac-body">
+                {% include "users/_instructor_ai.html" with part="feedback" fb=feedback label=label %}
+                {% include "users/_instructor_ai.html" with part="suggestions" sg=suggestions label=label %}
+            </div>
+            {% endwith %}
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="alerts" hidden>
+            <div class="ai-feed">
+            {% for a in data.alerts %}
+                {% include "ai_insights/_alert_card.html" with hide_name=True back="instructor" qs="" %}
+            {% empty %}<p class="ai-empty">No alert for this instructor.</p>{% endfor %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>{% endblock %}

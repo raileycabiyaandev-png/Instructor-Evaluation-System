@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Performance Forecasting | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}Performance Forecasting{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+
+    {% include "academics/_messages.html" %}
+
+    {% include "ai_insights/_generate_panel.html" with next="ai_admin_forecasting" %}
+
+    <section class="card" aria-label="Filters">
+        {% url 'ai_admin_forecasting' as here %}
+        {% include "ai_insights/_admin_filters.html" with action=here %}
+    </section>
+
+    <div class="ai-stats">
+        <div class="stat"><span class="stat-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span>
+            <div><div class="stat-label">Instructors shown</div><div class="stat-value">{{ data.stats.instructors }}</div></div></div>
+        <div class="stat"><span class="stat-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
+            <div><div class="stat-label">With a forecast</div><div class="stat-value">{{ data.stats.with_forecast }}</div></div></div>
+        <div class="stat"><span class="stat-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+            <div><div class="stat-label">No forecast (not enough data or not reliable)</div><div class="stat-value">{{ data.stats.not_enough|add:data.stats.unreliable }}</div></div></div>
+        <div class="stat"><span class="stat-icon"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></span>
+            <div><div class="stat-label">Average predicted change</div>
+                <div class="stat-value">{% if data.stats.avg_change is not None %}{{ data.stats.avg_change|stringformat:"+.2f" }}{% else %}—{% endif %}</div></div></div>
+    </div>
+
+    {% if data.stats.errors %}
+    <p class="ai-note-box ai-note-box--warn">{{ data.stats.errors }} instructor(s) had a forecast error. Generate the analysis again.</p>
+    {% endif %}
+
+    {# ---------- chart: last real score vs predicted next score ---------- #}
+    <section class="card" aria-labelledby="barTitle">
+        <div class="card-head">
+            <div class="card-title">
+                <span class="card-icon"><i class="bi bi-bar-chart" aria-hidden="true"></i></span>
+                <div><h3 id="barTitle">Last real score vs predicted score</h3>
+                    </div>
+            </div>
+        </div>
+        <div class="card-body">
+        {% if data.bar.labels %}
+            <div class="chart-wrap ai-admin-chart"><canvas id="forecastBar" role="img"
+                aria-label="Bar chart. For each instructor, the real score of the last finished period next to the predicted score of the next period."></canvas></div>
+            {{ data.bar|json_script:"forecast-bar-data" }}
+        {% else %}
+            <p class="ai-admin-empty">No forecast to chart for these filters.</p>
+        {% endif %}
+        </div>
+    </section>
+
+    {# ---------- one instructor: real vs predicted over time ---------- #}
+    {% if data.detail %}
+    <section class="card" aria-labelledby="detailTitle">
+        <div class="card-head">
+            <div class="card-title">
+                <span class="card-icon"><i class="bi bi-graph-up" aria-hidden="true"></i></span>
+                <div><h3 id="detailTitle">{{ filters.instructor.first_name }} {{ filters.instructor.last_name }}: real vs predicted</h3>
+                    <p class="card-sub">{% if data.detail.row %}{{ data.detail.row.department }}{% endif %}</p></div>
+            </div>
+        </div>
+        {% if data.detail.chart %}
+            {% with r=data.detail.row fc=data.detail.row.fc %}
+            <div class="card-body">
+                <div class="chart-wrap ai-admin-chart"><canvas id="forecastDetail" role="img"
+                    aria-label="Line chart. Solid line: real scores. Dotted line: what the model would have predicted for each past period using only earlier periods. Gold triangle: the prediction for the next period."></canvas></div>
+                {{ data.detail.chart|json_script:"forecast-detail-data" }}
+            </div>
+            <ul class="ai-legend">
+                <li><i></i> Real score</li>
+                <li class="dots"><i></i> Tested prediction (made using only earlier periods)</li>
+                <li class="dash"><i></i> Prediction for the next period</li>
+            </ul>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th scope="col">Category</th><th scope="col">Last real score</th><th scope="col">Predicted</th><th scope="col">Typical range</th></tr></thead>
+                    <tbody>
+                    {% for c in data.detail.categories %}
+                        <tr><th scope="row">{{ c.label }}</th><td>{{ c.last_actual|floatformat:2 }}</td>
+                            <td><span class="ai-pred">{{ c.value|floatformat:2 }}</span></td>
+                            <td>{{ c.low|floatformat:2 }} to {{ c.high|floatformat:2 }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endwith %}
+        {% else %}
+            <div class="card-body">
+                <p class="ai-admin-empty">
+                {% if data.detail.row and data.detail.row.message %}{{ data.detail.row.message }}
+                {% else %}No forecast is saved for this instructor with these filters.{% endif %}
+                </p>
+                {% with q=data.detail.row.quality %}
+                {% if q %}
+                <ul class="ai-facts-list">
+                    <li>Finished periods with responses: <strong>{{ q.periods_found }}</strong>. Usable (at least {{ data.min_responses }} responses, no missing scores): <strong>{{ q.periods_used }}</strong>. Needed for a forecast: <strong>{{ data.min_periods }}</strong>.</li>
+                    {% for s in q.skipped %}<li>Left out: {{ s.label }} ({{ s.responses }} response{{ s.responses|pluralize }}, {{ s.reason }}).</li>{% endfor %}
+                </ul>
+                {% endif %}
+                {% endwith %}
+                {% if data.detail.history %}
+                <p class="ai-muted">Real scores found: {% for h in data.detail.history %}{{ h.label }} = {{ h.overall|floatformat:2 }} ({{ h.responses }} responses){% if not forloop.last %}; {% endif %}{% endfor %}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {# ---------- table ---------- #}
+    <section class="card" aria-labelledby="tableTitle">
+        <div class="card-head">
+            <div class="card-title">
+                <span class="card-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
+                <div><h3 id="tableTitle">Forecast for the next evaluation period</h3>
+                    </div>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr>
+                    <th scope="col">Instructor</th><th scope="col">Last real score</th><th scope="col">Predicted</th>
+                    <th scope="col">Change</th><th scope="col">Method and test error</th><th scope="col">Forecast made</th><th scope="col">Detail</th>
+                </tr></thead>
+                <tbody>
+                {% for r in data.pager %}
+                    {% if r.state == "ok" %}
+                    <tr>
+                        <th scope="row">{{ r.name }}<span class="ai-table-sub">{{ r.department }}</span></th>
+                        <td>{{ r.last_actual|floatformat:2 }}<span class="ai-table-sub">{{ r.responses }} responses</span></td>
+                        <td><span class="ai-pred">{{ r.predicted|floatformat:2 }}</span>
+                            <span class="ai-table-sub">{{ r.low|floatformat:2 }} to {{ r.high|floatformat:2 }} · {{ r.target_label }}</span></td>
+                        <td><span class="{% if r.direction == 'up' %}ai-up{% elif r.direction == 'down' %}ai-down{% else %}ai-flat{% endif %}">{{ r.change|stringformat:"+.2f" }}</span></td>
+                        <td>{{ r.method }}
+                            <span class="ai-table-sub">Test error {{ r.mae|floatformat:2 }} vs {{ r.baseline|floatformat:2 }} for "same as last"
+                                {% if r.beats_baseline %}<span class="ai-pill ai-pill--good">better</span>{% else %}<span class="ai-pill ai-pill--warn">not better</span>{% endif %}
+                                {% if r.reliability == "low" %}<span class="ai-pill ai-pill--warn">low reliability</span>{% endif %}
+                                · {{ r.periods_used }} periods</span></td>
+                        <td>{{ r.generated_at|date:"M d, Y H:i" }}<span class="ai-table-sub">{{ r.model_version }}</span></td>
+                        <td><a class="btn btn-ghost btn-sm" href="?{{ filters.querystring }}{% if filters.querystring %}&{% endif %}instructor={{ r.teacher.pk }}">Chart</a></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <th scope="row">{{ r.name }}<span class="ai-table-sub">{{ r.department }}</span></th>
+                        <td colspan="6">
+                            {% if r.state == "insufficient" %}<span class="ai-pill ai-pill--warn">Not enough data</span> {{ r.message }}
+                            {% elif r.state == "baseline" %}<span class="ai-pill ai-pill--warn">Baseline only</span> {{ r.message }}
+                            {% elif r.state == "unreliable" %}<span class="ai-pill ai-pill--warn">Not reliable enough</span> {{ r.message }}
+                            {% elif r.state == "error" %}<span class="ai-pill ai-pill--bad">Error</span> {{ r.message }}
+                            {% else %}<span class="ai-pill">No forecast yet</span>
+                                {% if filters.period or filters.school_year or filters.semester %}No saved forecast matches these filters.{% else %}Use "Generate AI Analysis" above to create it.{% endif %}{% endif %}
+                            {% if r.based_on_label %}<span class="ai-table-sub">Based on {{ r.based_on_label }}</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% empty %}
+                    <tr><td colspan="7" class="ai-admin-empty">No active instructors match these filters.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body">{% include "ai_insights/_pager.html" with pager=data.pager keep=keep %}</div>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    if (typeof Chart === 'undefined') return;
+    var NAVY = '#1b2f6b', GOLD = '#c9a227', BLUE = '#5b78c4';
+
+    var barEl = document.getElementById('forecast-bar-data'), barCanvas = document.getElementById('forecastBar');
+    if (barEl && barCanvas) {
+        var b = JSON.parse(barEl.textContent);
+        new Chart(barCanvas, {
+            type: 'bar',
+            data: { labels: b.labels, datasets: [
+                { label: 'Last real score', data: b.actual, backgroundColor: NAVY },
+                { label: 'Predicted (next period)', data: b.predicted, backgroundColor: GOLD }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false,
+                scales: { y: { min: 1, max: 5, ticks: { stepSize: 1 }, title: { display: true, text: 'Score (1-5)' } },
+                          x: { ticks: { maxRotation: 40, autoSkip: true } } },
+                plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    var dEl = document.getElementById('forecast-detail-data'), dCanvas = document.getElementById('forecastDetail');
+    if (dEl && dCanvas) {
+        var d = JSON.parse(dEl.textContent);
+        var last = d.labels.length - 1;
+        // draws the typical range as a vertical line on the predicted point
+        var rangePlugin = { id: 'rangeLine', afterDatasetsDraw: function (chart) {
+            var x = chart.scales.x.getPixelForValue(last);
+            var y1 = chart.scales.y.getPixelForValue(d.low), y2 = chart.scales.y.getPixelForValue(d.high);
+            var c = chart.ctx; c.save(); c.strokeStyle = GOLD; c.lineWidth = 3;
+            c.beginPath(); c.moveTo(x, y1); c.lineTo(x, y2); c.stroke(); c.restore();
+        } };
+        new Chart(dCanvas, {
+            type: 'line',
+            data: { labels: d.labels, datasets: [
+                { label: 'Real score', data: d.actual, borderColor: NAVY, backgroundColor: NAVY, tension: 0.2, pointRadius: 4 },
+                { label: 'Tested prediction', data: d.tested, borderColor: BLUE, backgroundColor: BLUE, borderDash: [2, 4], tension: 0.2, pointRadius: 3, spanGaps: false },
+                { label: 'Predicted (next period)', data: d.next, borderColor: GOLD, backgroundColor: GOLD, pointStyle: 'triangle', pointRadius: 8, showLine: false }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false,
+                scales: { y: { min: 1, max: 5, ticks: { stepSize: 1 }, title: { display: true, text: 'Score (1-5)' } },
+                          x: { ticks: { maxRotation: 40, autoSkip: true } } },
+                plugins: { legend: { display: false } } },
+            plugins: [rangePlugin]
+        });
+    }
+})();
+</script>
+{% endblock %}

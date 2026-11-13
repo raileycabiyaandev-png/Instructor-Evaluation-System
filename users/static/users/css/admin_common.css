@@ -9,7 +9,8 @@
     2. Page header     6. Buttons and controls
     3. Cards           7. Tables, badges, pager
     4. Stat cards      8. Hero (best instructor), alerts, empty
-                       9. Responsive
+                       9. (reserved)   10. KPI cards, progress, tooltip
+                      11. Responsive
    ============================================================ */
 
 
@@ -170,6 +171,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
     min-height: 50px;
     padding: 0 16px;
     border: 0;
@@ -423,7 +425,71 @@
 
 
 /* ============================================================
-   9. RESPONSIVE
+   10. KPI CARDS, PROGRESS BAR, TOOLTIP
+   ============================================================ */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
+
+.kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.kpi--alert { border-left: 4px solid var(--warn); }
+
+.kpi-top { display: flex; align-items: center; gap: 10px; }
+.kpi-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--navy-50);
+    font-size: 18px;
+    color: var(--navy-700);
+}
+.kpi--alert .kpi-icon { background: var(--warn-bg); color: var(--warn); }
+.kpi-title { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--muted); }
+
+.kpi-value { font-family: "Playfair Display", Georgia, serif; font-size: 32px; font-weight: 700; line-height: 1.1; color: var(--navy-900); }
+.kpi-value small { font-family: "Source Sans 3", system-ui, sans-serif; font-size: 16px; font-weight: 500; color: var(--muted); }
+.kpi-note { font-size: 14px; color: var(--muted); }
+
+.progress { height: 8px; overflow: hidden; border-radius: 999px; background: var(--navy-100); }
+.progress span { display: block; height: 100%; border-radius: 999px; background: var(--navy-600); }
+
+/* Small "?" that explains a number (hover, touch or keyboard focus) */
+.tip { position: relative; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--muted); cursor: help; }
+.tip:hover, .tip:focus-visible { background: var(--navy-50); color: var(--navy-800); }
+.tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    z-index: 10;
+    width: 230px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--navy-900);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: #fff;
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.tip:hover::after, .tip:focus-visible::after { opacity: 1; visibility: visible; }
+
+
+/* ============================================================
+   11. RESPONSIVE
    ============================================================ */
 @media (max-width: 991.98px) {
     .overview { grid-template-columns: 1fr; }
@@ -436,7 +502,7 @@
     .card-foot, .pager { padding-left: 16px; padding-right: 16px; }
 
     .tabs { padding: 0 4px; }
-    .tab { flex: 1; justify-content: center; padding: 0 10px; font-size: 15px; }
+    .tab { flex: 1 0 auto; justify-content: center; padding: 0 12px; font-size: 15px; }
 
     .tools { width: 100%; }
     .tools .search, .tools .control, .tools .seg { width: 100%; }

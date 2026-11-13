@@ -4,691 +4,497 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Evaluation Portal</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    {# Loaded AFTER Bootstrap so our styles win #}
     {% block extra_css %}
         <link rel="stylesheet" href="{% static 'users/css/student_dashboard.css' %}">
     {% endblock %}
-    <title>Student Evaluation Portal</title>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-
 </head>
 
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+
 <div class="app-shell">
 
-    <!-- ═══════════════  SIDEBAR  ═══════════════ -->
-    <aside class="sidebar" id="sidebar">
+    <!-- ═════════ SIDEBAR ═════════ -->
+    <aside class="sidebar" id="sidebar" aria-label="Student navigation">
         <div class="sidebar-inner">
 
-            <!-- Brand -->
             <div class="sb-brand">
-                <div class="sb-brand-row">
-                    <div class="sb-logo-ring">
-                        <img src="{% static 'images/aclc_logo.jpg' %}" alt="ACLC Logo">
-                    </div>
-                    <div>
-                        <div class="sb-brand-name">ACLC · SES</div>
-                        <div class="sb-brand-sub">Student Portal</div>
-                    </div>
+                <div class="sb-logo-ring"><img src="{% static 'images/aclc_logo.jpg' %}" alt="ACLC logo"></div>
+                <div>
+                    <div class="sb-brand-name">ACLC · SES</div>
+                    <div class="sb-brand-sub">Student Portal</div>
                 </div>
-                <div class="sb-rule"></div>
             </div>
 
             <nav class="sb-nav">
-                <span class="sb-nav-label">Navigation</span>
-
-                <button class="sb-link active" data-view="dashboard">
-                    <span class="sb-icon">
-                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                            <rect x="1" y="1" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
-                            <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
-                            <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
-                            <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
-                        </svg>
-                    </span>
-                    Dashboard
+                <span class="sb-nav-label">Main</span>
+                <button type="button" class="sb-link active" data-view="dashboard">
+                    <i class="bi bi-grid-1x2" aria-hidden="true"></i> Dashboard
                 </button>
 
-                <button class="sb-link" data-view="history">
-                    <span class="sb-icon">
-                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                            <circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/>
-                            <path d="M7.5 4v3.7l2.4 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </span>
-                    My Evaluations
+                <span class="sb-nav-label">Evaluation</span>
+                {% if state == 'ready' %}
+                <a class="sb-link" href="{% url 'scan_qr_page' %}">
+                    <i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan QR Code
+                </a>
+                {% endif %}
+                <button type="button" class="sb-link" data-view="history">
+                    <i class="bi bi-clipboard-check" aria-hidden="true"></i> My Evaluations
                 </button>
 
-                <button class="sb-link" data-view="profile">
-                    <span class="sb-icon">
-                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                            <circle cx="7.5" cy="5" r="3" stroke="currentColor" stroke-width="1.4"/>
-                            <path d="M1.5 13c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                        </svg>
-                    </span>
-                    Profile
+                <span class="sb-nav-label">Account</span>
+                <button type="button" class="sb-link" data-view="profile">
+                    <i class="bi bi-person-circle" aria-hidden="true"></i> Profile
                 </button>
             </nav>
 
             <div class="sb-footer">
                 <div class="sb-user">
-                    <div class="sb-avatar">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
-                    <div style="flex:1;min-width:0;">
+                    <div class="sb-avatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
+                    <div class="sb-user-text">
                         <div class="sb-user-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
                         <div class="sb-user-role">Student</div>
                     </div>
                 </div>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
-                    <button type="submit" class="sb-logout">
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                            <path d="M4.5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2.5M9 9.5l3-3-3-3M12 6.5H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Sign Out
-                    </button>
+                    <button type="submit" class="sb-logout"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out</button>
                 </form>
             </div>
 
         </div>
     </aside>
-
     <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
 
-    <!-- ═══════════════  MAIN CONTENT ═══════════════ -->
+
+    <!-- ═════════ MAIN ═════════ -->
     <div class="main-col">
 
-        <!-- Topbar -->
         <header class="topbar">
             <div class="topbar-left">
-                <button class="hamburger" onclick="toggleSidebar()" aria-label="Open menu">
-                    <i class="bi bi-list"></i>
-                </button>
+                <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Open menu" aria-controls="sidebar"><i class="bi bi-list" aria-hidden="true"></i></button>
+                <h1 class="topbar-title" id="topbarTitle">Dashboard</h1>
             </div>
             <span class="role-badge">Student</span>
         </header>
 
-        <div class="page-scroll">
+        <main class="page-scroll" id="main">
             <div class="page-wrap">
 
-                <!-- Messages from the system (success / errors) -->
                 {% if messages %}
-                    {% for message in messages %}
-                    <div class="page-msg {{ message.tags }}">
-                        <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}"></i>
-                        {{ message }}
-                    </div>
-                    {% endfor %}
+                {% for message in messages %}
+                <div class="page-msg {{ message.tags }}" role="{% if message.tags == 'success' %}status{% else %}alert{% endif %}">
+                    <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
                 {% endif %}
 
-                <!-- ══════════════════════════════════
-                     DASHBOARD
-                ══════════════════════════════════ -->
+
+                <!-- ══════ DASHBOARD ══════ -->
                 <div class="view active" id="view-dashboard">
 
-                    <!-- Greeting -->
-                    <div class="greeting">
-                        <h1 class="greeting-title">Welcome back, {{ request.user.first_name }}.</h1>
-                        <p class="greeting-sub">
-                            {% if state == 'ready' and pending_count %}
-                                You have {{ pending_count }} instructor{{ pending_count|pluralize }} left to evaluate. Scan their QR code to begin.
-                            {% elif state == 'ready' %}
-                                You have evaluated all of your instructors for this period. Thank you!
-                            {% elif state == 'no_section' %}
-                                Your account is not assigned to a section yet.
-                            {% elif state == 'no_assignments' %}
-                                No instructors are assigned to your section for this semester yet.
-                            {% else %}
-                                No evaluation period is active right now. Check back later.
-                            {% endif %}
-                        </p>
-                    </div>
+                    <p class="page-date">{% now "l, F j, Y" %}</p>
 
-                    <div class="dashboard-grid">
+                    {% if active_period %}
+                    <div class="top-row">
 
-                        <!-- ── Main column ── -->
-                        <div class="dash-main">
+                        <!-- Period -->
+                        <section class="card card--accent" aria-label="Evaluation period">
+                            <span class="pill pill--live"><i class="bi bi-broadcast" aria-hidden="true"></i> Active evaluation period</span>
+                            <h2 class="period-year">{{ active_period.school_year }}</h2>
+                            <p class="period-sub">{{ active_period.get_semester_display }} · {{ active_period.get_term_display }}</p>
 
-                            {% if active_period %}
-                            <div class="period-card">
-                                <div class="period-card-inner">
-
-                                    <div class="period-eyebrow">
-                                        <i class="bi bi-clock-fill" style="font-size:10px;"></i>
-                                        Active Evaluation Period
-                                    </div>
-
-                                    <div class="period-meta-wrap">
-                                        <div class="row g-0">
-                                            <div class="col-6 col-md-3 period-meta-cell">
-                                                <span class="meta-lbl">School Year</span>
-                                                <span class="meta-val">{{ active_period.school_year }}</span>
-                                            </div>
-                                            <div class="col-6 col-md-3 period-meta-cell">
-                                                <span class="meta-lbl">Semester</span>
-                                                <span class="meta-val">{{ active_period.get_semester_display }}</span>
-                                            </div>
-                                            <div class="col-6 col-md-3 period-meta-cell">
-                                                <span class="meta-lbl">Term</span>
-                                                <span class="meta-val">{{ active_period.get_term_display }}</span>
-                                            </div>
-                                            <div class="col-6 col-md-3 period-meta-cell">
-                                                <span class="meta-lbl">Closes On</span>
-                                                <span class="meta-val">{{ active_period.end_date|date:"M d, Y" }}</span>
-                                                <span class="meta-sub {% if days_left <= 2 %}urgent{% endif %}">
-                                                    {% if days_left == 0 %}Closes today{% elif days_left == 1 %}1 day left{% else %}{{ days_left }} days left{% endif %}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="no-period">
-                                <i class="bi bi-calendar-x"></i>
-                                <h4>No Active Evaluation Period</h4>
-                                <p>Evaluations are currently unavailable. Please check back later.</p>
-                            </div>
-                            {% endif %}
-
-                            {% if state == 'no_section' %}
-                            <div class="state-box">
-                                <i class="bi bi-person-lines-fill"></i>
+                            <dl class="facts">
+                                {% if active_period.start_date %}
+                                <div><dt>Start date</dt><dd>{{ active_period.start_date|date:"M d, Y" }}</dd></div>
+                                {% endif %}
+                                <div><dt>End date</dt><dd>{{ active_period.end_date|date:"M d, Y" }}</dd></div>
                                 <div>
-                                    <h4>No section assigned yet</h4>
-                                    <p>We show only the instructors who teach your section. Please ask your administrator to place you in a section.</p>
+                                    <dt>Time left</dt>
+                                    <dd class="{% if days_left <= 2 %}is-urgent{% endif %}">
+                                        {% if days_left == 0 %}Closes today{% elif days_left == 1 %}1 day{% else %}{{ days_left }} days{% endif %}
+                                    </dd>
                                 </div>
-                            </div>
-                            {% elif state == 'no_assignments' %}
-                            <div class="state-box">
-                                <i class="bi bi-journal-x"></i>
-                                <div>
-                                    <h4>No instructors assigned to {{ request.user.section.name }}</h4>
-                                    <p>Your administrator has not assigned instructors to your section for this semester yet. Please check back later.</p>
-                                </div>
-                            </div>
-                            {% endif %}
+                            </dl>
 
                             {% if state == 'ready' %}
-
-                            <!-- General scan (any of MY instructors) -->
-                            <div class="scan-card">
-                                <div class="scan-icon-box">
-                                    <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M5 13V8.5A3.5 3.5 0 0 1 8.5 5H13" stroke="#e8c97a" stroke-width="2" stroke-linecap="round"/>
-                                        <path d="M35 13V8.5A3.5 3.5 0 0 0 31.5 5H27" stroke="#e8c97a" stroke-width="2" stroke-linecap="round"/>
-                                        <path d="M5 27v4.5A3.5 3.5 0 0 0 8.5 35H13" stroke="#e8c97a" stroke-width="2" stroke-linecap="round"/>
-                                        <path d="M35 27v4.5a3.5 3.5 0 0 1-3.5 3.5H27" stroke="#e8c97a" stroke-width="2" stroke-linecap="round"/>
-                                        <path d="M20 14.5 30 19l-10 4.5-10-4.5 10-4.5Z" fill="rgba(232,201,122,0.16)" stroke="#e8c97a" stroke-width="1.6" stroke-linejoin="round"/>
-                                        <path d="M14 21.3v4.2c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.2" stroke="#e8c97a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M27 19.6v4.4" stroke="#e8c97a" stroke-width="1.6" stroke-linecap="round"/>
-                                    </svg>
-                                </div>
-                                <div class="scan-body">
-                                    <div class="scan-title">Scan Instructor QR Code</div>
-                                    <p class="scan-desc">Ask your instructor to show their QR code, then scan it to start the evaluation.</p>
-                                </div>
-                                <a href="{% url 'scan_qr_page' %}" class="scan-btn">
-                                    <i class="bi bi-camera-fill"></i>
-                                    Scan QR Code
-                                </a>
-                            </div>
-
-                            <!-- NOT EVALUATED YET -->
-                            {% if pending_cards %}
-                            <div class="inst-group-title">To evaluate <span class="count">{{ pending_count }}</span></div>
-                            <div class="inst-grid">
-                                {% for item in pending_cards %}
-                                <div class="inst-card pending">
-                                    <div class="inst-top">
-                                        <div class="side-avatar">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
-                                        <div style="min-width:0;">
-                                            <div class="inst-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
-                                            <div class="inst-dept">{{ item.teacher.department.name|default:"—" }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="inst-subjects">
-                                        {% for subject in item.subjects %}<span class="subject-chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}
-                                    </div>
-                                    <div class="inst-foot">
-                                        <span class="chip-pending"><i class="bi bi-hourglass-split" style="font-size:10px;"></i> Not evaluated</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="all-done">
-                                <i class="bi bi-trophy-fill"></i>
-                                All done! You evaluated every instructor of your section for this period.
+                            <div class="cta-row">
+                                <a href="{% url 'scan_qr_page' %}" class="btn-main"><i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan QR code</a>
+                                <span class="cta-hint">Ask your instructor to show their QR code.</span>
                             </div>
                             {% endif %}
+                        </section>
 
-                            <!-- ALREADY EVALUATED -->
-                            {% if evaluated_cards %}
-                            <div class="inst-group-title">Evaluated <span class="count">{{ evaluated_count }}</span></div>
-                            <div class="inst-grid">
-                                {% for item in evaluated_cards %}
-                                <div class="inst-card evaluated">
-                                    <div class="inst-top">
-                                        <div class="side-avatar">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
-                                        <div style="min-width:0;">
-                                            <div class="inst-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
-                                            <div class="inst-dept">{{ item.teacher.department.name|default:"—" }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="inst-subjects">
-                                        {% for subject in item.subjects %}<span class="subject-chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}
-                                    </div>
-                                    <div class="inst-foot">
-                                        <span class="chip-evaluated"><i class="bi bi-check-circle-fill" style="font-size:10px;"></i> Evaluated</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
+                        <!-- Progress -->
+                        {% if state == 'ready' %}
+                        <section class="card card--navy" aria-label="My progress">
+                            <span class="pill pill--dark"><i class="bi bi-bar-chart-steps" aria-hidden="true"></i> My progress</span>
+                            <div class="big-number">{{ progress_percent }}<small>%</small></div>
+                            <div class="track" role="progressbar" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Evaluation progress">
+                                <span style="width: {{ progress_percent }}%"></span>
                             </div>
-                            {% endif %}
+                            <p class="progress-note">
+                                {{ evaluated_count }} of {{ total_instructors }} evaluated ·
+                                {% if pending_count %}{{ pending_count }} left{% else %}All done{% endif %}
+                            </p>
+                        </section>
+                        {% endif %}
 
-                            {% endif %}
-
-                        </div>
-
-                        <!-- ── Side column ── -->
-                        <div class="dash-side">
-                            <div class="side-stack">
-
-                                <!-- Progress -->
-                                {% if state == 'ready' %}
-                                <div class="side-panel">
-                                    <div class="side-panel-head">
-                                        <span class="side-panel-title">My Progress</span>
-                                        <span class="side-count">{{ progress_percent }}%</span>
-                                    </div>
-                                    <div class="progress-body">
-                                        <div class="progress-figure">{{ evaluated_count }} <small>of {{ total_instructors }} evaluated</small></div>
-                                        <div class="progress-track"><div class="progress-fill" style="width: {{ progress_percent }}%;"></div></div>
-                                        <div class="progress-note">
-                                            {% if pending_count %}{{ pending_count }} instructor{{ pending_count|pluralize }} left.{% else %}Everything is complete.{% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-
-                                <!-- My class -->
-                                <div class="side-panel class-panel">
-                                    <div class="side-panel-head">
-                                        <span class="side-panel-title">My Class</span>
-                                    </div>
-                                    <div class="profile-row">
-                                        <span class="p-label">Section</span>
-                                        <span class="p-value">{{ request.user.section.name|default:"Not assigned" }}</span>
-                                    </div>
-                                    <div class="profile-row">
-                                        <span class="p-label">Program</span>
-                                        <span class="p-value">{{ request.user.get_program_display|default:"—" }}</span>
-                                    </div>
-                                    <div class="profile-row">
-                                        <span class="p-label">Department</span>
-                                        <span class="p-value">{{ request.user.section.department.name|default:"—" }}</span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- ══════════════════════════════════
-                     MY EVALUATIONS (history)
-                ══════════════════════════════════ -->
-                <div class="view" id="view-history">
-
-                    <div class="greeting">
-                        <h1 class="greeting-title">My Evaluations</h1>
-                        <p class="greeting-sub">Evaluations you submitted. Your comments stay anonymous to instructors.</p>
-                    </div>
-
-                    {% if history %}
-                    <div class="hist-wrap">
-                        <div class="hist-scroll">
-                            <table class="hist-table">
-                                <thead>
-                                    <tr>
-                                        <th>Instructor</th>
-                                        <th>Evaluation Period</th>
-                                        <th>Date Submitted</th>
-                                        <th>Your Average</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for e in history %}
-                                    <tr>
-                                        <td><div class="h-name">{{ e.teacher.first_name }} {{ e.teacher.last_name }}</div></td>
-                                        <td>
-                                            {{ e.period.get_term_display }}
-                                            <div class="h-sub">S.Y. {{ e.period.school_year }} · {{ e.period.get_semester_display }}</div>
-                                        </td>
-                                        <td>{{ e.created_at|date:"M d, Y" }}</td>
-                                        <td class="hist-score"><i class="bi bi-star-fill"></i>{{ e.average_score }} / 5</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
                     {% else %}
-                    <div class="eval-empty">
-                        <i class="bi bi-clipboard-check"></i>
-                        <p>You have not submitted any evaluation yet.</p>
+                    <div class="card empty">
+                        <i class="bi bi-calendar-x" aria-hidden="true"></i>
+                        <h3>No active evaluation period</h3>
+                        <p>Evaluations open when the administrator starts a period.</p>
                     </div>
+                    {% endif %}
+
+                    {% if state == 'no_section' %}
+                    <div class="card empty">
+                        <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
+                        <h3>No section assigned</h3>
+                        <p>Ask your administrator to place you in a section.</p>
+                    </div>
+                    {% elif state == 'no_assignments' %}
+                    <div class="card empty">
+                        <i class="bi bi-journal-x" aria-hidden="true"></i>
+                        <h3>No instructors for {{ request.user.section.name }}</h3>
+                        <p>Instructors have not been assigned to your section yet.</p>
+                    </div>
+                    {% endif %}
+
+
+                    <!-- Instructors: one tab at a time -->
+                    {% if state == 'ready' %}
+                    <section class="card tabbed" aria-label="My instructors">
+                        <div class="tabs" role="tablist" aria-label="Instructor status">
+                            <button type="button" class="tab" role="tab" id="tab-pending" data-tab="pending" aria-controls="panel-pending" aria-selected="true">
+                                <i class="bi bi-hourglass-split" aria-hidden="true"></i> To evaluate <span class="tab-count tab-count--gold">{{ pending_count }}</span>
+                            </button>
+                            <button type="button" class="tab" role="tab" id="tab-done" data-tab="done" aria-controls="panel-done" aria-selected="false">
+                                <i class="bi bi-check-circle" aria-hidden="true"></i> Evaluated <span class="tab-count">{{ evaluated_count }}</span>
+                            </button>
+                        </div>
+
+                        <div class="tab-panel" role="tabpanel" id="panel-pending" aria-labelledby="tab-pending">
+                            {% if pending_cards %}
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead><tr><th scope="col">Instructor</th><th scope="col">Subjects</th><th scope="col">Status</th></tr></thead>
+                                    <tbody data-paged>
+                                    {% for item in pending_cards %}
+                                        <tr>
+                                            <th scope="row">
+                                                <div class="person">
+                                                    <span class="avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</span>
+                                                    <span><strong>{{ item.teacher.first_name }} {{ item.teacher.last_name }}</strong><small>{{ item.teacher.department.name|default:"—" }}</small></span>
+                                                </div>
+                                            </th>
+                                            <td>{% for subject in item.subjects %}<span class="chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}</td>
+                                            <td><span class="badge badge-wait"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Not evaluated</span></td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pager" hidden>
+                                <span class="pager-info" data-pager-info aria-live="polite"></span>
+                                <div class="pager-buttons">
+                                    <button type="button" class="btn-ghost" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                                    <button type="button" class="btn-ghost" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="empty empty--flat">
+                                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
+                                <h3>All done</h3>
+                                <p>You evaluated every instructor for this period.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="tab-panel" role="tabpanel" id="panel-done" aria-labelledby="tab-done" hidden>
+                            {% if evaluated_cards %}
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead><tr><th scope="col">Instructor</th><th scope="col">Subjects</th><th scope="col">Status</th></tr></thead>
+                                    <tbody data-paged>
+                                    {% for item in evaluated_cards %}
+                                        <tr>
+                                            <th scope="row">
+                                                <div class="person">
+                                                    <span class="avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</span>
+                                                    <span><strong>{{ item.teacher.first_name }} {{ item.teacher.last_name }}</strong><small>{{ item.teacher.department.name|default:"—" }}</small></span>
+                                                </div>
+                                            </th>
+                                            <td>{% for subject in item.subjects %}<span class="chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}</td>
+                                            <td><span class="badge badge-ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Evaluated</span></td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pager" hidden>
+                                <span class="pager-info" data-pager-info aria-live="polite"></span>
+                                <div class="pager-buttons">
+                                    <button type="button" class="btn-ghost" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                                    <button type="button" class="btn-ghost" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="empty empty--flat">
+                                <i class="bi bi-inbox" aria-hidden="true"></i>
+                                <h3>Nothing evaluated yet</h3>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </section>
                     {% endif %}
 
                 </div>
 
 
-                <!-- ══════════════════════════════════
-                     PROFILE
-                ══════════════════════════════════ -->
+                <!-- ══════ MY EVALUATIONS ══════ -->
+                <div class="view" id="view-history">
+                    {% if history %}
+                    <section class="card">
+                        <div class="card-head">
+                            <h2>Submitted evaluations <span class="tab-count">{{ history|length }}</span></h2>
+                            <span class="muted"><i class="bi bi-incognito" aria-hidden="true"></i> Your comments stay anonymous</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th scope="col">Instructor</th><th scope="col">Period</th><th scope="col">Submitted</th><th scope="col">Your average</th></tr>
+                                </thead>
+                                <tbody data-paged>
+                                {% for e in history %}
+                                    <tr>
+                                        <th scope="row"><strong>{{ e.teacher.first_name }} {{ e.teacher.last_name }}</strong></th>
+                                        <td>{{ e.period.get_term_display }}<small class="block">S.Y. {{ e.period.school_year }} · {{ e.period.get_semester_display }}</small></td>
+                                        <td>{{ e.created_at|date:"M d, Y" }}</td>
+                                        <td class="score"><i class="bi bi-star-fill" aria-hidden="true"></i> {{ e.average_score }} / 5</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pager" hidden>
+                            <span class="pager-info" data-pager-info aria-live="polite"></span>
+                            <div class="pager-buttons">
+                                <button type="button" class="btn-ghost" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+                                <button type="button" class="btn-ghost" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    </section>
+                    {% else %}
+                    <div class="card empty">
+                        <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                        <h3>No evaluations submitted yet</h3>
+                        <p>Evaluations you submit will be listed here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+
+                <!-- ══════ PROFILE ══════ -->
                 <div class="view" id="view-profile">
 
-                    <div class="profile-hero">
-                        <div class="hero-avatar">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
-                        <div class="hero-text">
-                            <div class="hero-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
-                            <div class="hero-role">Student Account{% if request.user.section %} · {{ request.user.section.name }}{% endif %}</div>
+                    <section class="card card--navy profile-hero" aria-label="Account">
+                        <div class="hero-avatar" id="heroAvatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
+                        <div>
+                            <h2 class="hero-name" id="heroName">{{ request.user.first_name }} {{ request.user.last_name }}</h2>
+                            <p class="hero-role">Student{% if request.user.section %} · {{ request.user.section.name }}{% endif %}</p>
                         </div>
-                    </div>
+                    </section>
 
                     <div class="profile-grid">
 
-                        <!-- Edit details -->
-                        <div class="profile-panel">
-                            <div class="profile-panel-head">
-                                <div class="panel-head-title">Edit Your Details</div>
+                        <section class="card" aria-labelledby="editTitle">
+                            <div class="card-head">
+                                <h2 id="editTitle"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit details</h2>
+                                <span class="pill pill--gold" id="changesPill" hidden>Unsaved changes</span>
                             </div>
-
-                            <form method="post" action="{% url 'student_update_profile' %}" class="profile-form" id="profileForm">
+                            <form method="post" action="{% url 'student_update_profile' %}" class="form" id="profileForm">
                                 {% csrf_token %}
-
-                                <div class="pf-row pf-two-col">
+                                <div class="form-two">
                                     <div>
-                                        <label class="pf-label" for="id_first_name">First Name</label>
-                                        <input type="text" id="id_first_name" name="first_name" class="pf-input"
-                                               value="{{ request.user.first_name }}" required>
+                                        <label class="label" for="id_first_name">First name</label>
+                                        <input type="text" id="id_first_name" name="first_name" class="input" value="{{ request.user.first_name }}" autocomplete="given-name" required>
                                     </div>
                                     <div>
-                                        <label class="pf-label" for="id_last_name">Last Name</label>
-                                        <input type="text" id="id_last_name" name="last_name" class="pf-input"
-                                               value="{{ request.user.last_name }}" required>
+                                        <label class="label" for="id_last_name">Last name</label>
+                                        <input type="text" id="id_last_name" name="last_name" class="input" value="{{ request.user.last_name }}" autocomplete="family-name" required>
                                     </div>
                                 </div>
-
-                                <div class="pf-row">
-                                    <label class="pf-label" for="id_middle_name">Middle Name</label>
-                                    <input type="text" id="id_middle_name" name="middle_name" class="pf-input"
-                                           value="{{ request.user.middle_name }}">
+                                <div>
+                                    <label class="label" for="id_middle_name">Middle name</label>
+                                    <input type="text" id="id_middle_name" name="middle_name" class="input" value="{{ request.user.middle_name }}" autocomplete="additional-name">
                                 </div>
-
-                                <div class="pf-row">
-                                    <label class="pf-label" for="id_email">Email Address</label>
-                                    <input type="email" id="id_email" name="email" class="pf-input"
-                                           value="{{ request.user.email }}" required>
-                                    <div class="pf-help">This is also the email you use to log in.</div>
+                                <div>
+                                    <label class="label" for="id_email">Email address</label>
+                                    <input type="email" id="id_email" name="email" class="input" value="{{ request.user.email }}" autocomplete="email" required>
                                 </div>
-
-                                <div class="pf-row">
-                                    <label class="pf-label">Program &amp; Section</label>
-                                    <input type="text" class="pf-input" disabled
-                                           value="{{ request.user.get_program_display|default:'—' }} · {{ request.user.section.name|default:'No section yet' }}">
-                                    <div class="pf-help">Your program and section are set by the administrator.</div>
+                                <div>
+                                    <label class="label" for="id_program">Program &amp; section</label>
+                                    <input type="text" id="id_program" class="input" disabled value="{{ request.user.get_program_display|default:'—' }} · {{ request.user.section.name|default:'No section yet' }}" aria-describedby="programHint">
+                                    <span class="hint" id="programHint">Set by the administrator.</span>
                                 </div>
-
-                                <div class="pf-actions">
-                                    <button type="submit" class="pf-save-btn" id="pfSaveBtn" disabled>
-                                        <i class="bi bi-check2-circle"></i>
-                                        Save Changes
-                                    </button>
-                                    <span class="pf-hint" id="pfHint">No changes to save yet.</span>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-main" id="pfSaveBtn" disabled><i class="bi bi-check2-circle" aria-hidden="true"></i> Save changes</button>
                                 </div>
                             </form>
-                        </div>
+                        </section>
 
-                        <!-- Change password -->
-                        <div class="profile-panel">
-                            <div class="profile-panel-head">
-                                <div class="panel-head-title">Change Password</div>
+                        <section class="card" aria-labelledby="pwTitle">
+                            <div class="card-head">
+                                <h2 id="pwTitle"><i class="bi bi-key" aria-hidden="true"></i> Change password</h2>
                             </div>
-
-                            <form method="post" action="{% url 'student_change_password' %}" class="profile-form">
+                            <form method="post" action="{% url 'student_change_password' %}" class="form">
                                 {% csrf_token %}
-
-                                <div class="pf-row">
-                                    <label class="pf-label" for="id_old_password">Current Password</label>
-                                    <input type="password" id="id_old_password" name="old_password" class="pf-input"
-                                           autocomplete="current-password" required>
+                                <div>
+                                    <label class="label" for="id_old_password">Current password</label>
+                                    <input type="password" id="id_old_password" name="old_password" class="input" autocomplete="current-password" required>
                                 </div>
-
-                                <div class="pf-row">
-                                    <label class="pf-label" for="id_new_password1">New Password</label>
-                                    <input type="password" id="id_new_password1" name="new_password1" class="pf-input"
-                                           autocomplete="new-password" required>
-                                    <div class="pf-help">At least 8 characters. Not too common and not only numbers.</div>
+                                <div>
+                                    <label class="label" for="id_new_password1">New password</label>
+                                    <input type="password" id="id_new_password1" name="new_password1" class="input" autocomplete="new-password" required aria-describedby="pwHint">
+                                    <span class="hint" id="pwHint">At least 8 characters, not too common, not only numbers.</span>
                                 </div>
-
-                                <div class="pf-row">
-                                    <label class="pf-label" for="id_new_password2">Confirm New Password</label>
-                                    <input type="password" id="id_new_password2" name="new_password2" class="pf-input"
-                                           autocomplete="new-password" required>
+                                <div>
+                                    <label class="label" for="id_new_password2">Confirm new password</label>
+                                    <input type="password" id="id_new_password2" name="new_password2" class="input" autocomplete="new-password" required>
                                 </div>
-
-                                <div class="pf-actions">
-                                    <button type="submit" class="pf-save-btn">
-                                        <i class="bi bi-key-fill"></i>
-                                        Update Password
-                                    </button>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-main"><i class="bi bi-key-fill" aria-hidden="true"></i> Update password</button>
                                 </div>
                             </form>
-                        </div>
+                        </section>
 
                     </div>
-
                 </div>
 
             </div>
-        </div>
-
+        </main>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-
-var VIEW_TITLES = {
-    dashboard: 'Dashboard',
-    history: 'My Evaluations',
-    profile: 'Profile'
-};
-
+/* ---------- Sidebar views (hash based: #dashboard, #history, #profile) ---------- */
+var VIEW_TITLES = { dashboard: 'Dashboard', history: 'My Evaluations', profile: 'Profile' };
 var DEFAULT_VIEW = 'dashboard';
-var VALID_VIEWS = ['dashboard', 'history', 'profile'];
-
 
 function showView(view) {
-
-    if (!VALID_VIEWS.includes(view)) {
-        view = DEFAULT_VIEW;
-    }
-
-    document.querySelectorAll('.view').forEach(function (v) {
-        v.classList.remove('active');
+    if (!VIEW_TITLES[view]) view = DEFAULT_VIEW;
+    document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
+    document.querySelectorAll('.sb-link[data-view]').forEach(function (l) {
+        var on = l.dataset.view === view;
+        l.classList.toggle('active', on);
+        if (on) l.setAttribute('aria-current', 'page'); else l.removeAttribute('aria-current');
     });
-
-
-    var selectedView = document.getElementById('view-' + view);
-
-    if (selectedView) {
-        selectedView.classList.add('active');
-    }
-
-    document.querySelectorAll('.sb-link[data-view]').forEach(function (link) {
-        link.classList.remove('active');
-    });
-
-    var activeLink = document.querySelector(
-        '.sb-link[data-view="' + view + '"]'
-    );
-
-    if (activeLink) {
-        activeLink.classList.add('active');
-    }
-
-    var topbarTitle = document.getElementById('topbarTitle');
-
-    if (topbarTitle) {
-        topbarTitle.textContent = VIEW_TITLES[view] || '';
-    }
-
+    document.getElementById('topbarTitle').textContent = VIEW_TITLES[view];
+    document.getElementById('main').scrollTop = 0;
     closeSidebar();
 }
-
-function getViewFromHash() {
-
-    var view = window.location.hash.replace('#', '').trim();
-
-    if (VALID_VIEWS.includes(view)) {
-        return view;
-    }
-
-    return DEFAULT_VIEW;
-}
-
-function navigateToView(view) {
-
-    if (!VALID_VIEWS.includes(view)) {
-        view = DEFAULT_VIEW;
-    }
-
-    window.location.hash = view;
-}
+function viewFromHash() { return window.location.hash.replace('#', '').trim(); }
 
 document.querySelectorAll('.sb-link[data-view]').forEach(function (btn) {
-
-    btn.addEventListener('click', function () {
-
-        var targetView = this.dataset.view;
-
-        navigateToView(targetView);
-
-    });
-
+    btn.addEventListener('click', function () { window.location.hash = this.dataset.view; });
 });
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    var currentView = getViewFromHash();
-
-    showView(currentView);
-
-});
-
-
-window.addEventListener('hashchange', function () {
-
-    var currentView = getViewFromHash();
-
-    showView(currentView);
-
-});
-
-(function () {
-
-    var form = document.getElementById('profileForm');
-
-    if (!form) {
-        return;
-    }
-
-    var saveBtn = document.getElementById('pfSaveBtn');
-    var hint = document.getElementById('pfHint');
-    var fields = form.querySelectorAll('.pf-input');
-
-    var initial = {};
-
-    fields.forEach(function (field) {
-
-        initial[field.name] = field.value;
-
-    });
-
-
-    function checkDirty() {
-
-        var dirty = false;
-
-        fields.forEach(function (field) {
-
-            if (field.value !== initial[field.name]) {
-                dirty = true;
-            }
-
-        });
-
-        saveBtn.disabled = !dirty;
-
-        hint.textContent = dirty
-            ? 'You have unsaved changes.'
-            : 'No changes to save yet.';
-
-    }
-
-    fields.forEach(function (field) {
-
-        field.addEventListener('input', checkDirty);
-        field.addEventListener('change', checkDirty);
-
-    });
-
-})();
+window.addEventListener('hashchange', function () { showView(viewFromHash()); });
+document.addEventListener('DOMContentLoaded', function () { showView(viewFromHash()); });
 
 function toggleSidebar() {
-
-    var sidebar = document.getElementById('sidebar');
-    var overlay = document.getElementById('sbOverlay');
-
-    if (!sidebar || !overlay) {
-        return;
-    }
-
-    var isOpen = sidebar.classList.toggle('open');
-
-    overlay.style.display = isOpen ? 'block' : 'none';
+    var open = document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sbOverlay').style.display = open ? 'block' : 'none';
 }
-
-
 function closeSidebar() {
-
-    var sidebar = document.getElementById('sidebar');
-    var overlay = document.getElementById('sbOverlay');
-
-    if (sidebar) {
-        sidebar.classList.remove('open');
-    }
-
-    if (overlay) {
-        overlay.style.display = 'none';
-    }
-
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sbOverlay').style.display = 'none';
 }
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSidebar(); });
+
+
+/* ---------- Tabs (arrow keys work) ---------- */
+(function () {
+    var root = document.querySelector('.tabbed');
+    if (!root) return;
+    var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+    function select(tab, focus) {
+        tabs.forEach(function (t) {
+            var on = t === tab;
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+        });
+        if (focus) tab.focus();
+    }
+    tabs.forEach(function (tab, i) {
+        tab.addEventListener('click', function () { select(tab, false); });
+        tab.addEventListener('keydown', function (e) {
+            var n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i + tabs.length - 1) % tabs.length : -1;
+            if (n < 0) return;
+            e.preventDefault();
+            select(tabs[n], true);
+        });
+    });
+    select(tabs[0], false);
+})();
+
+
+/* ---------- Pagination: 6 rows per page, hidden when 1 page ---------- */
+document.querySelectorAll('tbody[data-paged]').forEach(function (body) {
+    var pager = body.closest('.tab-panel, .card').querySelector('.pager');
+    var rows = Array.prototype.slice.call(body.children), size = 6, page = 1;
+    var pages = Math.max(1, Math.ceil(rows.length / size));
+    if (!pager || pages === 1) return;
+    var info = pager.querySelector('[data-pager-info]');
+    var prev = pager.querySelector('[data-pager-prev]');
+    var next = pager.querySelector('[data-pager-next]');
+    function render() {
+        rows.forEach(function (tr, i) { tr.hidden = i < (page - 1) * size || i >= page * size; });
+        info.textContent = 'Page ' + page + ' of ' + pages;
+        prev.disabled = page === 1;
+        next.disabled = page === pages;
+    }
+    prev.addEventListener('click', function () { page--; render(); });
+    next.addEventListener('click', function () { page++; render(); });
+    pager.hidden = false;
+    render();
+});
+
+
+/* ---------- Profile form: Save turns on only after a change ---------- */
+(function () {
+    var form = document.getElementById('profileForm');
+    if (!form) return;
+    var save = document.getElementById('pfSaveBtn');
+    var pill = document.getElementById('changesPill');
+    var fields = form.querySelectorAll('.input:not([disabled])');
+    var first = document.getElementById('id_first_name');
+    var last = document.getElementById('id_last_name');
+    var initial = {};
+    fields.forEach(function (f) { initial[f.name] = f.value; });
+
+    function check() {
+        var dirty = false;
+        fields.forEach(function (f) { if (f.value !== initial[f.name]) dirty = true; });
+        save.disabled = !dirty;
+        pill.hidden = !dirty;
+        document.getElementById('heroAvatar').textContent = (first.value.trim().charAt(0) + last.value.trim().charAt(0)).toUpperCase();
+        document.getElementById('heroName').textContent = (first.value.trim() + ' ' + last.value.trim()).trim() || '—';
+    }
+    fields.forEach(function (f) { f.addEventListener('input', check); });
+})();
 </script>
 </body>
 </html>

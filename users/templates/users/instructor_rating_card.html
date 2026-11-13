@@ -1,0 +1,17 @@
+<!-- templates/instructor_rating_card.html
+     Compact overall rating card.
+     Needs: score, title, period.  Optional: live=True, note -->
+<div class="kpi kpi--rating">
+    <div class="kpi-body">
+        <div class="kpi-label">{{ title }}{% if live %} <span class="kpi-live">Live</span>{% endif %}</div>
+        <div class="kpi-value">{{ score|floatformat:2 }}<small> / 5</small></div>
+        <div class="meter" aria-hidden="true"><span style="width: {% widthratio score 5 100 %}%"></span></div>
+        <div class="kpi-note">
+            {% if score >= 4.5 %}<i class="bi bi-check-circle" aria-hidden="true"></i> Excellent
+            {% elif score >= 3.5 %}<i class="bi bi-dash-circle" aria-hidden="true"></i> Good
+            {% else %}<i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs improvement{% endif %}
+            &middot; {{ period }}
+        </div>
+        {% if note %}<div class="kpi-note">{{ note }}</div>{% endif %}
+    </div>
+</div>

@@ -1,0 +1,15 @@
+<div class="field">
+    <label for="f-severity">Severity</label>
+    <select id="f-severity" name="severity" class="select">
+        <option value="">Any</option>
+        {% for value, label in data.severities.items %}<option value="{{ value }}" {% if value == data.severity %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>
+<div class="field">
+    <label for="f-kind">Alert type</label>
+    <select id="f-kind" name="kind" class="select">
+        <option value="">All types</option>
+        {% for value, label in data.kinds %}<option value="{{ value }}" {% if value == data.kind %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>
+<input type="hidden" name="status" value="{{ data.status }}">

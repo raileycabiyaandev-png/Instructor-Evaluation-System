@@ -1,0 +1,180 @@
+{% load static %}{% comment %} ai_insights/_teacher_insights.html
+   Feedback summary + recommendations for ONE period. Needs: feedback, suggestions, label (period text). {% endcomment %}
+<div class="card-body ai-body" data-ai-tabs data-ai-start="summary">
+    {% include "ai_insights/_teacher_notices.html" %}
+
+    <div class="ai-head">
+        <h4>{{ label|default:"Latest finished period" }}</h4>
+        <div class="ai-tabs" role="group" aria-label="AI insights">
+            <button type="button" class="ai-tab" data-ai-tab="summary"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</button>
+            <button type="button" class="ai-tab" data-ai-tab="topics"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> Topics</button>
+            <button type="button" class="ai-tab" data-ai-tab="recs"><i class="bi bi-lightbulb" aria-hidden="true"></i> Recommendations
+                {% if suggestions.state == "ok" %}<span class="ai-tab-count">{{ suggestions.items|length }}</span>{% endif %}</button>
+        </div>
+    </div>
+
+    <!-- ───────── TAB 1: summary of comments ───────── -->
+    <div data-ai-panel="summary" class="ai-panel-stack">
+    {% if feedback.state == "ok" %}
+        {% with row=feedback.row %}
+        <div class="ai-tiles">
+            <div class="ai-tile"><b>{{ row.n_analyzed }}</b><span>Comments analysed</span></div>
+            <div class="ai-tile ai-tile--good"><b>{{ feedback.bars.0.percent }}%</b><span>Positive</span></div>
+            <div class="ai-tile"><b>{{ feedback.bars.1.percent }}%</b><span>Neutral</span></div>
+            <div class="ai-tile ai-tile--bad"><b>{{ feedback.bars.2.percent }}%</b><span>Negative</span></div>
+        </div>
+
+        <div class="ai-split">
+            <div class="ai-donut" style="background: {{ feedback.donut }};" role="img" aria-label="Positive {{ row.positive }}, neutral {{ row.neutral }}, negative {{ row.negative }} comments">
+                <div class="ai-donut-center"><b>{{ row.n_analyzed }}</b><span>comments</span></div>
+            </div>
+            <ul class="ai-legend2">
+                {% for b in feedback.bars %}
+                <li><i class="ai-dot--{{ b.key }}"></i>{{ b.label }}<b>{{ b.count }} · {{ b.percent }}%</b></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="ai-summary-box {% if feedback.ai %}ai-summary-box--ai{% endif %}">
+            {% if feedback.ai %}<span class="ai-badge ai-badge--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI summary · {{ row.llm_model }}</span>
+            {% else %}<span class="ai-badge"><i class="bi bi-list-check" aria-hidden="true"></i> Rule-based summary</span>{% endif %}
+            <p>{{ row.summary_text }}</p>
+        </div>
+
+        <div class="ai-points">
+            <section class="good">
+                <h5><i class="bi bi-hand-thumbs-up" aria-hidden="true"></i> What students liked</h5>
+                {% if feedback.positive_points %}<ul>{% for p in feedback.positive_points %}<li>{{ p }}</li>{% endfor %}</ul>
+                {% else %}<p>Nothing was mentioned often enough.</p>{% endif %}
+            </section>
+            <section class="bad">
+                <h5><i class="bi bi-tools" aria-hidden="true"></i> What students want improved</h5>
+                {% if feedback.negative_points %}<ul>{% for p in feedback.negative_points %}<li>{{ p }}</li>{% endfor %}</ul>
+                {% else %}<p>Nothing was mentioned often enough.</p>{% endif %}
+            </section>
+        </div>
+
+        <details class="ai-details">
+            <summary>Model details</summary>
+            <p>{{ row.n_analyzed }} usable comment{{ row.n_analyzed|pluralize }} from {{ row.n_responses }} student{{ row.n_responses|pluralize }}
+               ({{ row.n_skipped }} empty or unusable) · sentiment model {{ row.sentiment_model }} · made {{ row.generated_at|date:"M d, Y H:i" }}.</p>
+        </details>
+        {% endwith %}
+    {% elif feedback.state == "hidden" %}
+        <p class="ai-note"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>No comment summary is shown. {{ feedback.reason }}</span></p>
+    {% elif feedback.state == "not_released" %}
+        <p class="ai-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i><span>Waiting for your administrator to generate the AI analysis.</span></p>
+    {% elif feedback.state == "not_included" %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>{{ feedback.message }}</span></p>
+    {% elif feedback.state == "no_period" %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>There is no finished evaluation with responses yet.</span></p>
+    {% else %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>The comment summary has not been generated yet.</span></p>
+    {% endif %}
+    </div>
+
+    <!-- ───────── TAB 2: topics ───────── -->
+    <div data-ai-panel="topics" class="ai-panel-stack" hidden>
+    {% if feedback.state == "ok" %}
+        <div class="ai-cols">
+            <div class="ai-box">
+                <h5><i class="bi bi-exclamation-circle" aria-hidden="true"></i> To improve</h5>
+                {% if feedback.problems %}
+                <ul class="ai-hbars">
+                    {% for t in feedback.problems %}
+                    <li class="ai-hbar"><span>{{ t.label }}<small>{{ t.category_label }}</small></span>
+                        <span class="ai-hbar-track"><span class="ai-hbar-fill ai-hbar-fill--problem" style="width: {{ t.width }}%;"></span></span>
+                        <b>{{ t.mentions }} comments</b></li>
+                    {% endfor %}
+                </ul>
+                {% else %}<p class="ai-empty">No problem topic was mentioned in 2 or more comments.</p>{% endif %}
+            </div>
+            <div class="ai-box">
+                <h5><i class="bi bi-check-circle" aria-hidden="true"></i> Liked</h5>
+                {% if feedback.praise %}
+                <ul class="ai-hbars">
+                    {% for t in feedback.praise %}
+                    <li class="ai-hbar"><span>{{ t.label }}<small>{{ t.category_label }}</small></span>
+                        <span class="ai-hbar-track"><span class="ai-hbar-fill ai-hbar-fill--praise" style="width: {{ t.width }}%;"></span></span>
+                        <b>{{ t.mentions }} comments</b></li>
+                    {% endfor %}
+                </ul>
+                {% else %}<p class="ai-empty">No praised topic was mentioned in 2 or more comments.</p>{% endif %}
+            </div>
+        </div>
+        <div class="ai-box">
+            <h5><i class="bi bi-diagram-3" aria-hidden="true"></i> Comments per category</h5>
+            {% if feedback.categories %}
+            <ul class="ai-hbars">
+                {% for t in feedback.categories %}
+                <li class="ai-hbar"><span>{{ t.label }}<small>{{ t.positive }} positive · {{ t.negative }} negative</small></span>
+                    <span class="ai-hbar-track"><span class="ai-hbar-fill" style="width: {{ t.width }}%;"></span></span>
+                    <b>{{ t.mentions }} comments</b></li>
+                {% endfor %}
+            </ul>
+            {% else %}<p class="ai-empty">No category was mentioned in 2 or more comments.</p>{% endif %}
+        </div>
+    {% else %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Topics appear after the comment summary is available.</span></p>
+    {% endif %}
+    </div>
+
+    <!-- ───────── TAB 3: recommendations ───────── -->
+    <div data-ai-panel="recs" class="ai-panel-stack" hidden data-ai-filter-scope>
+    {% if suggestions.state == "ok" %}
+        {% if suggestions.note %}
+        <div class="ai-summary-box ai-summary-box--ai">
+            <span class="ai-badge ai-badge--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI overview · {{ suggestions.note.llm_model }}</span>
+            <p>{{ suggestions.note.text }}</p>
+        </div>
+        {% endif %}
+
+        <div class="ai-chips" data-ai-filter-group role="group" aria-label="Filter recommendations">
+            <button type="button" class="ai-chip" data-ai-filter="all" aria-pressed="true">All <span class="ai-chip-n">{{ suggestions.items|length }}</span></button>
+            {% if suggestions.counts.high %}<button type="button" class="ai-chip" data-ai-filter="high" aria-pressed="false">Needs attention <span class="ai-chip-n">{{ suggestions.counts.high }}</span></button>{% endif %}
+            {% if suggestions.counts.medium %}<button type="button" class="ai-chip" data-ai-filter="medium" aria-pressed="false">Can improve <span class="ai-chip-n">{{ suggestions.counts.medium }}</span></button>{% endif %}
+            {% if suggestions.counts.low %}<button type="button" class="ai-chip" data-ai-filter="low" aria-pressed="false">Small idea <span class="ai-chip-n">{{ suggestions.counts.low }}</span></button>{% endif %}
+            {% if suggestions.counts.strength %}<button type="button" class="ai-chip" data-ai-filter="strength" aria-pressed="false">Strength <span class="ai-chip-n">{{ suggestions.counts.strength }}</span></button>{% endif %}
+        </div>
+
+        <div class="ai-recs">
+            {% for s in suggestions.items %}
+            <article class="ai-rec ai-rec--{{ s.priority }}" data-filter-value="{{ s.priority }}">
+                <div class="ai-rec-head">
+                    <strong>{{ s.label }}</strong>
+                    <span>
+                        <span class="ai-badge ai-badge--{% if s.priority == 'high' %}bad{% elif s.priority == 'strength' %}good{% elif s.priority == 'medium' %}warn{% endif %}">{{ s.priority_text }}</span>
+                        {% if s.ai %}<span class="ai-badge ai-badge--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI</span>
+                        {% else %}<span class="ai-badge"><i class="bi bi-list-check" aria-hidden="true"></i> Rules</span>{% endif %}
+                    </span>
+                </div>
+                <div class="ai-meter">
+                    <span class="ai-meter-track"><span class="ai-meter-fill" style="width: {{ s.score_width }}%;"></span></span>
+                    <span><b>{{ s.score }}</b> / 5{% if s.change is not None and s.change != 0 %} · <span class="ai-delta {% if s.change > 0 %}ai-delta--up{% else %}ai-delta--down{% endif %}">{{ s.change|stringformat:"+.2f" }}</span>{% endif %}</span>
+                </div>
+                <p>{{ s.text }}</p>
+                {% if s.actions %}
+                <ul class="ai-steps">
+                    {% for a in s.actions %}
+                    <li><b>{{ a.topic }}</b>{% if a.mentions %} <small>· {{ a.mentions }} comments</small>{% endif %}<br>{{ a.text }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        <p class="ai-empty" data-ai-empty hidden>No recommendation in this group.</p>
+    {% elif suggestions.state == "not_released" %}
+        <p class="ai-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i><span>Waiting for your administrator to generate the AI analysis.</span></p>
+    {% elif suggestions.state == "not_included" %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>{{ suggestions.message }}</span></p>
+    {% elif suggestions.state == "older_period" %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Recommendations are made for your most recent finished period. Open the Dashboard to see them.</span></p>
+    {% elif suggestions.state == "no_period" %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Recommendations appear after your first finished evaluation.</span></p>
+    {% else %}
+        <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Recommendations have not been generated yet.</span></p>
+    {% endif %}
+    </div>
+</div>
+<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>

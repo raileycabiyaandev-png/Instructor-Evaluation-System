@@ -1,0 +1,27 @@
+{% comment %} ai_insights/_radar_chart.html  Needs: chart (from ai_insights.charts.radar_chart), title (text for screen readers). {% endcomment %}
+{% if chart %}
+<figure class="ai-chart-fig ai-radar">
+    <ul class="ai-chart-legend">
+        {% for s in chart.shapes %}<li><i style="background: {{ s.color }};{% if s.dashed %} background: repeating-linear-gradient(90deg, {{ s.color }} 0 4px, transparent 4px 7px);{% endif %}"></i>{{ s.name }}</li>{% endfor %}
+    </ul>
+    <svg class="ai-svg ai-svg--radar" viewBox="-70 -10 {{ chart.size|add:140 }} {{ chart.size|add:20 }}" role="img" aria-label="{{ title }}" preserveAspectRatio="xMidYMid meet">
+        {% for r in chart.rings %}<polygon points="{{ r.points }}" fill="none" class="ai-svg-grid"/>
+        <text x="{{ chart.cx|add:'4' }}" y="{{ r.y }}" class="ai-svg-tick" dominant-baseline="middle">{{ r.label }}</text>{% endfor %}
+        {% for s in chart.spokes %}<line x1="{{ chart.cx }}" y1="{{ chart.cy }}" x2="{{ s.x }}" y2="{{ s.y }}" class="ai-svg-grid"/>
+        <text x="{{ s.lx }}" y="{{ s.ly }}" text-anchor="{{ s.anchor }}" class="ai-svg-tick ai-svg-axis" dominant-baseline="middle">{{ s.text }}</text>{% endfor %}
+        {% for s in chart.shapes %}
+        <polygon points="{{ s.points }}" fill="{{ s.color }}" fill-opacity="{% if s.dashed %}0{% else %}.14{% endif %}" stroke="{{ s.color }}" stroke-width="2.6" stroke-linejoin="round"{% if s.dashed %} stroke-dasharray="6 5"{% endif %}/>
+        {% for d in s.dots %}<circle cx="{{ d.x }}" cy="{{ d.y }}" r="4" fill="#fff" stroke="{{ s.color }}" stroke-width="2.4"><title>{{ d.tip }}</title></circle>{% endfor %}
+        {% endfor %}
+    </svg>
+    <details class="ai-details">
+        <summary>Show the numbers</summary>
+        <div class="table-wrap"><table class="data-table">
+            <thead><tr><th scope="col"></th>{% for a in chart.axes %}<th scope="col">{{ a }}</th>{% endfor %}</tr></thead>
+            <tbody>{% for row in chart.table %}<tr><th scope="row">{{ row.name }}</th>{% for v in row.values %}<td>{% if v is None %}–{% else %}{{ v|floatformat:2 }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+        </table></div>
+    </details>
+</figure>
+{% else %}
+<p class="ai-empty">No category scores to draw yet.</p>
+{% endif %}

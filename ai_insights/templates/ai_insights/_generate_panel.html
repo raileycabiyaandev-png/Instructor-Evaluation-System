@@ -1,0 +1,60 @@
+{% comment %} ai_insights/_generate_panel.html
+   The ONE "Generate AI analysis" button of the admin AI pages. Click it to open a small box.
+   Needs: panel (selectors.generate_panel) and next (url name of the page to come back to). {% endcomment %}
+<details class="ac-gen" {% if panel.running or panel.last_failed %}open{% endif %}>
+    <summary class="btn btn-primary"><i class="bi bi-cpu" aria-hidden="true"></i>
+        {% if panel.running %}Running {{ panel.running.percent }}%{% elif panel.latest %}Regenerate analysis{% else %}Generate analysis{% endif %}</summary>
+    <div class="ac-gen-body">
+        {% if panel.running %}
+        <div id="aiRun" data-status-url="{% url 'ai_admin_run_status' %}" role="status" aria-live="polite">
+            <strong>{{ panel.running.period_label }}</strong>
+            <div class="ai-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ panel.running.percent }}"><span id="aiRunBar" style="width: {{ panel.running.percent }}%;"></span></div>
+            <span class="ac-hint" id="aiRunText">{{ panel.running.processed }} of {{ panel.running.total }} instructors done{% if panel.running.failed %} · {{ panel.running.failed }} failed{% endif %}</span>
+        </div>
+        {% endif %}
+        {% if panel.last_failed and not panel.running %}<p class="ac-hint"><span class="ac-chip ac-chip--failed">Last attempt failed</span> {{ panel.last_failed.message }}</p>{% endif %}
+
+        {% if panel.has_periods %}
+        <form method="post" action="{% url 'ai_admin_generate' %}" class="ac-gen-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% if panel.latest %}<input type="hidden" name="regenerate" value="on">{% endif %}
+            <div class="field">
+                <label for="gen-period">Evaluation period</label>
+                <select id="gen-period" name="period" class="select" required>
+                    {% for o in panel.options %}<option value="{{ o.pk }}" {% if o.pk == panel.chosen %}selected{% endif %}>{{ o.label }} ({{ o.note }})</option>{% endfor %}
+                </select>
+            </div>
+            <label class="ac-check"><input type="checkbox" name="use_llm" {% if panel.ollama.state == "ready" %}checked{% else %}disabled{% endif %}>
+                Write summaries with Ollama <span class="ac-chip {% if panel.ollama.state == 'ready' %}ac-chip--good{% else %}ac-chip--warn{% endif %}">{{ panel.ollama.text }}</span></label>
+            <button type="submit" class="btn btn-primary" {% if panel.running %}disabled{% endif %}>Start</button>
+        </form>
+        {% else %}
+        <p class="ac-hint">No finished period with answers yet.</p>
+        {% endif %}
+    </div>
+</details>
+
+{% if panel.running %}
+<script>
+(function () {
+    var box = document.getElementById('aiRun');
+    if (!box) return;
+    var bar = document.getElementById('aiRunBar'), text = document.getElementById('aiRunText');
+    var failures = 0;
+    function tick() {
+        fetch(box.dataset.statusUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); })
+            .then(function (d) {
+                failures = 0;
+                bar.style.width = d.percent + '%';
+                text.textContent = d.processed + ' of ' + d.total + ' instructors done' + (d.failed ? ' · ' + d.failed + ' failed' : '');
+                if (!d.running) { window.location.reload(); return; }
+                setTimeout(tick, 2000);
+            })
+            .catch(function () { failures += 1; if (failures < 5) setTimeout(tick, 4000); else text.textContent = 'Reload the page to see the result.'; });
+    }
+    setTimeout(tick, 1500);
+})();
+</script>
+{% endif %}

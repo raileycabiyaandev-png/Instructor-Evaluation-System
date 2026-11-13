@@ -473,9 +473,18 @@
                     <a href="#" class="nav-link">
                         <i class="bi bi-bar-chart-line nav-icon" aria-hidden="true"></i> Reports <span class="nav-soon">Soon</span>
                     </a>
-                    <a href="#" class="nav-link">
-                        <i class="bi bi-graph-up-arrow nav-icon" aria-hidden="true"></i> AI Forecasting <span class="nav-soon">Soon</span>
-                    </a>
+                    <div class="nav-item {% if current|slice:':3' == 'ai_' %}open{% endif %}" id="aiMenu">
+                        <button type="button" class="nav-link nav-toggle" aria-expanded="false">
+                            <i class="bi bi-graph-up-arrow nav-icon" aria-hidden="true"></i>
+                            <span class="nav-text">AI Analytics</span>
+                            <i class="bi bi-chevron-right nav-arrow" aria-hidden="true"></i>
+                        </button>
+                        <div class="submenu">
+                            <a href="{% url 'ai_admin_analytics' %}" class="nav-link {% if current == 'ai_admin_analytics' or current == 'ai_admin_feedback' or current == 'ai_admin_alerts' %}active{% endif %}">AI Overview</a>
+                            <a href="{% url 'ai_admin_trends' %}" class="nav-link {% if current == 'ai_admin_trends' or current == 'ai_admin_forecasting' or current == 'ai_admin_recommendations' or current == 'ai_admin_instructor' %}active{% endif %}">AI Performance Trends</a>
+                            <a href="{% url 'ai_admin_reports' %}" class="nav-link {% if current == 'ai_admin_reports' %}active{% endif %}">AI Reports</a>
+                        </div>
+                    </div>
                 </div>
 
             {% endwith %}

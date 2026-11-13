@@ -7,6 +7,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
 {% endblock %}
 
 {% block page_title %}Dashboard{% endblock %}
@@ -15,67 +16,202 @@
 {% block content %}
 <div class="admin-page">
 
-    <!-- ═══════════ 1. OVERVIEW: best instructor + quick numbers ═══════════ -->
-    <div class="overview {% if not best_teacher %}overview--single{% endif %}">
-
-        {% if best_teacher %}
-        {% widthratio best_teacher.overall 5 100 as best_pct %}
-        <section class="hero" aria-label="Best performing instructor">
-            <span class="hero-eyebrow"><i class="bi bi-trophy-fill" aria-hidden="true"></i> Best performing instructor</span>
-
-            <div class="hero-person">
-                <div class="hero-avatar" aria-hidden="true">{{ best_teacher.teacher.first_name|first }}{{ best_teacher.teacher.last_name|first }}</div>
-                <div>
-                    <h3 class="hero-name">{{ best_teacher.teacher.first_name }} {{ best_teacher.teacher.last_name }}</h3>
-                    <p class="hero-role">Instructor</p>
-                </div>
-            </div>
-
-            <div class="hero-score">
-                <span class="hero-number">{{ best_teacher.overall }}</span>
-                <span class="hero-outof">out of 5</span>
-            </div>
-
-            <div class="stars" role="img" aria-label="{{ best_teacher.overall }} out of 5 stars">
-                <div class="stars-back" aria-hidden="true">★★★★★</div>
-                <div class="stars-front" aria-hidden="true" style="width:{{ best_pct }}%;">★★★★★</div>
-            </div>
-
-            <p class="hero-foot">Based on {{ best_teacher.evaluation_count }} evaluation{{ best_teacher.evaluation_count|pluralize }}.</p>
-        </section>
-        {% endif %}
-
-        <div class="side {% if not best_teacher %}side--grid{% endif %}">
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Total users</div>
-                    <div class="stat-value">{{ total_users }}</div>
-                </div>
-            </div>
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Teachers</div>
-                    <div class="stat-value">{{ total_instructors }}</div>
-                </div>
-            </div>
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Students</div>
-                    <div class="stat-value">{{ total_students }}</div>
-                </div>
-            </div>
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Active evaluations</div>
-                    <div class="stat-value">{{ total_evaluations }}</div>
-                </div>
+    <!-- ═══════════ 1. WHICH PERIOD IS SHOWN + ITS STATUS ═══════════ -->
+    {% if dash.period %}
+    <section class="card dash-period dash-period--{{ dash.period.status }}" aria-label="Evaluation period status">
+        <div class="dash-period-main">
+            <span class="hero-eyebrow"><i class="bi bi-calendar-check" aria-hidden="true"></i>
+                {% if dash.is_current %}Current evaluation period{% else %}Latest available evaluation period{% endif %}</span>
+            <h3 class="dash-period-title">{{ dash.period.term }}</h3>
+            <dl class="dash-facts">
+                <div><dt>Academic year</dt><dd>{{ dash.period.school_year }}</dd></div>
+                <div><dt>Semester</dt><dd>{{ dash.period.semester }}</dd></div>
+                <div><dt>Evaluation period</dt><dd>{{ dash.period.term }}</dd></div>
+                <div><dt>Dates</dt><dd>{{ dash.period.start|date:"M d, Y" }} to {{ dash.period.end|date:"M d, Y" }}</dd></div>
+            </dl>
+        </div>
+        <div class="dash-period-side">
+            <span class="dash-status dash-status--{{ dash.period.status }}">{{ dash.period.status_label }}</span>
+            <div class="dash-completion">
+                <b>{% if dash.period.completion %}{{ dash.period.completion }}%{% else %}—{% endif %}</b>
+                <span>completion rate</span>
             </div>
         </div>
+        {% if not dash.is_current %}
+        <p class="dash-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>No evaluation period is open right now. Everything below shows the results of the
+            <strong>{{ dash.period.words }}</strong>.
+            {% if dash.upcoming %}Next period: <strong>{{ dash.upcoming.words }}</strong> (Not Started, begins {{ dash.upcoming.start|date:"M d, Y" }}).{% endif %}</span></p>
+        {% elif dash.period.status == 'not_started' %}
+        <p class="dash-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>This period is switched on but it begins on {{ dash.period.start|date:"M d, Y" }}. Students cannot evaluate yet.</span></p>
+        {% endif %}
+    </section>
+    {% else %}
+    <section class="card" aria-label="Evaluation period status">
+        <div class="empty">
+            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+            <h3>No evaluation period yet</h3>
+            <p>Create one in Evaluation Period. The results will show here.</p>
+        </div>
+    </section>
+    {% endif %}
+
+
+    <!-- ═══════════ 2. QUICK NUMBERS ═══════════ -->
+    <div class="dash-stats">
+        <div class="stat">
+            <span class="stat-icon"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></span>
+            <div><div class="stat-label">Total students</div><div class="stat-value">{{ dash.stats.students }}</div></div>
+        </div>
+        <div class="stat">
+            <span class="stat-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span>
+            <div><div class="stat-label">Total instructors</div><div class="stat-value">{{ dash.stats.instructors }}</div></div>
+        </div>
+        <div class="stat">
+            <span class="stat-icon"><i class="bi bi-building" aria-hidden="true"></i></span>
+            <div><div class="stat-label">Total departments</div><div class="stat-value">{{ dash.stats.departments }}</div></div>
+        </div>
     </div>
+
+
+    <!-- ═══════════ 3. PROGRESS + SCHOOL AVERAGE ═══════════ -->
+    <div class="dash-two">
+        <section class="card" aria-labelledby="progTitle">
+            <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>
+                <div><h3 id="progTitle">Evaluation progress</h3>
+                    <p class="card-sub">{% if dash.period %}{{ dash.period.term }} · {{ dash.period.semester }} · S.Y. {{ dash.period.school_year }}{% else %}No period{% endif %}</p></div></div></div>
+            <div class="card-body">
+            {% if dash.progress and dash.progress.required %}
+                <div class="dash-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ dash.progress.percent_text }}"
+                     aria-label="{{ dash.progress.percent_text }} percent of the required evaluations are done">
+                    <div class="dash-bar-fill" style="width: {{ dash.progress.width }}%"></div>
+                </div>
+                <p class="dash-percent"><b>{{ dash.progress.percent_text }}%</b> of the required evaluations are done</p>
+                <ul class="dash-counts">
+                    <li><b>{{ dash.progress.completed }}</b><span>Completed</span></li>
+                    <li><b>{{ dash.progress.remaining }}</b><span>Remaining</span></li>
+                    <li><b>{{ dash.progress.required }}</b><span>Required</span></li>
+                </ul>
+                <p class="card-sub">Required = every student evaluates every instructor who teaches their section in this semester.</p>
+            {% else %}
+                <p class="ai-empty">No evaluation is required yet. Add teaching assignments in Academics so each section has instructors, and make sure students are in a section.</p>
+            {% endif %}
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="schoolTitle">
+            <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
+                <div><h3 id="schoolTitle">School overall average</h3>
+                    <p class="card-sub">All instructors, out of 5</p></div></div></div>
+            <div class="card-body">
+            {% if dash.school.average is not None %}
+                <div class="dash-school">
+                    <div class="hero-score"><span class="hero-number dash-big">{{ dash.school.average|floatformat:2 }}</span><span class="hero-outof">out of 5</span></div>
+                    {% if dash.school.trend == 'improving' %}
+                        <span class="dash-trend dash-trend--up"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> Improving ({{ dash.school.change|stringformat:"+.2f" }})</span>
+                    {% elif dash.school.trend == 'declining' %}
+                        <span class="dash-trend dash-trend--down"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> Declining ({{ dash.school.change|stringformat:"+.2f" }})</span>
+                    {% elif dash.school.trend == 'stable' %}
+                        <span class="dash-trend dash-trend--flat"><i class="bi bi-arrow-right" aria-hidden="true"></i> Stable ({{ dash.school.change|stringformat:"+.2f" }})</span>
+                    {% else %}
+                        <span class="dash-trend dash-trend--none">No earlier period to compare with</span>
+                    {% endif %}
+                </div>
+                <div class="dash-meter" aria-hidden="true"><div style="width: {{ dash.school.width }}%"></div></div>
+                <p class="card-sub">From {{ dash.school.count }} evaluation{{ dash.school.count|pluralize }}{% if dash.school.partial %} so far (the period is still open){% endif %}.
+                    {% if dash.school.previous %}Compared with {{ dash.school.previous.words }}: {{ dash.school.previous.average|floatformat:2 }}.
+                    "Stable" means a change smaller than 0.05.{% endif %}</p>
+            {% else %}
+                <p class="ai-empty">No evaluations have been received in this period yet, so there is no average.</p>
+            {% endif %}
+            </div>
+        </section>
+    </div>
+
+
+    <!-- ═══════════ 4. DEPARTMENTS: instructors, best, poor ═══════════ -->
+    <section class="card" aria-labelledby="deptTitle">
+        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
+            <div><h3 id="deptTitle">Departments</h3>
+                <p class="card-sub">Best and poor performing instructor of {% if dash.period %}the {{ dash.period.term }}, {{ dash.period.semester }}, S.Y. {{ dash.period.school_year }}{% else %}the period{% endif %}.
+                    Only instructors with {{ dash.min_responses }} or more evaluations are counted.</p></div></div></div>
+        {% if dash.departments %}
+        <div class="table-wrap">
+            <table class="data-table dept-table">
+                <thead><tr>
+                    <th scope="col">Department</th>
+                    <th scope="col">Instructors</th>
+                    <th scope="col">Best performing</th>
+                    <th scope="col">Poor performing (lowest average)</th>
+                </tr></thead>
+                <tbody>
+                {% for d in dash.departments %}
+                    <tr>
+                        <th scope="row" data-label="Department"><span class="person-name">{{ d.name }}</span>{% if d.code %}<span class="person-role"> {{ d.code }}</span>{% endif %}</th>
+                        <td data-label="Instructors"><span class="dash-count">{{ d.instructors }}</span></td>
+                        <td data-label="Best performing">
+                            {% if d.best %}
+                                <div class="dash-person"><span class="person-avatar dash-avatar" aria-hidden="true">{{ d.best.initials }}</span>
+                                    <div><div class="person-name">{{ d.best.name }}</div>
+                                        <div class="person-role"><span class="badge badge-high">{{ d.best.overall|floatformat:2 }} / 5</span> · {{ d.best.count }} evaluation{{ d.best.count|pluralize }}</div></div></div>
+                            {% else %}<span class="ai-muted">{% if d.instructors %}Not enough evaluations yet{% else %}No instructors{% endif %}</span>{% endif %}
+                        </td>
+                        <td data-label="Poor performing">
+                            {% if d.poor %}
+                                <div class="dash-person"><span class="person-avatar dash-avatar dash-avatar--low" aria-hidden="true">{{ d.poor.initials }}</span>
+                                    <div><div class="person-name">{{ d.poor.name }}</div>
+                                        <div class="person-role"><span class="badge {% if d.poor.overall < 3.5 %}badge-low{% else %}badge-mid{% endif %}">{{ d.poor.overall|floatformat:2 }} / 5</span> · {{ d.poor.count }} evaluation{{ d.poor.count|pluralize }}</div></div></div>
+                            {% elif d.only_one %}<span class="ai-muted">Only one instructor qualifies, so there is no one to compare</span>
+                            {% else %}<span class="ai-muted">Not enough evaluations yet</span>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty"><i class="bi bi-building" aria-hidden="true"></i><h3>No departments yet</h3><p>Add departments in Academics.</p></div>
+        {% endif %}
+    </section>
+
+
+    <!-- ═══════════ 5. DEPARTMENT TRENDS AND FORECAST ═══════════ -->
+    <section class="card" aria-labelledby="fcTitle">
+        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
+            <div><h3 id="fcTitle">Department performance: trends and forecast</h3>
+                <p class="card-sub">Real scores are solid. AI forecasts are dashed or marked "forecast".</p></div></div>
+            <a class="btn btn-ghost btn-sm" href="{% url 'ai_admin_forecasting' %}">Open AI forecasting</a></div>
+        <div class="card-body dash-forecast">
+        {% if outlook.line_chart %}
+            <h4 class="ai-h4">Forecast for the next period{% if outlook.target_label %}: {{ outlook.target_label }}{% endif %}</h4>
+            {% if outlook.bars %}
+            <ul class="dash-bars" aria-label="Last real score and forecast of each department">
+                {% for b in outlook.bars %}
+                <li>
+                    <div class="dash-bars-name"><b>{{ b.name }}</b>
+                        <span>{{ b.forecasts }} of {{ b.teachers }} instructor{{ b.teachers|pluralize }} with a forecast
+                        {% if b.change is not None %}· {{ b.change|stringformat:"+.2f" }}{% endif %}</span></div>
+                    <div class="dash-bars-pair">
+                        <div class="dash-bars-row"><span>Last real</span><span class="dash-bars-track"><i class="dash-bars-fill dash-bars-fill--real" style="width: {{ b.last_w }}%"></i></span><b>{% if b.avg_last is not None %}{{ b.avg_last|floatformat:2 }}{% else %}—{% endif %}</b></div>
+                        <div class="dash-bars-row"><span>Forecast</span><span class="dash-bars-track"><i class="dash-bars-fill dash-bars-fill--pred" style="width: {{ b.pred_w }}%"></i></span><b>{{ b.avg_pred|floatformat:2 }}</b></div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>No forecast is saved for the next period yet. It needs at least {{ outlook.min_periods }} finished periods per instructor.
+                    Open <a href="{% url 'ai_admin_analytics' %}">AI Overview</a> and press "Generate AI analysis". Nothing is guessed in the meantime.</span></p>
+            {% endif %}
+
+            <h4 class="ai-h4">Trend in each finished period</h4>
+            {% include "ai_insights/_line_chart.html" with chart=outlook.line_chart title="Average real score of each department in each finished period, with the AI forecast as a dashed line" %}
+        {% else %}
+            <p class="ai-empty">No finished period has {{ dash.min_responses }} or more evaluations for an instructor yet, so there is nothing to draw.</p>
+        {% endif %}
+        </div>
+    </section>
 
 
     <!-- ═══════════ 2. TABS: one section at a time ═══════════ -->
@@ -101,7 +237,7 @@
                     <span class="card-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
                     <div>
                         <h3>Instructor performance</h3>
-                        <p class="card-sub">Average score from all evaluations, out of 5</p>
+                        <p class="card-sub">Average score from all evaluations in all periods, out of 5</p>
                     </div>
                 </div>
                 {% if data %}

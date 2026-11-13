@@ -1,0 +1,95 @@
+{% comment %} users/_instructor_overview.html
+   The core numbers of ONE period of the logged-in instructor. Used by the Dashboard AND the Evaluation Results
+   page, so both always show the same thing.
+   Needs: snap (from period_snapshot), live (true = the period is still open, so the numbers are not final),
+          line_chart (may be empty). {% endcomment %}
+{% if snap and snap.has_data %}
+
+<div class="ac-kpis ac-kpis--3">
+    <div class="ac-kpi">
+        <span class="ac-kpi-label">Responses received</span>
+        {% if snap.expected %}
+        <span class="ac-kpi-value">{{ snap.responses }}<small> of {{ snap.expected }}</small></span>
+        <div class="progress" role="progressbar" aria-label="Students who answered"
+             aria-valuemin="0" aria-valuemax="{{ snap.expected }}" aria-valuenow="{{ snap.responses }}"><span style="width: {{ snap.percent }}%;"></span></div>
+        <span class="ac-kpi-note">{{ snap.percent }}% of your students answered</span>
+        {% else %}
+        <span class="ac-kpi-value">{{ snap.responses }}</span>
+        <span class="ac-kpi-note">No students are placed in your sections yet, so no total can be shown.</span>
+        {% endif %}
+    </div>
+
+    <div class="ac-kpi ac-kpi--gold">
+        <span class="ac-kpi-label">Average score{% if live %} so far{% endif %}</span>
+        <span class="ac-kpi-value">{{ snap.overall|floatformat:2 }}<small> / 5</small></span>
+        <span class="ac-kpi-note">
+            {% if snap.indicator == "improving" %}<span class="ac-chip ac-chip--good"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Improving</span>
+            {% elif snap.indicator == "declining" %}<span class="ac-chip ac-chip--bad"><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> Declining</span>
+            {% elif snap.indicator == "stable" %}<span class="ac-chip"><i class="bi bi-dash-circle" aria-hidden="true"></i> Stable</span>
+            {% else %}<span class="ac-chip"><i class="bi bi-hourglass-split" aria-hidden="true"></i> First rating</span>{% endif %}
+            {% if live %}<span class="ac-chip ac-chip--warn">Not final</span>{% endif %}
+        </span>
+    </div>
+
+    <div class="ac-kpi">
+        <span class="ac-kpi-label">Compared with the previous period</span>
+        {% if snap.previous %}
+        <span class="ac-kpi-value {% if snap.change > 0 %}ac-up{% elif snap.change < 0 %}ac-down{% endif %}">{{ snap.change|stringformat:"+.2f" }}</span>
+        <span class="ac-kpi-note">Before: {{ snap.previous.overall|floatformat:2 }} · {{ snap.previous.label }}</span>
+        {% else %}
+        <span class="ac-kpi-value">—</span>
+        <span class="ac-kpi-note">There is no earlier finished period to compare with.</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if snap.low_sample %}
+<div class="ac-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
+    Only {{ snap.responses }} student{{ snap.responses|pluralize }} answered so far. With fewer than {{ min_responses }} answers the average is easy to swing, so read it with care.</div>
+{% endif %}
+
+<div class="ac-grid ac-grid--3">
+    <div class="ac-panel ac-panel--good">
+        <h3 class="ac-sec">Strongest area</h3>
+        <p class="ac-area"><b>{{ snap.strongest.label }}</b><span>{{ snap.strongest.score|floatformat:2 }}</span></p>
+    </div>
+    <div class="ac-panel ac-panel--gold">
+        <h3 class="ac-sec">Weakest area</h3>
+        {% if snap.strongest.score == snap.weakest.score %}<p class="ac-empty">All five areas have the same score.</p>
+        {% else %}<p class="ac-area"><b>{{ snap.weakest.label }}</b><span>{{ snap.weakest.score|floatformat:2 }}</span></p>{% endif %}
+    </div>
+    <div class="ac-panel ac-panel--bad">
+        <h3 class="ac-sec">Needs attention</h3>
+        {% if snap.attention %}
+        <ul class="ac-areas">{% for r in snap.attention %}
+            <li><b>{{ r.label }}</b><span>{{ r.score|floatformat:2 }}{% if r.diff is not None and r.diff <= -0.2 %} · {{ r.diff|stringformat:"+.2f" }}{% endif %}</span></li>
+        {% endfor %}</ul>
+        {% else %}<p class="ac-empty">Nothing right now. Every area is 3.5 or higher and none fell sharply.</p>{% endif %}
+    </div>
+</div>
+
+<div class="ac-grid ac-grid--2">
+    <div class="ac-panel">
+        <h3 class="ac-sec">Progress over time</h3>
+        {% include "ai_insights/_line_chart.html" with chart=line_chart title="Line chart of your real average score in each finished period." %}
+    </div>
+    <div class="ac-panel">
+        <h3 class="ac-sec">Ratings by area</h3>
+        <ul class="ac-bars ac-bars--areas">
+            {% for r in snap.categories %}
+            <li>
+                <span>{{ r.label }}</span>
+                <span class="ac-bar-track"><span class="ac-bar-fill{% if r.level == 'low' %} ac-bar-fill--gold{% endif %}" style="width: {{ r.percent }}%;"></span>{% if r.previous is not None %}<i class="ac-mark" style="left: {{ r.previous_percent }}%;" title="Previous period: {{ r.previous|floatformat:2 }}"></i>{% endif %}</span>
+                <b>{{ r.score|floatformat:2 }}</b>
+            </li>
+            {% endfor %}
+        </ul>
+        <p class="ac-hint">{% if snap.previous %}The gold mark shows the previous period.{% else %}Scores are out of 5.{% endif %}</p>
+    </div>
+</div>
+
+{% elif snap %}
+<section class="card"><div class="empty"><i class="bi bi-inbox" aria-hidden="true"></i>
+    <h3>No answers yet</h3>
+    <p>{% if live %}Students have not answered for this period yet.{% else %}Nobody answered for this period.{% endif %}</p></div></section>
+{% endif %}

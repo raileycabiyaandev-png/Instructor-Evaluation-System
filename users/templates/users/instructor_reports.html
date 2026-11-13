@@ -1,0 +1,91 @@
+<!--   users/Instructor Reports -->
+{% extends "instructor_base.html" %}
+{% load static %}
+
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_evaluation_results.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page ac-stack">
+    {% if messages %}{% for message in messages %}
+    <div class="msg {% if 'success' in message.tags %}msg-success{% else %}msg-error{% endif %}" role="alert"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i><span>{{ message }}</span></div>
+    {% endfor %}{% endif %}
+
+    {% if not options %}
+    <section class="card"><div class="empty"><i class="bi bi-file-earmark-x" aria-hidden="true"></i>
+        <h3>No report yet</h3><p>A report can be made after one evaluation period has closed and has student answers for you.</p></div></section>
+    {% else %}
+
+    <section class="card" aria-labelledby="repTitle">
+        <div class="card-head"><div class="card-title">
+            <span class="card-icon"><i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i></span>
+            <div><h3 id="repTitle">Evaluation report</h3><p class="card-sub">Choose a finished period, then download the file.</p></div>
+        </div></div>
+
+        <form method="get" action="{% url 'instructor_reports' %}" class="filters" id="periodForm">
+            <div class="field">
+                <label for="r_period">Period</label>
+                <select id="r_period" name="period" class="select" onchange="this.form.submit()">
+                    {% for o in options %}<option value="{{ o.id }}" {% if o.id == chosen.pk %}selected{% endif %}>{{ o.label }}</option>{% endfor %}
+                </select>
+            </div>
+            <noscript><div class="filter-actions"><button type="submit" class="btn btn-primary">Show</button></div></noscript>
+        </form>
+
+        <form method="post" action="{% url 'ai_my_report' %}" class="ac-actions" style="padding: 4px 20px 18px;">
+            {% csrf_token %}
+            <input type="hidden" name="period" value="{{ chosen.pk }}">
+            <button type="submit" name="fmt" value="pdf" class="btn btn-primary"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Download PDF</button>
+            <button type="submit" name="fmt" value="xlsx" class="btn btn-ghost"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Download Excel</button>
+        </form>
+    </section>
+
+    <div class="ac-grid ac-grid--2">
+        <section class="card"><div class="ac-body">
+            <h3 class="ac-sec">What is inside</h3>
+            <ul class="ac-list">
+                <li>Summary: answers received, average, change and indicator.</li>
+                <li>Strongest, weakest and needs-attention areas.</li>
+                <li>Charts: progress over time and ratings by area.</li>
+                <li>Complete history of every finished period.</li>
+                <li>AI forecast, feedback summary and suggestions{% if not has_ai %} (not available yet, the administrator has not run the AI analysis){% endif %}.</li>
+            </ul>
+            <p class="ac-hint">Student names and single comments are never included.</p>
+        </div></section>
+
+        <section class="card"><div class="ac-body">
+            <h3 class="ac-sec">This period at a glance</h3>
+            {% if snap and snap.has_data %}
+            <ul class="ac-areas">
+                <li><b>Answers</b><span>{{ snap.responses }}{% if snap.expected %} of {{ snap.expected }}{% endif %}</span></li>
+                <li><b>Average score</b><span>{{ snap.overall|floatformat:2 }} / 5</span></li>
+                <li><b>Change</b><span>{% if snap.change is None %}—{% else %}{{ snap.change|stringformat:"+.2f" }}{% endif %}</span></li>
+                <li><b>Strongest</b><span>{{ snap.strongest.label }}</span></li>
+                <li><b>Weakest</b><span>{{ snap.weakest.label }}</span></li>
+            </ul>
+            {% else %}<p class="ac-empty">No answers in this period.</p>{% endif %}
+        </div></section>
+    </div>
+
+    {% endif %}
+
+    <section class="card"><div class="ac-body">
+        <h3 class="ac-sec">Your recent downloads</h3>
+        {% if pager.paginator.count %}
+        <div class="table-wrap"><table class="ac-table">
+            <thead><tr><th scope="col">Report</th><th scope="col">File</th><th scope="col">Date</th></tr></thead>
+            <tbody>{% for r in pager %}<tr><th scope="row">{{ r.title }}</th><td>{{ r.fmt|upper }}</td><td>{{ r.created_at|date:"M d, Y H:i" }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        {% include "ai_insights/_pager.html" with pager=pager keep=keep %}
+        {% else %}<p class="ac-empty">You have not downloaded a report yet.</p>{% endif %}
+    </div></section>
+</div>
+{% endblock %}

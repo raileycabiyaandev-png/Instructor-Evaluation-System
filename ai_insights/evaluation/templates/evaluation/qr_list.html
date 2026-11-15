@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'evaluation/css/qr_list.css' %}">
+{% endblock %}
+
+{% block page_title %}QR Code Lists{% endblock %}
+
+{% block content %}
+
+<div class="qr-system">
+
+    <!-- PAGE HEADER -->
+    <div class="qr-header">
+        <button type="button" class="btn-primary" onclick="openGenerateModal()">
+            + Generate QR
+        </button>
+    </div>
+
+    <!-- ALERTS -->
+    {% if messages %}
+        <div class="qr-alert-stack">
+            {% for message in messages %}
+                <div class="alert-box">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- DATA PANEL -->
+    <section class="qr-panel">
+
+        <div class="panel-header">
+
+            <div class="panel-title-group">
+                <span class="badge">Records</span>
+                <h2 class="panel-title">Instructor QR Directory</h2>
+            </div>
+
+            <div class="panel-actions">
+                <div class="search-wrapper">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg"
+                         width="15" height="15" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="text"
+                           class="input-search"
+                           placeholder="Search instructor..."
+                           id="searchQR">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-container">
+            <table class="data-table" id="qrTable">
+
+                <colgroup>
+                    <col style="width: 42%">
+                    <col style="width: 22%">
+                    <col style="width: 14%">
+                    <col style="width: 22%">
+                </colgroup>
+
+                <thead>
+                    <tr>
+                        <th>Instructor</th>
+                        <th>Type</th>
+                        <th class="center">QR</th>
+                        <th class="actions-column">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for qr in qr_codes %}
+                    <tr>
+
+                        <td>
+                            <span class="cell-strong">{{ qr.instructor.get_full_name }}</span>
+                        </td>
+
+                        <td>
+                            <span class="badge soft">Permanent QR</span>
+                        </td>
+
+                        <td class="center">
+                            <img src="{{ qr.qr_image.url }}" class="qr-image" alt="QR Code">
+                        </td>
+
+                        <td class="actions-column">
+                            <div class="action-row">
+
+                            <button class="btn-action view"
+                                    onclick="openViewModal('{{ qr.qr_image.url }}')">
+
+                                View
+                            </button>
+
+                            <a href="{{ qr.qr_image.url }}"
+                            download
+                            class="btn-action download">
+
+                                Download
+                            </a>
+
+                            <button class="btn-action danger"
+                                    data-id="{{ qr.id }}"
+                                    onclick="confirmDelete(this)">
+
+                                Delete
+                            </button>
+
+                        </div>
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-title">No QR codes found</div>
+                                <div class="empty-sub">Generate your first QR code to begin</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+</div>
+
+<!-- ===== GENERATE MODAL ===== -->
+<div id="generateModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeGenerateModal()"></div>
+    <div class="modal-box">
+
+        <div class="modal-header">
+            <div>
+                <h3 class="modal-title">Generate QR Code</h3>
+                <p class="modal-subtitle">Assign one permanent QR per instructor</p>
+            </div>
+            <button class="modal-close" onclick="closeGenerateModal()">×</button>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="modal-body">
+                <label class="label">Instructor</label>
+                <select name="instructor" class="select" required>
+                    <option value="">Select Instructor</option>
+                    {% for instructor in instructors %}
+                        <option value="{{ instructor.id }}">{{ instructor.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="hint">Each instructor can only have one permanent QR code.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeGenerateModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Generate</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- ===== VIEW MODAL ===== -->
+<div id="viewModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeViewModal()"></div>
+    <div class="modal-box center">
+
+        <div class="modal-header">
+            <h3 class="modal-title">QR Preview</h3>
+            <button class="modal-close" onclick="closeViewModal()">×</button>
+        </div>
+
+        <div class="modal-body center">
+            <img id="modalImage" class="qr-preview" alt="QR Code">
+            <p class="hint">Scan using mobile device</p>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeViewModal()">Close</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===== DELETE MODAL ===== -->
+<div id="deleteModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeDelete()"></div>
+    <div class="modal-box">
+
+        <div class="modal-header">
+            <h3 class="modal-title danger">Confirm Deletion</h3>
+            <button class="modal-close" onclick="closeDelete()">×</button>
+        </div>
+
+        <div class="modal-body">
+            <p class="danger-text">This action is permanent and cannot be undone.</p>
+        </div>
+
+        <div class="modal-footer">
+            <form id="deleteForm" method="POST">
+                {% csrf_token %}
+                <button type="button" class="btn-secondary" onclick="closeDelete()">Cancel</button>
+                <button type="submit" class="btn-danger">Delete</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+function openGenerateModal()  { document.getElementById("generateModal").classList.remove("hidden"); }
+function closeGenerateModal() { document.getElementById("generateModal").classList.add("hidden"); }
+
+function openViewModal(img) {
+    document.getElementById("modalImage").src = img;
+    document.getElementById("viewModal").classList.remove("hidden");
+}
+function closeViewModal() { document.getElementById("viewModal").classList.add("hidden"); }
+
+function confirmDelete(el) {
+    document.getElementById("deleteForm").action = "/evaluation/qr/delete/" + el.dataset.id + "/";
+    document.getElementById("deleteModal").classList.remove("hidden");
+}
+function closeDelete() { document.getElementById("deleteModal").classList.add("hidden"); }
+
+document.getElementById("searchQR").addEventListener("input", function () {
+    const v = this.value.toLowerCase();
+    document.querySelectorAll("#qrTable tbody tr").forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(v) ? "" : "none";
+    });
+});
+</script>
+
+{% endblock %}

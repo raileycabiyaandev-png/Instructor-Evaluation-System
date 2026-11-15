@@ -1,3 +1,21 @@
+# evaluation/submission.py
+#
+# SAVING ONE STUDENT'S EVALUATION (the 15 ratings + the optional comment)
+#
+# The view does the web part (login, "may this student evaluate this teacher?"). This file does the
+# DATA part, so the rules live in one place and can be tested without a web page:
+#
+#   1. The ratings must be for EXACTLY the statements of the period's questionnaire:
+#      no statement missing, none extra, none from another questionnaire.
+#   2. Every rating is a whole number from 1 to 5.
+#   3. The Evaluation row and its 15 answers are saved in ONE database transaction:
+#      either everything is saved or nothing is (never a half-finished evaluation).
+#   4. One evaluation per student + instructor + period. The database enforces it too, so two
+#      clicks at the same moment cannot create two copies.
+#
+# Also here: build_form() (what the student page draws) and create_evaluation() (a short helper
+# for tests and demo-data scripts).
+
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 

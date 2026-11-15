@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'evaluation/css/generate_qr.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="qr-container">
+
+    <div class="qr-card">
+        <h2>QR Code Generator</h2>
+
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Form -->
+        <form method="POST" class="qr-form">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label>Instructor</label>
+                <select name="instructor" required>
+                    <option value="">Select Instructor</option>
+                    {% for instructor in instructors %}
+                        <option value="{{ instructor.id }}">{{ instructor }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Evaluation Period</label>
+                <select name="evaluation_period" required>
+                    <option value="">Select Period</option>
+                    {% for period in evaluation_periods %}
+                        <option value="{{ period.id }}">
+                            {{ period.name }} {% if period.is_active %}(Active){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn-generate">
+                Generate QR Code
+            </button>
+        </form>
+
+        <!-- QR Display -->
+        {% if qr_code %}
+        <div class="qr-result">
+            <h3>Generated QR</h3>
+
+            <div class="qr-image-wrapper">
+                <img src="{{ qr_code.qr_image.url }}" alt="QR Code">
+            </div>
+
+            <a href="{{ qr_code.qr_image.url }}" download class="btn-download">
+                Download QR Code
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+{% endblock %}

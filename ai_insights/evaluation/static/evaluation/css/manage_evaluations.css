@@ -1,0 +1,348 @@
+/* ============================================================
+   evaluation/static/evaluation/css/manage_evaluations.css
+
+   Manage Evaluation page (list + create window + delete window).
+   Also used by the Update Evaluation page, so the "update page"
+   classes at the bottom must stay.
+   Shared admin styles (cards, tabs, buttons) are in
+   users/static/users/css/admin_common.css. NO gold: navy + light blue only.
+
+   1. Tokens                  5. Create / delete windows
+   2. Messages                6. Form fields
+   3. Evaluation table        7. Update page (kept for update_evaluation.html)
+   4. Row actions             8. Responsive
+   ============================================================ */
+
+
+/* ============================================================
+   1. TOKENS  (repeated here so the update page works on its own)
+   ============================================================ */
+:root {
+    --navy-900: #13224f;
+    --navy-800: #1b2f6b;
+    --navy-700: #223a85;
+    --navy-600: #2f4a9e;
+    --navy-500: #5b78c4;
+    --navy-300: #9fb0dc;
+    --navy-200: #c9d4ee;
+    --navy-100: #e4eaf7;
+    --navy-50:  #f3f6fc;
+
+    --ink:   #1c2540;
+    --muted: #5b6585;
+    --line:  #dbe2f0;
+
+    --warn:    #b4443a;
+    --warn-bg: #fbeae8;
+
+    --slate-50:  #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-900: #0f172a;
+    --off-white: #f7f8fc;
+
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'Source Sans 3', system-ui, sans-serif;
+    --shadow-md:    0 8px 24px rgba(6, 9, 26, 0.12);
+}
+
+
+/* ============================================================
+   2. MESSAGES
+   ============================================================ */
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    border-left: 4px solid var(--navy-700);
+    border-radius: 10px;
+    background: var(--navy-100);
+    font-weight: 500;
+    color: var(--navy-900);
+}
+.alert-success { border-left-color: var(--navy-700); }
+.alert-error   { border-left-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+
+
+/* ============================================================
+   3. EVALUATION TABLE
+   ============================================================ */
+.period-name { font-weight: 600; color: var(--navy-900); }
+.period-sub  { font-size: 14px; color: var(--muted); }
+.date-range  { white-space: nowrap; }
+.date-range small { display: block; font-size: 14px; color: var(--muted); }
+
+.status-badge i { font-size: 8px; }
+
+
+/* ============================================================
+   4. ROW ACTIONS  (edit, on/off switch, delete)
+   ============================================================ */
+.row-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; }
+.row-actions form { margin: 0; }
+.btn-delete { color: var(--warn); border-color: rgba(180, 68, 58, .4); }
+.btn-delete:hover { background: var(--warn-bg); }
+.actions-col { text-align: right !important; }
+
+
+/* ============================================================
+   5. CREATE / DELETE WINDOWS  (modals)
+   ============================================================ */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+    background: rgba(11, 18, 41, 0.55);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .2s ease, visibility .2s ease;
+}
+.modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
+
+.modal-content {
+    width: 100%;
+    max-width: 680px;
+    margin: auto;
+    overflow: hidden;
+    border-top: 5px solid var(--navy-700);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: var(--shadow-md);
+    transform: translateY(14px);
+    transition: transform .25s ease;
+}
+.modal.show .modal-content { transform: translateY(0); }
+
+.eval-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 26px;
+    border-bottom: 1px solid var(--line);
+    background: var(--navy-50);
+}
+.eval-modal__header h3 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--navy-900); }
+.eval-modal__header p  { margin: 6px 0 0; font-size: 15px; color: var(--muted); }
+
+.close {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 26px;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+}
+.close:hover { background: var(--navy-100); color: var(--navy-900); }
+
+.eval-modal__body { padding: 24px 26px; background: #fff; }
+.eval-modal__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 26px;
+    border-top: 1px solid var(--line);
+    background: var(--navy-50);
+}
+
+/* Small "are you sure?" window */
+.confirm-box { max-width: 460px; border-top-color: var(--warn); }
+.confirm-body { padding: 22px 26px; }
+.confirm-body h3 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; color: var(--navy-900); }
+.confirm-body p { margin: 0; color: var(--muted); }
+.confirm-body strong { color: var(--navy-900); }
+
+
+/* ============================================================
+   6. FORM FIELDS  (inside the create window)
+   ============================================================ */
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.full-width { grid-column: span 2; }
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field > label { font-size: 15px; font-weight: 600; color: var(--navy-800); }
+
+.eval-modal__body input[type="text"],
+.eval-modal__body input[type="date"],
+.eval-modal__body input[type="number"],
+.eval-modal__body select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid #aab5d3;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 16px;                 /* 16px stops iPhone zoom */
+    color: var(--ink);
+}
+.eval-modal__body input:focus,
+.eval-modal__body select:focus { outline: 3px solid var(--navy-500); outline-offset: 1px; border-color: var(--navy-600); }
+input[type="date"] { cursor: pointer; }
+
+.field-help { font-size: 14px; color: var(--muted); }
+.error, .errorlist { list-style: none; font-size: 14px; font-weight: 600; color: var(--warn); }
+
+/* "Enable this period" switch (the checkbox comes from the Django form) */
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 46px;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--navy-50);
+    cursor: pointer;
+}
+.toggle-label input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 26px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--navy-200);
+    cursor: pointer;
+    transition: background .15s;
+}
+.toggle-label input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(11, 18, 41, .3);
+    transition: transform .15s;
+}
+.toggle-label input[type="checkbox"]:checked { background: var(--navy-700); }
+.toggle-label input[type="checkbox"]:checked::after { transform: translateX(18px); }
+.toggle-text { font-size: 15px; font-weight: 600; color: var(--navy-800); }
+
+
+/* ============================================================
+   7. UPDATE PAGE  (classes used by update_evaluation.html; kept as before, no gold)
+   ============================================================ */
+.page-container, .dashboard-page { padding: 24px; background: var(--off-white); }
+.dashboard-container { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+.page-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.page-title { margin: 8px 0 6px; font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1.2; color: var(--navy-900); }
+.page-subtitle { margin: 0; font-size: 15px; color: var(--muted); }
+
+.btn-primary, .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.btn-primary { background: var(--navy-700); color: #fff; }
+.btn-primary:hover { background: var(--navy-800); }
+.btn-secondary { background: #fff; color: var(--navy-700); border-color: var(--navy-200); }
+.btn-secondary:hover { background: var(--navy-50); }
+
+.update-card { max-width: 860px; margin: auto; overflow: hidden; }
+.readonly-display {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--navy-50);
+    font-weight: 600;
+    color: var(--navy-900);
+}
+
+.modal-header-modern { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+.modal-header-modern h3 { margin: 0; font-family: var(--font-display); font-size: 22px; color: var(--navy-900); }
+.modal-header-modern p  { margin-top: 6px; font-size: 15px; color: var(--muted); }
+.close-btn { width: 44px; height: 44px; border: 0; border-radius: 10px; background: var(--navy-50); font-size: 22px; cursor: pointer; }
+.close-btn:hover { background: var(--navy-100); }
+.modal-body-modern { padding: 24px 26px; }
+.modal-footer-modern { display: flex; justify-content: flex-end; gap: 12px; padding: 18px 26px; border-top: 1px solid var(--line); }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 15px; font-weight: 600; color: var(--navy-800); }
+.modal-body-modern input,
+.modal-body-modern select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid #aab5d3;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+}
+.modal-body-modern input:focus,
+.modal-body-modern select:focus { outline: 3px solid var(--navy-500); outline-offset: 1px; }
+
+
+/* ============================================================
+   8. RESPONSIVE
+   ============================================================ */
+@media (max-width: 767.98px) {
+    /* each table row becomes a small card */
+    .period-table thead { display: none; }
+    .period-table, .period-table tbody { display: block; }
+    .period-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px 12px;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+    }
+    .period-table tbody tr:last-child { border-bottom: 0; }
+    .period-table td { display: block; padding: 0; border: 0; }
+    .period-table .cell-actions { grid-column: 1 / -1; }
+    .row-actions { justify-content: flex-start; }
+}
+
+@media (max-width: 575.98px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .full-width { grid-column: span 1; }
+    .eval-modal__header, .eval-modal__body, .eval-modal__footer, .confirm-body { padding-left: 18px; padding-right: 18px; }
+    .eval-modal__footer { flex-direction: column-reverse; }
+    .eval-modal__footer .btn, .eval-modal__footer button { width: 100%; }
+    .modal-header-modern, .modal-body-modern, .modal-footer-modern { padding-left: 18px; padding-right: 18px; }
+    .modal-footer-modern { flex-direction: column-reverse; }
+    .modal-footer-modern .btn-primary, .modal-footer-modern .btn-secondary { width: 100%; }
+    .page-container, .dashboard-page { padding: 16px; }
+}

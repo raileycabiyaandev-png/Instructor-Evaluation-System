@@ -250,6 +250,16 @@ RECOMMEND_SYSTEM = (
 )
 
 
+# Everyday words for each dimension, so advice about one dimension that names another is still caught
+_SHORT_NAMES = {
+    'teaching_competence': ('teaching competence',),
+    'communication_clarity': ('communication skills',),
+    'classroom_management': (),
+    'student_engagement_support': ('student engagement',),
+    'professionalism_reliability': ('punctuality', 'professionalism'),
+}
+
+
 def recommend(facts, category_keys):
     """
     facts: text built by pipeline.coaching_facts(). category_keys: the keys we want advice for.
@@ -275,8 +285,8 @@ def recommend(facts, category_keys):
         if len(text) < 20 or not numbers_are_supported(text, facts):
             continue
         # a text about one category must not talk about another category
-        others = [lab for k, lab in labels.items() if k != key]
-        if any(lab.lower() in text.lower() for lab in others):
+        others = [name for k, lab in labels.items() if k != key for name in (lab, *_SHORT_NAMES.get(k, ()))]
+        if any(name.lower() in text.lower() for name in others):
             continue
         norm = re.sub(r'\W+', ' ', text.lower()).strip()
         if norm in seen:                       # the same sentence for two categories is not real advice

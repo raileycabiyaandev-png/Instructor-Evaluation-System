@@ -10,18 +10,13 @@ import json
 from django.db.models import Avg, Count
 from django.utils import timezone
 
+from evaluation import scoring
 from evaluation.models import Evaluation, EvaluationPeriod
 
 from .. import conf
 
-# The five required categories (database field, label).
-CATEGORIES = [
-    ("teaching_effectiveness", "Teaching Effectiveness"),
-    ("communication_skills", "Communication Skills"),
-    ("classroom_management", "Classroom Management"),
-    ("punctuality", "Punctuality"),
-    ("student_engagement", "Student Engagement"),
-]
+# The five dimensions (key, label). They come from evaluation/questionnaire_data.py, the single source.
+from evaluation.questionnaire_data import CATEGORIES  # noqa: E402
 CATEGORY_LABELS = dict(CATEGORIES)
 
 TERM_POSITION = {'prelims': 1, 'midterm': 2, 'prefinals': 3, 'finals': 4}
@@ -71,33 +66,29 @@ def analyse_history(instructor, periods=None):
     periods = finished_periods() if periods is None else periods
     by_id = {p.pk: p for p in periods}
 
-    rows = (
-        Evaluation.objects
-        .filter(teacher=instructor, period_id__in=by_id.keys())
-        .values('period_id')
-        .annotate(responses=Count('id'), **{f: Avg(f) for f, _ in CATEGORIES})
-    )
-    found = {r['period_id']: r for r in rows}
+    # Real averages of every period at once (evaluation/scoring.py): per dimension and weighted overall
+    found = scoring.grouped(
+        Evaluation.objects.filter(teacher=instructor, period_id__in=by_id.keys()), 'period_id')
 
     series, skipped = [], []
     for period in periods:                      # keeps oldest -> newest order
-        r = found.get(period.pk)
+        r = found.get((period.pk,))
         if not r:
             continue                            # no responses at all: nothing to report
         if r['responses'] < conf.MIN_RESPONSES:
             skipped.append({"label": period_label(period), "responses": r['responses'],
                             "reason": f"fewer than {conf.MIN_RESPONSES} responses"})
             continue
-        if any(r[f] is None for f, _ in CATEGORIES):
+        if any(r['categories'][f] is None for f, _ in CATEGORIES):
             skipped.append({"label": period_label(period), "responses": r['responses'],
                             "reason": "missing scores"})
             continue
-        cats = {f: round(float(r[f]), 4) for f, _ in CATEGORIES}
+        cats = {f: round(float(r['categories'][f]), 4) for f, _ in CATEGORIES}
         series.append({
             "period": period,
             "label": period_label(period),
             "responses": r['responses'],
-            "overall": round(sum(cats.values()) / len(cats), 4),
+            "overall": round(float(r['overall']), 4),
             "categories": cats,
         })
     quality = {
@@ -148,12 +139,11 @@ def expected_students(instructor, period):
 
 
 def _period_scores(instructor, period):
-    agg = Evaluation.objects.filter(teacher=instructor, period=period).aggregate(
-        total=Count('id'), **{f: Avg(f) for f, _ in CATEGORIES})
-    if not agg['total']:
+    found = scoring.period_summary(instructor, period)
+    if not found:
         return None
-    cats = {f: round(float(agg[f]), 2) for f, _ in CATEGORIES}
-    return {'responses': agg['total'], 'categories': cats, 'overall': round(sum(cats.values()) / len(cats), 2)}
+    cats = {f: round(float(found['categories'][f]), 2) for f, _ in CATEGORIES}
+    return {'responses': found['responses'], 'categories': cats, 'overall': round(float(found['overall']), 2)}
 
 
 def period_snapshot(instructor, period):

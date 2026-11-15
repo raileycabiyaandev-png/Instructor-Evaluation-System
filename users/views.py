@@ -18,6 +18,8 @@ from .forms import (
 )
 from .models import User
 from evaluation.models import Evaluation, EvaluationPeriod
+from evaluation import scoring                          # the one place where scores are calculated
+from evaluation.questionnaire_data import CATEGORIES, CATEGORY_KEYS
 from django.http import JsonResponse
 from django.contrib.auth import update_session_auth_hash
 from django.views.decorators.cache import never_cache
@@ -186,36 +188,19 @@ def admin_dashboard(request):
 
     data = []
 
+    # One set of queries for ALL instructors (no query per instructor). See evaluation/scoring.py.
+    scores = scoring.grouped(Evaluation.objects.all(), 'teacher_id')
+
     for teacher in teachers:
 
-        evaluations = Evaluation.objects.filter(teacher=teacher)
-
-        avg = evaluations.aggregate(
-            teaching=Avg('teaching_effectiveness'),
-            communication=Avg('communication_skills'),
-            classroom=Avg('classroom_management'),
-            punctuality=Avg('punctuality'),
-            engagement=Avg('student_engagement')
-        )
-
-        total_teacher_evaluations = evaluations.count()
-
-        overall = round(
-            (
-                (avg['teaching'] or 0) +
-                (avg['communication'] or 0) +
-                (avg['classroom'] or 0) +
-                (avg['punctuality'] or 0) +
-                (avg['engagement'] or 0)
-            ) / 5,
-            2
-        )
+        found = scores.get((teacher.pk,))
+        categories = found['categories'] if found else {key: None for key in CATEGORY_KEYS}
 
         data.append({
             'teacher': teacher,
-            'avg': avg,
-            'overall': overall,
-            'evaluation_count': total_teacher_evaluations
+            'avg': categories,
+            'overall': round(found['overall'], 2) if found else 0,
+            'evaluation_count': found['responses'] if found else 0,
         })
 
     # SORT BEST TEACHERS
@@ -231,20 +216,14 @@ def admin_dashboard(request):
     # BEST TEACHER
     best_teacher = ranked_teachers[0] if ranked_teachers else None
 
-    # CHART DATA
+    # CHART DATA (the 5 dimensions, in the order of CATEGORIES)
     chart_data = []
 
     for i, item in enumerate(data):
 
         chart_data.append({
             "id": f"chart{i+1}",
-            "values": [
-                round(item['avg']['teaching'] or 0, 2),
-                round(item['avg']['communication'] or 0, 2),
-                round(item['avg']['classroom'] or 0, 2),
-                round(item['avg']['punctuality'] or 0, 2),
-                round(item['avg']['engagement'] or 0, 2),
-            ]
+            "values": [round(item['avg'][key] or 0, 2) for key in CATEGORY_KEYS]
         })
 
     # NEW: the numbers for the top of the dashboard (see users/dashboard_data.py)
@@ -354,6 +333,10 @@ def student_dashboard(request):
         .select_related('teacher', 'period')
         .order_by('-created_at')[:50]
     )
+    history = list(history)
+    overall_of = scoring.overall_for_evaluations([e.pk for e in history])      # one set of queries, no N+1
+    for e in history:
+        e.overall = overall_of.get(e.pk)
 
     return render(request, 'users/student_dashboard.html', {
         'state': state,
@@ -399,24 +382,9 @@ def period_sort_key(period):
 
 
 def average_rating(evaluations):
-    """Average of the 5 categories for a queryset of evaluations."""
-    data = evaluations.aggregate(
-        teaching=Avg('teaching_effectiveness'),
-        communication=Avg('communication_skills'),
-        management=Avg('classroom_management'),
-        punctuality=Avg('punctuality'),
-        engagement=Avg('student_engagement'),
-    )
-    return round(
-        (
-            (data['teaching'] or 0) +
-            (data['communication'] or 0) +
-            (data['management'] or 0) +
-            (data['punctuality'] or 0) +
-            (data['engagement'] or 0)
-        ) / 5,
-        2
-    )
+    """Overall score (weighted mean of the 5 dimensions) for a queryset of evaluations. 0 when empty."""
+    overall = scoring.summary(evaluations)['overall']
+    return round(overall, 2) if overall is not None else 0
 
 MIN_RESPONSES = 3
 # Same number the AI uses, so the progress bar and the forecast always agree.
@@ -642,27 +610,15 @@ def chart_api(request):
 
     chart_data = []
 
+    scores = scoring.grouped(Evaluation.objects.all(), 'teacher_id')
+
     for i, teacher in enumerate(teachers):
 
-        avg = Evaluation.objects.filter(
-            teacher=teacher
-        ).aggregate(
-            teaching=Avg('teaching_effectiveness'),
-            communication=Avg('communication_skills'),
-            classroom=Avg('classroom_management'),
-            punctuality=Avg('punctuality'),
-            engagement=Avg('student_engagement')
-        )
+        found = scores.get((teacher.pk,))
 
         chart_data.append({
             "id": f"chart{i+1}",
-            "values": [
-                round(avg['teaching'] or 0, 2),
-                round(avg['communication'] or 0, 2),
-                round(avg['classroom'] or 0, 2),
-                round(avg['punctuality'] or 0, 2),
-                round(avg['engagement'] or 0, 2)
-            ]
+            "values": [round((found['categories'][key] if found else 0) or 0, 2) for key in CATEGORY_KEYS]
         })
 
     return JsonResponse(chart_data, safe=False)
@@ -866,14 +822,7 @@ from django.utils import timezone
 
 from evaluation.models import Evaluation, EvaluationPeriod
 
-# The five required categories: (database field, label shown on screen)
-CATEGORIES = [
-    ("teaching_effectiveness", "Teaching Effectiveness"),
-    ("communication_skills", "Communication Skills"),
-    ("classroom_management", "Classroom Management"),
-    ("punctuality", "Punctuality"),
-    ("student_engagement", "Student Engagement"),
-]
+# The five dimensions (key, label shown on screen) come from evaluation/questionnaire_data.py (imported at the top)
 
 
 def _score_level(value):
@@ -907,19 +856,13 @@ def _get_scores(teacher, period):
     selected, so student identity cannot leak into the page.
     Returns None when there are no responses.
     """
-    agg = Evaluation.objects.filter(teacher=teacher, period=period).aggregate(
-        total=Count("id"),
-        **{field: Avg(field) for field, _ in CATEGORIES},
-    )
-    if not agg["total"]:
+    found = scoring.period_summary(teacher, period)
+    if not found:
         return None
-
-    # Every category has equal weight (the models have no weight setting yet).
-    overall = sum(agg[field] for field, _ in CATEGORIES) / len(CATEGORIES)
     return {
-        "total": agg["total"],
-        "overall": round(overall, 2),
-        "categories": {field: round(agg[field], 2) for field, _ in CATEGORIES},
+        "total": found["responses"],
+        "overall": round(found["overall"], 2),
+        "categories": {field: round(found["categories"][field], 2) for field, _ in CATEGORIES},
     }
 
 

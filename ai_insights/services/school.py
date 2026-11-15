@@ -12,7 +12,9 @@
 
 import logging
 
-from django.db.models import Avg, Count
+from django.db.models import Count
+
+from evaluation import scoring
 from django.utils import timezone
 
 from evaluation.models import Evaluation
@@ -25,11 +27,11 @@ from .data import CATEGORIES, period_label
 log = logging.getLogger(__name__)
 
 TIPS = {
-    'teaching_effectiveness': "Hold a short teaching workshop on explaining lessons clearly, with examples and a steady pace.",
-    'communication_skills': "Remind instructors to answer student questions and to be easy to approach, for example with set consultation hours.",
+    'teaching_competence': "Hold a short teaching workshop on explaining lessons clearly, with examples and a steady pace.",
+    'communication_clarity': "Remind instructors to answer student questions and to be easy to approach, for example with set consultation hours.",
     'classroom_management': "Share good classroom-management practices between instructors and agree on clear, fair class rules.",
-    'punctuality': "Remind instructors to start and end classes on time and to announce schedule changes early.",
-    'student_engagement': "Encourage more activities and group work, and let instructors share lesson ideas that keep students interested.",
+    'professionalism_reliability': "Remind instructors to start and end classes on time and to announce schedule changes early.",
+    'student_engagement_support': "Encourage more activities and group work, and let instructors share lesson ideas that keep students interested.",
 }
 WEAK_BELOW = 3.5          # a category average below this is called weak in the text
 
@@ -51,15 +53,12 @@ def facts_for(period):
     from users import dashboard_data
 
     evals = Evaluation.objects.filter(period=period, teacher__role='instructor')
-    total = evals.aggregate(
-        n=Count('id'), a1=Avg('teaching_effectiveness'), a2=Avg('communication_skills'),
-        a3=Avg('classroom_management'), a4=Avg('punctuality'), a5=Avg('student_engagement'))
-    if not total['n']:
+    found = scoring.grouped(evals, 'period_id').get((period.pk,))
+    if not found or any(found['categories'][k] is None for k, _ in CATEGORIES):
         return None
-    scores = [total['a1'], total['a2'], total['a3'], total['a4'], total['a5']]
-    categories = [{'key': key, 'label': label, 'score': round(score, 2)}
-                  for (key, label), score in zip(CATEGORIES, scores)]
-    average = round(sum(scores) / 5, 2)
+    categories = [{'key': key, 'label': label, 'score': round(found['categories'][key], 2)}
+                  for key, label in CATEGORIES]
+    average = round(found['overall'], 2)
     instructors = evals.values('teacher_id').distinct().count()
 
     block = dashboard_data.school_block(period, 'closed')
@@ -73,7 +72,7 @@ def facts_for(period):
     }
     ranked = sorted(categories, key=lambda c: (-c['score'], c['key']))
     return {
-        'period': period_label(period), 'responses': total['n'], 'instructors': instructors,
+        'period': period_label(period), 'responses': found['responses'], 'instructors': instructors,
         'average': average, 'categories': categories,
         'strongest': ranked[0] if ranked[0]['score'] > ranked[-1]['score'] else None,
         'weakest': ranked[-1] if ranked[0]['score'] > ranked[-1]['score'] else None,

@@ -10,6 +10,7 @@ import re
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
 
+from evaluation import scoring
 from evaluation.models import Evaluation
 from users.models import User
 
@@ -367,14 +368,14 @@ def teacher_results_ai(instructor, period):
 def _cells(teacher_ids, periods):
     """REAL average scores: {(teacher_id, period_id): {...}} (cells with too few answers are left out)."""
     fields = [f for f, _ in CATEGORIES]
-    rows = (Evaluation.objects.filter(teacher_id__in=teacher_ids, period__in=periods)
-            .values('teacher_id', 'period_id').annotate(n=Count('id'), **{f: Avg(f) for f in fields}))
+    found = scoring.grouped(
+        Evaluation.objects.filter(teacher_id__in=teacher_ids, period__in=periods), 'teacher_id', 'period_id')
     cells = {}
-    for r in rows:
-        if r['n'] < conf.MIN_RESPONSES or any(r[f] is None for f in fields):
+    for key, r in found.items():
+        if r['responses'] < conf.MIN_RESPONSES or any(r['categories'][f] is None for f in fields):
             continue
-        cats = {f: float(r[f]) for f in fields}
-        cells[(r['teacher_id'], r['period_id'])] = {'n': r['n'], **cats, 'overall': sum(cats.values()) / len(fields)}
+        cells[key] = {'n': r['responses'], **{f: float(r['categories'][f]) for f in fields},
+                      'overall': r['overall']}
     return cells
 
 
@@ -597,14 +598,13 @@ def analysis_state(period):
 def _school_scores(periods):
     """{period_id: {'n', 'overall', categories...}} for ALL instructors together (response-weighted)."""
     fields = [f for f, _ in CATEGORIES]
-    rows = (Evaluation.objects.filter(period__in=periods, teacher__role='instructor')
-            .values('period_id').annotate(n=Count('id'), **{f: Avg(f) for f in fields}))
+    found = scoring.grouped(Evaluation.objects.filter(period__in=periods, teacher__role='instructor'), 'period_id')
     out = {}
-    for r in rows:
-        if r['n'] < conf.MIN_RESPONSES or any(r[f] is None for f in fields):
+    for (period_id,), r in found.items():
+        if r['responses'] < conf.MIN_RESPONSES or any(r['categories'][f] is None for f in fields):
             continue
-        cats = {f: float(r[f]) for f in fields}
-        out[r['period_id']] = {'n': r['n'], **cats, 'overall': sum(cats.values()) / len(fields)}
+        out[period_id] = {'n': r['responses'], **{f: float(r['categories'][f]) for f in fields},
+                          'overall': r['overall']}
     return out
 
 

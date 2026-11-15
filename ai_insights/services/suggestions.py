@@ -28,11 +28,11 @@ from .themes import TOPIC_BY_KEY
 
 # Used only when a category needs attention but the comments gave no clear topic.
 FALLBACK_ACTION = {
-    'teaching_effectiveness': "Ask your students in a short anonymous poll which part of your lessons is hardest to follow.",
-    'communication_skills': "Ask your students in a short anonymous poll when it is hard to ask you a question.",
+    'teaching_competence': "Ask your students in a short anonymous poll which part of your lessons is hardest to follow.",
+    'communication_clarity': "Ask your students in a short anonymous poll when it is hard to ask you a question.",
     'classroom_management': "Ask your students in a short anonymous poll what slows the class down.",
-    'punctuality': "Check the real start and end times of your classes for two weeks and compare them with the schedule.",
-    'student_engagement': "Ask your students in a short anonymous poll which activity they enjoyed most and which one least.",
+    'professionalism_reliability': "Check the real start and end times of your classes for two weeks and compare them with the schedule.",
+    'student_engagement_support': "Ask your students in a short anonymous poll which activity they enjoyed most and which one least.",
 }
 
 # Kept for older code and tests that import it.

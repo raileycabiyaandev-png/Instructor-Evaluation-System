@@ -12,12 +12,12 @@ from .. import conf
 from .data import CATEGORY_LABELS
 
 KEYWORDS = {
-    'teaching_effectiveness': [
+    'teaching_competence': [
         'teach', 'explain', 'lesson', 'lecture', 'understand', 'learn', 'topic', 'example',
         'clear', 'knowledge', 'quiz', 'exam', 'grading', 'turo', 'magturo', 'naiintindihan',
         'hindi maintindihan', 'leksyon', 'aralin', 'paliwanag',
     ],
-    'communication_skills': [
+    'communication_clarity': [
         'communicat', 'speak', 'voice', 'listen', 'question', 'answer', 'respond', 'reply',
         'language', 'approachable', 'friendly', 'rude', 'sagot', 'tanong', 'magsalita',
         'boses', 'mabait', 'masungit',
@@ -26,11 +26,12 @@ KEYWORDS = {
         'discipline', 'noise', 'noisy', 'control', 'rules', 'order', 'organized', 'organised',
         'fair', 'strict', 'attendance', 'seatwork', 'maingay', 'disiplina', 'ayos', 'gulo',
     ],
-    'punctuality': [
+    'professionalism_reliability': [
         'late', 'on time', 'punctual', 'early', 'absent', 'cancel', 'schedule', 'wait',
         'dismiss', 'huli', 'late dumating', 'absent si', 'oras', 'maaga', 'nahuhuli',
+        'prepar', 'unprepared', 'responsib', 'reliable', 'handa', 'walang handa',
     ],
-    'student_engagement': [
+    'student_engagement_support': [
         'engage', 'interest', 'boring', 'fun', 'activity', 'activities', 'participat', 'motivat',
         'interactive', 'group', 'game', 'sleepy', 'nakakaantok', 'masaya', 'nakakabagot', 'gawain',
     ],
@@ -79,7 +80,7 @@ def find_themes(items):
 _NOT = r"(?:never|not|hindi|di|wasn'?t|isn'?t|no)\s+(?:ever\s+|naman\s+)?"
 
 SUBTOPICS = {
-    'teaching_effectiveness': [
+    'teaching_competence': [
         {'key': 'unclear_explanation', 'label': 'Lessons are hard to understand', 'tone': 'problem',
          'words': ['hard to understand', 'difficult to understand', 'not clear', 'unclear', 'confus',
                    'hindi maintindihan', 'hindi ko maintindihan', 'di maintindihan', 'mahirap intindihin',
@@ -106,7 +107,7 @@ SUBTOPICS = {
          'words': ['knowledgeable', 'knows the subject', 'knows his', 'knows her', 'expert', 'marunong', 'magaling'],
          'strength': "Students notice how well you know your subject."},
     ],
-    'communication_skills': [
+    'communication_clarity': [
         {'key': 'unapproachable', 'label': 'Hard to approach', 'tone': 'problem',
          'words': ['rude', 'masungit', 'snob', 'intimidat', 'scary', 'afraid to ask', 'takot magtanong',
                    'shout', 'sigaw', 'harsh', 'nakakatakot'],
@@ -140,7 +141,7 @@ SUBTOPICS = {
          'words': ['well organized', 'well organised', 'organized', 'organised', 'disciplined', 'maayos', 'orderly', 'patas', 'fair'],
          'strength': "Students see your class as organised and fair."},
     ],
-    'punctuality': [
+    'professionalism_reliability': [
         {'key': 'late_start', 'label': 'Class starts or ends late', 'tone': 'problem',
          'words': ['late', 'lagi late', 'laging late', 'nahuhuli', 'huli dumating', 'starts late', 'dismiss late'],
          'unless': _NOT + r'late',
@@ -150,12 +151,20 @@ SUBTOPICS = {
                    'missed class', 'skip'],
          'unless': _NOT + r'(?:absent|cancel)',
          'action': "Tell students early when a class is moved or cancelled, and give a make-up plan."},
+        {'key': 'unprepared', 'label': 'Not prepared for class', 'tone': 'problem',
+         'words': ['unprepared', 'not prepared', 'no preparation', 'walang handa', 'hindi handa', 'di handa',
+                   'not ready', 'walang preparasyon'],
+         'action': "Prepare the lesson and materials before every class, and share the plan of the day with students."},
+        {'key': 'prepared', 'label': 'Comes prepared', 'tone': 'praise',
+         'words': ['well prepared', 'always prepared', 'is prepared', 'prepared lesson', 'handa palagi', 'laging handa'],
+         'unless': _NOT + r'(?:well |always )?prepared',
+         'strength': "Students notice that you come prepared."},
         {'key': 'on_time', 'label': 'Comes on time', 'tone': 'praise',
          'words': ['on time', 'punctual', 'maaga', 'never late', 'not late', 'hindi late', 'always early',
                    'sakto sa oras', 'laging maaga'],
          'strength': "Students notice that you come on time."},
     ],
-    'student_engagement': [
+    'student_engagement_support': [
         {'key': 'boring', 'label': 'Lessons feel boring', 'tone': 'problem',
          'words': ['boring', 'nakakabagot', 'nakakaantok', 'sleepy', 'monotone', 'dull', 'walang gana'],
          'action': "Change the activity about every 15 minutes, and start with a short question or problem."},

@@ -1,10 +1,29 @@
+# users/dashboard_data.py
+#
+# All the numbers for the ADMIN DASHBOARD live here, so the view stays short and the rules are
+# written in one place (and can be tested without opening a web page).
+#
+# Which evaluation period does the dashboard show?
+#   1. The CURRENT period = a period the admin has switched on (is_active) whose end date has not passed.
+#   2. If there is none, the LATEST period that has results. The page then says clearly that these
+#      are older results, and shows the school year, semester and term.
+#
+# Rules used (the same words are shown on the page):
+#   * Required evaluations = for every student, one evaluation for every instructor who teaches the
+#     student's section in the school year + semester of the period. (Same rule the student pages use.)
+#   * An instructor "qualifies" for best / poor performing only with at least MIN_RESPONSES
+#     evaluations in the period (the same privacy minimum the AI pages use).
+#   * Overall score = the average of the 5 category scores (same as everywhere else).
+#   * "Improving / declining / stable" uses the same steady band as the AI forecast (0.05).
+
 from collections import OrderedDict
 
-from django.db.models import Avg, Count
+from django.db.models import Count
 from django.utils import timezone
 
 from academics.models import Department, TeachingAssignment
 from ai_insights import conf as ai_conf
+from evaluation import scoring
 from evaluation.models import Evaluation, EvaluationPeriod
 
 from .models import User
@@ -18,22 +37,10 @@ STATUS_LABELS = {
     'closed': 'Closed',
 }
 
-_AVGS = {
-    'a1': Avg('teaching_effectiveness'),
-    'a2': Avg('communication_skills'),
-    'a3': Avg('classroom_management'),
-    'a4': Avg('punctuality'),
-    'a5': Avg('student_engagement'),
-}
 
-
-def _overall(row):
-    """Average of the 5 category averages. None when there is nothing to average."""
-    values = [row.get(k) for k in ('a1', 'a2', 'a3', 'a4', 'a5')]
-    if any(v is None for v in values):
-        return None
-    return round(sum(values) / 5, 2)
-
+# ─────────────────────────────────────────────
+# Which period?
+# ─────────────────────────────────────────────
 def period_status(period, today):
     """'not_started', 'ongoing' or 'closed'."""
     if period.start_date > today:
@@ -48,7 +55,8 @@ def period_words(period):
 
 
 def pick_period(today):
-    from .views import period_sort_key       
+    """Returns (period or None, is_current)."""
+    from .views import period_sort_key          # imported here: views.py imports this file too
 
     current = list(EvaluationPeriod.objects.filter(is_active=True, end_date__gte=today))
     if current:
@@ -58,13 +66,14 @@ def pick_period(today):
     if with_results:
         return max(with_results, key=period_sort_key), False
 
-    anything = list(EvaluationPeriod.objects.all())
+    anything = list(EvaluationPeriod.objects.all())          # periods exist but nobody has answered yet
     if anything:
         return max(anything, key=period_sort_key), False
     return None, False
 
 
 def previous_period_with_results(period):
+    """The nearest EARLIER period that has at least one evaluation (or None)."""
     from .views import period_sort_key
 
     mine = period_sort_key(period)
@@ -72,8 +81,15 @@ def previous_period_with_results(period):
                if period_sort_key(p) < mine]
     return max(earlier, key=period_sort_key) if earlier else None
 
+
+# ─────────────────────────────────────────────
+# Progress bar
+# ─────────────────────────────────────────────
 def evaluation_progress(period):
-    
+    """
+    required  = every (student, instructor) pair that SHOULD evaluate in this period
+    completed = how many of those pairs have already evaluated
+    """
     pairs = set(
         TeachingAssignment.objects.filter(
             school_year=period.school_year, semester=period.semester,
@@ -104,6 +120,10 @@ def evaluation_progress(period):
         'width': min(percent or 0, 100),
     }
 
+
+# ─────────────────────────────────────────────
+# Instructors and departments
+# ─────────────────────────────────────────────
 def _person(teacher, row):
     return {
         'name': f"{teacher.first_name} {teacher.last_name}".strip(),
@@ -114,6 +134,7 @@ def _person(teacher, row):
 
 
 def departments_block(period):
+    """One row per department: instructor count, best and poor performing instructor of the period."""
     teachers = list(User.objects.filter(role='instructor', is_active=True).select_related('department'))
     by_dept = OrderedDict((d.pk, {'name': d.name, 'code': d.code, 'teachers': []})
                           for d in Department.objects.order_by('name'))
@@ -123,11 +144,12 @@ def departments_block(period):
 
     stats = {}
     if period is not None:
-        rows = (Evaluation.objects.filter(period=period, teacher__role='instructor', teacher__is_active=True)
-                .values('teacher_id').annotate(n=Count('id'), **_AVGS))
-        for row in rows:
-            row['overall'] = _overall(row)
-            stats[row['teacher_id']] = row
+        found = scoring.grouped(
+            Evaluation.objects.filter(period=period, teacher__role='instructor', teacher__is_active=True),
+            'teacher_id', 'period_id')
+        for (teacher_id, _period_id), r in found.items():
+            overall = r['overall']
+            stats[teacher_id] = {'n': r['responses'], 'overall': None if overall is None else round(overall, 2)}
 
     blocks = list(by_dept.values())
     if no_dept['teachers']:
@@ -151,10 +173,16 @@ def departments_block(period):
         })
     return out
 
+
+# ─────────────────────────────────────────────
+# School average and "improving / declining / stable"
+# ─────────────────────────────────────────────
 def _school_average(period):
-    row = (Evaluation.objects.filter(period=period, teacher__role='instructor')
-           .aggregate(n=Count('id'), **_AVGS))
-    return _overall(row), row['n']
+    found = scoring.grouped(Evaluation.objects.filter(period=period, teacher__role='instructor'), 'period_id')
+    r = found.get((period.pk,))
+    if not r or r['overall'] is None:
+        return None, (r['responses'] if r else 0)
+    return round(r['overall'], 2), r['responses']
 
 
 def school_block(period, status):
@@ -184,6 +212,10 @@ def school_block(period, status):
         block['trend'] = 'improving' if change > 0 else 'declining'
     return block
 
+
+# ─────────────────────────────────────────────
+# Everything for the page
+# ─────────────────────────────────────────────
 def build(today=None):
     today = today or timezone.now().date()
     period, is_current = pick_period(today)

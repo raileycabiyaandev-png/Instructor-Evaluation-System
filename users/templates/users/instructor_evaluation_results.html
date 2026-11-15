@@ -93,7 +93,7 @@
                 <h3 class="ac-sec">All finished periods <small class="ac-hint">({{ history_total }})</small></h3>
                 <div class="table-wrap"><table class="ac-table">
                     <thead><tr><th scope="col">Period</th><th scope="col">Answers</th><th scope="col">Overall</th><th scope="col">Change</th>
-                        <th scope="col">Teaching</th><th scope="col">Communication</th><th scope="col">Class mgmt</th><th scope="col">Punctuality</th><th scope="col">Engagement</th></tr></thead>
+                        <th scope="col">Teaching</th><th scope="col">Communication</th><th scope="col">Class mgmt</th><th scope="col">Engagement</th><th scope="col">Professionalism</th></tr></thead>
                     <tbody>
                     {% for r in pager %}
                     <tr>
@@ -101,11 +101,11 @@
                         <td>{{ r.responses }}</td>
                         <td><b>{{ r.overall|floatformat:2 }}</b></td>
                         <td>{% if r.diff is None %}—{% else %}<span class="{% if r.diff > 0 %}ac-up{% elif r.diff < 0 %}ac-down{% endif %}">{{ r.diff|stringformat:"+.2f" }}</span>{% endif %}</td>
-                        <td>{{ r.categories.teaching_effectiveness|floatformat:2 }}</td>
-                        <td>{{ r.categories.communication_skills|floatformat:2 }}</td>
+                        <td>{{ r.categories.teaching_competence|floatformat:2 }}</td>
+                        <td>{{ r.categories.communication_clarity|floatformat:2 }}</td>
                         <td>{{ r.categories.classroom_management|floatformat:2 }}</td>
-                        <td>{{ r.categories.punctuality|floatformat:2 }}</td>
-                        <td>{{ r.categories.student_engagement|floatformat:2 }}</td>
+                        <td>{{ r.categories.student_engagement_support|floatformat:2 }}</td>
+                        <td>{{ r.categories.professionalism_reliability|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>

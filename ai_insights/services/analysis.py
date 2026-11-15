@@ -22,9 +22,10 @@ import threading
 from datetime import timedelta
 
 from django.db import IntegrityError, close_old_connections, transaction
-from django.db.models import Count, Max, Sum
+from django.db.models import Count, Max
 from django.utils import timezone
 
+from evaluation import scoring
 from evaluation.models import Evaluation
 
 from .. import conf
@@ -66,8 +67,7 @@ def data_fingerprint(period):
     """Short code of everything the analysis of `period` depends on. Same code = nothing new to do."""
     from users.models import User
     periods = periods_up_to(period)
-    totals = Evaluation.objects.filter(period__in=periods).aggregate(
-        n=Count('id'), newest=Max('id'), **{f: Sum(f) for f, _ in CATEGORIES})
+    totals = dict(scoring.fingerprint_parts(periods))
     teachers = list(User.objects.filter(role='instructor', is_active=True).order_by('id').values_list('id', flat=True))
     return hash_of(
         period.pk, conf.FORECAST_MODEL_VERSION, conf.MIN_PERIODS, conf.MIN_RESPONSES, conf.MIN_COMMENTS,

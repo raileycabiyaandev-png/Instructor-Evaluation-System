@@ -1,0 +1,72 @@
+/* ============================================================
+   evaluation/static/evaluation/css/evaluation_monitoring.css
+   Admin > Evaluation > Monitoring only.
+   Cards, buttons, tables and the period card come from admin_common.css and admin_dashboard.css.
+   1. Filters   2. Progress bars   3. Chips and status list   4. Student tabs   5. Phones
+   ============================================================ */
+
+/* 1. FILTERS */
+.mon-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 16px; align-items: end; }
+.mon-field { display: grid; gap: 6px; min-width: 0; }
+.mon-field > span { font-size: 14px; font-weight: 600; color: var(--navy-800); }
+.mon-field .select { width: 100%; min-width: 0; text-overflow: ellipsis; }
+.mon-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.mon-scope { margin: 0 0 18px; padding: 10px 14px; border-radius: 12px; background: #f3f6fd; color: var(--navy-900); }
+.mon-scope i { margin-right: 6px; color: var(--navy-600); }
+
+/* 2. PROGRESS BARS (tables) */
+.mon-bar-cell { min-width: 220px; }
+.mon-bar { position: relative; display: block; height: 12px; border-radius: 999px; background: #e8ecf6; overflow: visible; margin-bottom: 4px; }
+.mon-bar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #2c4ba0, #1b2f6b); min-width: 2px; }
+.mon-bar-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #c9a227; border-radius: 2px; }
+.mon-pct { font-size: 14px; color: var(--navy-900); }
+.mon-sub { font-size: 13px; color: var(--muted); }
+
+/* 3. CHIPS AND STATUS LIST */
+.mon-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #e9ebf1; color: #4b5470; white-space: nowrap; }
+.mon-chip--up { background: #def3e6; color: #1f6a3f; }
+.mon-chip--down { background: #fbe3da; color: #8f3a17; }
+.mon-status-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 10px; }
+.mon-status-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.mon-status-list b { font-family: "Playfair Display", Georgia, serif; font-size: 24px; color: var(--navy-900); }
+.mon-warn { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: #fbf0cf; color: #7a5b00; font-size: 14px; }
+.mon-warn i { margin-right: 6px; }
+.mon-stats { margin-top: 0; }
+.mon-table th[scope="row"] { font-weight: 400; background: none; font-size: 16px; color: var(--ink); padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.mon-table tbody tr:last-child th[scope="row"] { border-bottom: 0; }
+
+/* 4. STUDENT STATUS TABS (real links: they work without JavaScript) */
+.mon-seg-wrap { padding-bottom: 6px; overflow-x: auto; }
+.mon-seg-link { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border-radius: 8px; color: var(--navy-800); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.mon-seg-link:hover { background: rgba(255, 255, 255, .6); }
+.mon-seg-link[aria-current="true"] { background: #fff; box-shadow: 0 1px 3px rgba(11, 18, 41, .18); color: var(--navy-900); }
+
+/* SECTIONS TABLE + STUDENT TOOLS */
+.mon-trio { display: inline-flex; gap: 6px; }
+.mon-n { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 28px; padding: 0 8px; border-radius: 8px; font-weight: 700; font-size: 14px; }
+.mon-n--done { background: var(--navy-800); color: #fff; }
+.mon-n--part { background: var(--navy-100); color: var(--navy-800); }
+.mon-n--none { background: #fbe3da; color: #8f3a17; }
+.mon-act { text-align: right; white-space: nowrap; }
+.mon-student-tools { display: grid; grid-template-columns: minmax(180px, 260px) minmax(200px, 1fr) auto; gap: 14px 16px; align-items: end; padding-bottom: 4px; }
+.mon-field--grow { min-width: 0; }
+.mon-input { width: 100%; background-image: none; padding-right: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 5. PHONES: every table row becomes a small card */
+@media (max-width: 767.98px) {
+    .mon-table thead { display: none; }
+    .mon-table, .mon-table tbody { display: block; }
+    .mon-table tr { display: grid; gap: 10px; padding: 16px; border-bottom: 1px solid var(--line); }
+    .mon-table tbody tr:last-child { border-bottom: 0; }
+    .mon-table th, .mon-table td, .mon-table th[scope="row"] { display: block; padding: 0; border: 0; }
+    .mon-table td[data-label]::before { content: attr(data-label); display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+    .mon-bar-cell { min-width: 0; }
+    .mon-actions .btn { flex: 1; }
+    .mon-act { text-align: left; }
+    .mon-act .btn { width: 100%; }
+    .mon-student-tools { grid-template-columns: 1fr; }
+}
+@media (max-width: 575.98px) {
+    .mon-filters { grid-template-columns: 1fr; }
+}

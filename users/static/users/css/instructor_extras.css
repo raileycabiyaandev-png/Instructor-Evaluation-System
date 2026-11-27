@@ -1,12 +1,6 @@
 /* ============================================================
    users/static/users/css/instructor_extras.css
-   Extra parts for the teacher pages: updates (notifications), forecast,
-   anonymous feedback, notices and the QR page.
-   Load it AFTER instructor_common.css (it uses the same colors).
    ============================================================ */
-
-
-/* ---------- notice (small warning / info box) ---------- */
 .notice {
     display: flex;
     gap: 12px;

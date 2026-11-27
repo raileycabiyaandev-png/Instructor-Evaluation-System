@@ -29,7 +29,7 @@ class SubtopicTests(SimpleTestCase):
         found = topics(("He is always late", 'negative'), ("Late again today", 'negative'))
         self.assertEqual(found['late_start']['mentions'], 2)
         self.assertEqual(found['late_start']['tone'], 'problem')
-        self.assertEqual(found['late_start']['category'], 'punctuality')
+        self.assertEqual(found['late_start']['category'], 'professionalism_reliability')
 
     def test_never_late_is_praise_not_a_problem(self):
         found = topics(("Never late, very punctual", 'positive'), ("He is not late at all", 'positive'))
@@ -93,10 +93,10 @@ class AnswerCheckTests(SimpleTestCase):
 
     def test_the_same_advice_for_two_categories_is_not_accepted(self):
         same = 'Start on time and tell the class early about changes. Check the result next period.'
-        data = {'overall': '', 'categories': {'punctuality': same, 'student_engagement': same}}
+        data = {'overall': '', 'categories': {'professionalism_reliability': same, 'student_engagement_support': same}}
         with mock.patch.object(ollama, 'generate', return_value=json.dumps(data)):
-            out = ollama.recommend("[punctuality] x", ['punctuality', 'student_engagement'])
-        self.assertEqual(list(out['categories']), ['punctuality'])
+            out = ollama.recommend("[professionalism_reliability] x", ['professionalism_reliability', 'student_engagement_support'])
+        self.assertEqual(list(out['categories']), ['professionalism_reliability'])
 
     def test_short_or_wrong_shape_is_rejected(self):
         for bad in (self.answer(summary='ok'), self.answer(positive_points='a string'), '[1, 2]'):
@@ -109,13 +109,13 @@ class AnswerCheckTests(SimpleTestCase):
             self.assertNotIn(gone, out)
 
     def test_recommendation_for_one_category_must_not_talk_about_another(self):
-        facts = "[punctuality] Punctuality: score 3.0."
+        facts = "[professionalism_reliability] Punctuality: score 3.0."
         data = {'overall': '', 'categories': {
-            'punctuality': 'Start on time and tell the class early about changes.',
-            'student_engagement': 'Your Punctuality is the real problem, fix that first please.'}}
+            'professionalism_reliability': 'Start on time and tell the class early about changes.',
+            'student_engagement_support': 'Your Punctuality is the real problem, fix that first please.'}}
         with mock.patch.object(ollama, 'generate', return_value=json.dumps(data)):
-            out = ollama.recommend(facts, ['punctuality', 'student_engagement'])
-        self.assertEqual(list(out['categories']), ['punctuality'])
+            out = ollama.recommend(facts, ['professionalism_reliability', 'student_engagement_support'])
+        self.assertEqual(list(out['categories']), ['professionalism_reliability'])
 
     def test_status_chip(self):
         with override_settings(AI_OLLAMA_URL='http://127.0.0.1:9'):
@@ -179,9 +179,9 @@ class PipelineAiTests(AiFeedbackBase):
 
     def test_rule_suggestions_use_those_topics(self):
         newest = Suggestion.objects.filter(instructor=self.teacher).order_by('-period__start_date').first().period
-        punctuality = Suggestion.objects.get(instructor=self.teacher, source='rule', category='punctuality',
+        professionalism_reliability = Suggestion.objects.get(instructor=self.teacher, source='rule', category='professionalism_reliability',
                                              period=newest)
-        topics_here = [t['key'] for t in punctuality.evidence['topics']]
+        topics_here = [t['key'] for t in professionalism_reliability.evidence['topics']]
         self.assertIn('late_start', topics_here)
 
     def test_falls_back_to_rule_text_when_the_ai_fails(self):
@@ -277,7 +277,7 @@ class AdminPagesTests(AiFeedbackBase):
 
     def test_recommendation_filters(self):
         for params, check in (
-            ({'category': 'punctuality'}, lambda c: c['key'] == 'punctuality'),
+            ({'category': 'professionalism_reliability'}, lambda c: c['key'] == 'professionalism_reliability'),
             ({'priority': 'high'}, lambda c: c['priority'] == 'high'),
             ({'source': 'rule'}, lambda c: not c['ai']),
         ):

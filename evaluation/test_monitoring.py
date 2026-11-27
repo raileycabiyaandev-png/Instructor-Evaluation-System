@@ -15,6 +15,7 @@ from django.utils import timezone
 from academics.models import Department, Section, Subject, TeachingAssignment
 from evaluation import monitoring
 from evaluation.models import Evaluation, EvaluationPeriod
+from evaluation.submission import create_evaluation
 from users.models import User
 
 TODAY = timezone.now().date()
@@ -37,9 +38,7 @@ def period(year='2026-2027', sem='1st', term='prelims', active=True, start=-2, e
 
 
 def evaluate(student, teacher, p, comment=''):
-    return Evaluation.objects.create(
-        student=student, teacher=teacher, period=p, comment=comment,
-        teaching_effectiveness=4, communication_skills=4, classroom_management=4, punctuality=4, student_engagement=4)
+    return create_evaluation(student, teacher, p, scores=4, comment=comment, check_period_open=False)
 
 
 def assign(teacher, subject, section, year='2026-2027', sem='1st'):
@@ -127,10 +126,7 @@ class CountingTests(World):
 
     def test_other_periods_are_not_counted(self):
         other = period(term='midterm', active=False, start=-60, end=-50)
-        evaluate_inactive = Evaluation(student=self.st4, teacher=self.t1, period=other,
-                                       teaching_effectiveness=5, communication_skills=5, classroom_management=5,
-                                       punctuality=5, student_engagement=5)
-        super(Evaluation, evaluate_inactive).save()          # skip the "period must be open" check on purpose
+        create_evaluation(self.st4, self.t1, other, scores=5, check_period_open=False)   # closed period on purpose
         self.assertEqual(self.get_data()['stats']['overall']['completed'], 4)
 
     def test_other_semester_assignments_are_not_required(self):
@@ -206,6 +202,10 @@ class FilterTests(World):
         rows = self.get_data()['stats']['students']
         self.assertEqual([r['name'] for r in monitoring.apply_student_filter(rows, 'partial')], ['Test, St2'])
         self.assertEqual(len(monitoring.apply_student_filter(rows, '')), 4)
+        
+    def test_an_inactive_instructor_is_not_accepted_as_a_filter(self):
+        gone = user('gone@x.com', 'instructor', department=self.dept_a, is_active=False)
+        self.assertIsNone(monitoring.parse_filters({'instructor': gone.pk}).instructor)
 
 
 class PeriodTests(TestCase):
@@ -289,7 +289,7 @@ class PageTests(World):
         self.login(self.admin)
         html = self.client.get(self.url).content.decode()
         self.assertNotIn(SECRET_COMMENT, html)
-        self.assertNotIn('Teaching Effectiveness', html)
+        self.assertNotIn('Teaching Competence', html)
 
     def test_page_with_all_filters_and_bad_values_does_not_crash(self):
         self.login(self.admin)

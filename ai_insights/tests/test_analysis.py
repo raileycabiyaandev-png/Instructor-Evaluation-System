@@ -16,7 +16,8 @@ from ai_insights import selectors
 from ai_insights.models import AnalysisRun, ForecastResult, Suggestion
 from ai_insights.services import analysis, pipeline
 from ai_insights.services.data import analyse_history, finished_periods
-from evaluation.models import EvaluationPeriod
+from evaluation.seed import ensure_questionnaire_v1
+from evaluation.models import Evaluation, EvaluationAnswer, EvaluationPeriod
 
 from .factories import build_history, make_period, make_user, rate, release, spread
 
@@ -166,9 +167,9 @@ class ExecuteRunTests(Base):
 
     def test_ratings_are_never_changed_by_an_analysis(self):
         from evaluation.models import Evaluation
-        before = list(Evaluation.objects.order_by('id').values_list('id', 'teaching_effectiveness', 'comment'))
+        before = (list(Evaluation.objects.order_by('id').values_list('id', 'comment')), list(EvaluationAnswer.objects.order_by('id').values_list('id', 'rating')))
         self.run_sync(self.p[4])
-        self.assertEqual(before, list(Evaluation.objects.order_by('id').values_list('id', 'teaching_effectiveness', 'comment')))
+        self.assertEqual(before, (list(Evaluation.objects.order_by('id').values_list('id', 'comment')), list(EvaluationAnswer.objects.order_by('id').values_list('id', 'rating'))))
 
 
 class ForecastRuleTests(Base):
@@ -430,6 +431,11 @@ class GenerateViewTests(Base):
 
 
 class BackgroundTests(TransactionTestCase):
+    # This kind of test EMPTIES the whole database when it ends, including the questionnaire that the
+    # migrations created. Put it back, so a later test run with --keepdb still finds it.
+    def _fixture_teardown(self):
+        super()._fixture_teardown()
+        ensure_questionnaire_v1()
     """The real button starts a background thread. Check that it finishes and records the result."""
 
     def test_background_run_finishes_and_is_recorded(self):

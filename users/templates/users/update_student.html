@@ -1,87 +1,115 @@
+<!-- users/update_student.html -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block page_title %}Update Student{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/student_update.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}?v=20261121-directory-1">
+<link rel="stylesheet" href="{% static 'users/css/update_dialog.css' %}?v=20261121-update-1">
 {% endblock %}
 
 {% block content %}
 
-<div class="student-update-wrapper container-fluid py-4 px-3 px-lg-5">
+<div class="modal user-modal show"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="studentUpdateTitle"
+     data-standalone-modal
+     data-cancel-url="{% url 'create_student' %}">
 
-    <!-- Main Card -->
-    <div class="update-card">
+    <div class="modal-content modern-modal" data-update-dialog>
 
-        <!-- Card Header -->
-        <div class="update-card-header">
+        <div class="modal-header-modern">
+
             <div>
-                <span class="section-badge">Student Record</span>
-                <h2>Edit Student Information</h2>
-                <p>Maintain accurate student profiles for academic integrity.</p>
+                <span class="page-eyebrow">Student record</span>
+                <h3 id="studentUpdateTitle">Edit student</h3>
+                <p>Keep student profiles accurate and up to date.</p>
             </div>
+
+            <button type="button" class="close-btn" data-close-edit aria-label="Close dialog">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+
         </div>
 
-        <!-- Card Body -->
-        <div class="update-card-body">
-            <form method="POST" class="student-form-grid" novalidate>
-                {% csrf_token %}
+        <form method="POST" data-update-form novalidate>
 
-                <div class="form-group">
-                    <label>First Name</label>
-                    {{ form.first_name }}
+            {% csrf_token %}
+
+            <div class="modal-body-modern">
+
+                <div class="form-grid">
+
+                    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}<span class="error">{{ form.first_name.errors }}</span>{% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.middle_name.id_for_label }}">Middle name <span>(optional)</span></label>
+                        {{ form.middle_name }}
+                        {% if form.middle_name.errors %}<span class="error">{{ form.middle_name.errors }}</span>{% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}<span class="error">{{ form.last_name.errors }}</span>{% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.email.id_for_label }}">Email address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<span class="error">{{ form.email.errors }}</span>{% endif %}
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label" for="{{ form.program.id_for_label }}">Program</label>
+                        {{ form.program }}
+                        {% if form.program.errors %}<span class="error">{{ form.program.errors }}</span>{% endif %}
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label" for="{{ form.section.id_for_label }}">Section <span>(optional)</span></label>
+                        {{ form.section }}
+                        {% if form.section.errors %}<span class="error">{{ form.section.errors }}</span>{% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="form-group full-width">
+                        <span class="error">{{ form.non_field_errors }}</span>
+                    </div>
+                    {% endif %}
+
                 </div>
 
-                <div class="form-group">
-                    <label>Middle Name</label>
-                    {{ form.middle_name }}
-                </div>
+            </div>
 
-                <div class="form-group">
-                    <label>Last Name</label>
-                    {{ form.last_name }}
-                </div>
+            <div class="modal-footer-modern">
 
-                <div class="form-group">
-                    <label>Email</label>
-                    {{ form.email }}
-                </div>
+                <button type="button" class="btn-secondary" data-close-edit>
+                    Cancel
+                </button>
 
-                <div class="form-group">
-                    <label>Program</label>
-                    {{ form.program }}
-                    {{ form.program.errors }}
-                </div>
+                <button type="submit" class="btn-primary" data-submit>
+                    <i class="fas fa-save" aria-hidden="true"></i>
+                    Save changes
+                </button>
 
-                <div class="form-group">
-                    <label>Section</label>
-                    {{ form.section }}
-                    {{ form.section.errors }}
-                </div>
+            </div>
 
-                {% if form.non_field_errors %}
-                <div class="form-group full-row">
-                    {{ form.non_field_errors }}
-                </div>
-                {% endif %}
-
-                <!-- Action Buttons -->
-                <div class="form-actions full-row">
-                    <button type="submit" class="btn save-btn">
-                        <i class="fas fa-save me-2"></i> Save Changes
-                    </button>
-
-                    <a href="{% url 'create_student' %}" class="btn cancel-btn">
-                        Cancel
-                    </a>
-                </div>
-
-            </form>
-        </div>
+        </form>
 
     </div>
 
 </div>
+
+<script src="{% static 'users/js/directory.js' %}?v=20261121-directory-3"></script>
 
 {% endblock %}

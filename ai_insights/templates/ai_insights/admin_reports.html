@@ -55,16 +55,53 @@
         </div>
     </section>
 
-    <section class="card">
-        <div class="card-head"><div class="card-title"><div><h3>Recent downloads</h3></div></div></div>
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead><tr><th scope="col">When</th><th scope="col">Report</th><th scope="col">File</th><th scope="col">By</th></tr></thead>
-                <tbody>{% for h in history %}
-                    <tr><td>{{ h.created_at|date:"M d, Y H:i" }}</td><td>{{ h.title }}</td><td>{{ h.fmt|upper }}</td><td>{{ h.user.get_full_name|default:h.user.email }}</td></tr>
-                {% empty %}<tr><td colspan="4" class="ai-admin-empty">No report downloaded yet.</td></tr>{% endfor %}</tbody>
-            </table>
+    
+<section class="card">
+    <div class="card-head">
+        <div class="card-title">
+            <div>
+                <h3>Recent downloads</h3>
+            </div>
         </div>
-    </section>
-</div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">Report</th>
+                    <th scope="col">File</th>
+                    <th scope="col">By</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for h in history %}
+                <tr>
+                    <td>{{ h.created_at|date:"M d, Y H:i" }}</td>
+                    <td>{{ h.title }}</td>
+                    <td>{{ h.fmt|upper }}</td>
+
+                    <td>
+                        {% if h.user %}
+                            {{ h.user.get_full_name|default:h.user.email }}
+                        {% else %}
+                            Unknown user
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="ai-admin-empty">
+                        No report downloaded yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
 {% endblock %}

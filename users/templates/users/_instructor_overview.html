@@ -1,95 +1,214 @@
 {% comment %} users/_instructor_overview.html
-   The core numbers of ONE period of the logged-in instructor. Used by the Dashboard AND the Evaluation Results
-   page, so both always show the same thing.
+   The core numbers of ONE period of the logged-in instructor.
+   Used by the Dashboard AND the Evaluation Results page, so both always show the same thing.
    Needs: snap (from period_snapshot), live (true = the period is still open, so the numbers are not final),
-          line_chart (may be empty). {% endcomment %}
+   line_chart (may be empty), min_responses.
+   Keep every template tag on ONE line. A code formatter that splits a tag over two lines makes Django fail.
+   Numbers that go into CSS use the stringformat filter, so no extra tag library is needed. {% endcomment %}
+
 {% if snap and snap.has_data %}
+<div class="ov">
 
-<div class="ac-kpis ac-kpis--3">
-    <div class="ac-kpi">
-        <span class="ac-kpi-label">Responses received</span>
-        {% if snap.expected %}
-        <span class="ac-kpi-value">{{ snap.responses }}<small> of {{ snap.expected }}</small></span>
-        <div class="progress" role="progressbar" aria-label="Students who answered"
-             aria-valuemin="0" aria-valuemax="{{ snap.expected }}" aria-valuenow="{{ snap.responses }}"><span style="width: {{ snap.percent }}%;"></span></div>
-        <span class="ac-kpi-note">{{ snap.percent }}% of your students answered</span>
-        {% else %}
-        <span class="ac-kpi-value">{{ snap.responses }}</span>
-        <span class="ac-kpi-note">No students are placed in your sections yet, so no total can be shown.</span>
-        {% endif %}
+    <!-- ═══════════ ROW 1: responses · average · comparison ═══════════ -->
+    <div class="ov-kpis">
+
+        <!-- Responses -->
+        <section class="ov-card" aria-labelledby="ovRespTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+                <div>
+                    <h3 id="ovRespTitle">Responses received</h3>
+                    <p>Students who answered</p>
+                </div>
+            </header>
+            <div class="ov-card-body">
+                {% if snap.expected %}
+                <div class="ov-ring" style="--p: {{ snap.percent|stringformat:'s' }};" role="progressbar" aria-label="Students who answered"
+                     aria-valuemin="0" aria-valuemax="{{ snap.expected }}" aria-valuenow="{{ snap.responses }}">
+                    <div class="ov-ring-in"><b>{{ snap.percent }}%</b><span>answered</span></div>
+                </div>
+                <div class="ov-figure">
+                    <p class="ov-big">{{ snap.responses }}<small> of {{ snap.expected }}</small></p>
+                    <p class="ov-text">{{ snap.percent }}% of your students answered</p>
+                </div>
+                {% else %}
+                <div class="ov-figure">
+                    <p class="ov-big">{{ snap.responses }}</p>
+                    <p class="ov-text">No students are placed in your sections yet, so no total can be shown.</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Average score -->
+        <section class="ov-card" aria-labelledby="ovAvgTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon" aria-hidden="true"><i class="bi bi-star"></i></span>
+                <div>
+                    <h3 id="ovAvgTitle">Average score{% if live %} so far{% endif %}</h3>
+                    <p>Across the five rating areas</p>
+                </div>
+            </header>
+            <div class="ov-card-body">
+                <div class="ov-ring ov-ring--score" style="--p: {% widthratio snap.overall 5 100 %};" role="img" aria-label="Average score {{ snap.overall|floatformat:2 }} out of 5">
+                    <div class="ov-ring-in"><b>{{ snap.overall|floatformat:2 }}</b><span>out of 5</span></div>
+                </div>
+                <div class="ov-figure">
+                    <p class="ov-chips">
+                        {% if snap.indicator == "improving" %}<span class="ov-chip ov-chip--good"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Improving</span>
+                        {% elif snap.indicator == "declining" %}<span class="ov-chip ov-chip--bad"><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> Declining</span>
+                        {% elif snap.indicator == "stable" %}<span class="ov-chip"><i class="bi bi-dash-circle" aria-hidden="true"></i> Stable</span>
+                        {% else %}<span class="ov-chip"><i class="bi bi-hourglass-split" aria-hidden="true"></i> First rating</span>{% endif %}
+                        {% if live %}<span class="ov-chip ov-chip--warn">Not final</span>{% endif %}
+                    </p>
+                    <p class="ov-text">{% if live %}This period is still open, so the score can change.{% else %}Final score for this period.{% endif %}</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison -->
+        <section class="ov-card" aria-labelledby="ovCmpTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon" aria-hidden="true"><i class="bi bi-arrow-left-right"></i></span>
+                <div>
+                    <h3 id="ovCmpTitle">Compared with the previous period</h3>
+                    <p>Change in your average score</p>
+                </div>
+            </header>
+            <div class="ov-card-body ov-card-body--col">
+                {% if snap.previous %}
+                <p class="ov-big ov-change {% if snap.change > 0 %}ov-up{% elif snap.change < 0 %}ov-down{% endif %}">
+                    <i class="bi {% if snap.change > 0 %}bi-arrow-up-right{% elif snap.change < 0 %}bi-arrow-down-right{% else %}bi-dash{% endif %}" aria-hidden="true"></i>
+                    {{ snap.change|stringformat:"+.2f" }}
+                </p>
+                <ul class="ov-vs">
+                    <li>
+                        <span>This period</span>
+                        <span class="ov-track" aria-hidden="true"><span class="ov-fill" style="width: {% widthratio snap.overall 5 100 %}%;"></span></span>
+                        <b>{{ snap.overall|floatformat:2 }}</b>
+                    </li>
+                    <li>
+                        <span>Before</span>
+                        <span class="ov-track" aria-hidden="true"><span class="ov-fill ov-fill--soft" style="width: {% widthratio snap.previous.overall 5 100 %}%;"></span></span>
+                        <b>{{ snap.previous.overall|floatformat:2 }}</b>
+                    </li>
+                </ul>
+                <p class="ov-text">Before: {{ snap.previous.label }}</p>
+                {% else %}
+                <p class="ov-big">&mdash;</p>
+                <p class="ov-text">There is no earlier finished period to compare with.</p>
+                {% endif %}
+            </div>
+        </section>
+
     </div>
 
-    <div class="ac-kpi ac-kpi--gold">
-        <span class="ac-kpi-label">Average score{% if live %} so far{% endif %}</span>
-        <span class="ac-kpi-value">{{ snap.overall|floatformat:2 }}<small> / 5</small></span>
-        <span class="ac-kpi-note">
-            {% if snap.indicator == "improving" %}<span class="ac-chip ac-chip--good"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Improving</span>
-            {% elif snap.indicator == "declining" %}<span class="ac-chip ac-chip--bad"><i class="bi bi-graph-down-arrow" aria-hidden="true"></i> Declining</span>
-            {% elif snap.indicator == "stable" %}<span class="ac-chip"><i class="bi bi-dash-circle" aria-hidden="true"></i> Stable</span>
-            {% else %}<span class="ac-chip"><i class="bi bi-hourglass-split" aria-hidden="true"></i> First rating</span>{% endif %}
-            {% if live %}<span class="ac-chip ac-chip--warn">Not final</span>{% endif %}
-        </span>
+    {% if snap.low_sample %}
+    <div class="ov-note" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>Only {{ snap.responses }} student{{ snap.responses|pluralize }} answered so far. With fewer than {{ min_responses }} answers the average is easy to swing, so read it with care.</span>
+    </div>
+    {% endif %}
+
+    <!-- ═══════════ ROW 2: strongest · weakest · needs attention ═══════════ -->
+    <div class="ov-areas">
+        <section class="ov-card ov-card--good" aria-labelledby="ovStrongTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon ov-icon--good" aria-hidden="true"><i class="bi bi-trophy"></i></span>
+                <div><h3 id="ovStrongTitle">Strongest area</h3></div>
+            </header>
+            <div class="ov-card-body">
+                <p class="ov-area"><b>{{ snap.strongest.label }}</b><span>{{ snap.strongest.score|floatformat:2 }}</span></p>
+            </div>
+        </section>
+
+        <section class="ov-card ov-card--warn" aria-labelledby="ovWeakTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon ov-icon--warn" aria-hidden="true"><i class="bi bi-flag"></i></span>
+                <div><h3 id="ovWeakTitle">Weakest area</h3></div>
+            </header>
+            <div class="ov-card-body">
+                {% if snap.strongest.score == snap.weakest.score %}
+                <p class="ov-empty">All five areas have the same score.</p>
+                {% else %}
+                <p class="ov-area"><b>{{ snap.weakest.label }}</b><span>{{ snap.weakest.score|floatformat:2 }}</span></p>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="ov-card ov-card--bad" aria-labelledby="ovAttnTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon ov-icon--bad" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+                <div><h3 id="ovAttnTitle">Needs attention</h3></div>
+            </header>
+            <div class="ov-card-body">
+                {% if snap.attention %}
+                <ul class="ov-list">
+                    {% for r in snap.attention %}
+                    <li><b>{{ r.label }}</b><span>{{ r.score|floatformat:2 }}{% if r.diff is not None and r.diff <= -0.2 %} &middot; {{ r.diff|stringformat:"+.2f" }}{% endif %}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="ov-empty">Nothing right now. Every area is 3.5 or higher and none fell sharply.</p>
+                {% endif %}
+            </div>
+        </section>
     </div>
 
-    <div class="ac-kpi">
-        <span class="ac-kpi-label">Compared with the previous period</span>
-        {% if snap.previous %}
-        <span class="ac-kpi-value {% if snap.change > 0 %}ac-up{% elif snap.change < 0 %}ac-down{% endif %}">{{ snap.change|stringformat:"+.2f" }}</span>
-        <span class="ac-kpi-note">Before: {{ snap.previous.overall|floatformat:2 }} · {{ snap.previous.label }}</span>
-        {% else %}
-        <span class="ac-kpi-value">—</span>
-        <span class="ac-kpi-note">There is no earlier finished period to compare with.</span>
-        {% endif %}
-    </div>
-</div>
+    <!-- ═══════════ ROW 3: graphs ═══════════ -->
+    <div class="ov-charts">
 
-{% if snap.low_sample %}
-<div class="ac-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
-    Only {{ snap.responses }} student{{ snap.responses|pluralize }} answered so far. With fewer than {{ min_responses }} answers the average is easy to swing, so read it with care.</div>
-{% endif %}
+        <section class="ov-card" aria-labelledby="ovTrendTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon" aria-hidden="true"><i class="bi bi-graph-up"></i></span>
+                <div>
+                    <h3 id="ovTrendTitle">Progress over time</h3>
+                    <p>Your real average score in each finished period</p>
+                </div>
+            </header>
+            <div class="ov-card-body ov-card-body--block">
+                {% include "ai_insights/_line_chart.html" with chart=line_chart title="Line chart of your real average score in each finished period." %}
+            </div>
+        </section>
 
-<div class="ac-grid ac-grid--3">
-    <div class="ac-panel ac-panel--good">
-        <h3 class="ac-sec">Strongest area</h3>
-        <p class="ac-area"><b>{{ snap.strongest.label }}</b><span>{{ snap.strongest.score|floatformat:2 }}</span></p>
-    </div>
-    <div class="ac-panel ac-panel--gold">
-        <h3 class="ac-sec">Weakest area</h3>
-        {% if snap.strongest.score == snap.weakest.score %}<p class="ac-empty">All five areas have the same score.</p>
-        {% else %}<p class="ac-area"><b>{{ snap.weakest.label }}</b><span>{{ snap.weakest.score|floatformat:2 }}</span></p>{% endif %}
-    </div>
-    <div class="ac-panel ac-panel--bad">
-        <h3 class="ac-sec">Needs attention</h3>
-        {% if snap.attention %}
-        <ul class="ac-areas">{% for r in snap.attention %}
-            <li><b>{{ r.label }}</b><span>{{ r.score|floatformat:2 }}{% if r.diff is not None and r.diff <= -0.2 %} · {{ r.diff|stringformat:"+.2f" }}{% endif %}</span></li>
-        {% endfor %}</ul>
-        {% else %}<p class="ac-empty">Nothing right now. Every area is 3.5 or higher and none fell sharply.</p>{% endif %}
-    </div>
-</div>
+        <section class="ov-card" aria-labelledby="ovAreaTitle">
+            <header class="ov-card-head">
+                <span class="ov-icon" aria-hidden="true"><i class="bi bi-bar-chart-line"></i></span>
+                <div>
+                    <h3 id="ovAreaTitle">Ratings by area</h3>
+                    <p>Score out of 5 for each area</p>
+                </div>
+            </header>
+            <div class="ov-card-body ov-card-body--block">
+                <ul class="ov-bars">
+                    {% for r in snap.categories %}
+                    <li>
+                        <span class="ov-bar-label">{{ r.label }}</span>
+                        <span class="ov-track ov-track--grid" aria-hidden="true">
+                            <span class="ov-fill{% if r.level == 'low' %} ov-fill--low{% endif %}" style="width: {{ r.percent|stringformat:'s' }}%;"></span>
+                            {% if r.previous is not None %}<i class="ov-mark" style="left: {{ r.previous_percent|stringformat:'s' }}%;" title="Previous period: {{ r.previous|floatformat:2 }}"></i>{% endif %}
+                        </span>
+                        <b>{{ r.score|floatformat:2 }}</b>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="ov-hint">
+                    {% if snap.previous %}<i class="ov-mark-key" aria-hidden="true"></i> The dark mark shows the previous period.{% else %}Scores are out of 5.{% endif %}
+                    {% if snap.categories %}<span class="ov-hint-low"><i aria-hidden="true"></i> Grey bar = low score</span>{% endif %}
+                </p>
+            </div>
+        </section>
 
-<div class="ac-grid ac-grid--2">
-    <div class="ac-panel">
-        <h3 class="ac-sec">Progress over time</h3>
-        {% include "ai_insights/_line_chart.html" with chart=line_chart title="Line chart of your real average score in each finished period." %}
     </div>
-    <div class="ac-panel">
-        <h3 class="ac-sec">Ratings by area</h3>
-        <ul class="ac-bars ac-bars--areas">
-            {% for r in snap.categories %}
-            <li>
-                <span>{{ r.label }}</span>
-                <span class="ac-bar-track"><span class="ac-bar-fill{% if r.level == 'low' %} ac-bar-fill--gold{% endif %}" style="width: {{ r.percent }}%;"></span>{% if r.previous is not None %}<i class="ac-mark" style="left: {{ r.previous_percent }}%;" title="Previous period: {{ r.previous|floatformat:2 }}"></i>{% endif %}</span>
-                <b>{{ r.score|floatformat:2 }}</b>
-            </li>
-            {% endfor %}
-        </ul>
-        <p class="ac-hint">{% if snap.previous %}The gold mark shows the previous period.{% else %}Scores are out of 5.{% endif %}</p>
-    </div>
+
 </div>
 
 {% elif snap %}
-<section class="card"><div class="empty"><i class="bi bi-inbox" aria-hidden="true"></i>
-    <h3>No answers yet</h3>
-    <p>{% if live %}Students have not answered for this period yet.{% else %}Nobody answered for this period.{% endif %}</p></div></section>
+<section class="card">
+    <div class="empty">
+        <i class="bi bi-inbox" aria-hidden="true"></i>
+        <h3>No answers yet</h3>
+        <p>{% if live %}Students have not answered for this period yet.{% else %}Nobody answered for this period.{% endif %}</p>
+    </div>
+</section>
 {% endif %}

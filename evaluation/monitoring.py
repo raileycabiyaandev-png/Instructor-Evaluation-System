@@ -90,7 +90,7 @@ def parse_filters(params):
     if _as_int(params.get('section')):
         section = Section.objects.filter(pk=_as_int(params.get('section'))).first()
     if _as_int(params.get('instructor')):
-        instructor = (User.objects.filter(pk=_as_int(params.get('instructor')), role='instructor')
+                instructor = (User.objects.filter(pk=_as_int(params.get('instructor')), role='instructor', is_active=True)
                       .select_related('department').first())
     student_section = None
     if _as_int(params.get('ssection')):

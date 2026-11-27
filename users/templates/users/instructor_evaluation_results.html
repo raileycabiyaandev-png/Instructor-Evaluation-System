@@ -6,51 +6,65 @@
 {% block page_title %}Evaluation Results{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
-<link rel="stylesheet" href="{% static 'users/css/instructor_evaluation_results.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
 <link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
 <link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}?v=5">
+<link rel="stylesheet" href="{% static 'users/css/instructor_evaluation_results.css' %}?v=3">
 {% endblock %}
 
 
 {% block content %}
-<div class="page ac-stack">
+<div class="page">
+<div class="view dash active">
 
-    <!-- Step 1: choose a period -->
+    <!-- ═══════════ PAGE HEADING ═══════════ -->
+    <div class="dash-hello">
+        <div class="dash-hello__text">
+            <p class="dash-hello__sub">Review your scores, history, AI analysis and student comments for any period.</p>
+        </div>
+    </div>
+
+    <div class="dash-stack">
+
+    <!-- ═══════════ PERIOD PICKER ═══════════ -->
     <section class="card no-print" aria-labelledby="filterTitle">
         <div class="card-head">
-            <div class="card-title">
-                <span class="card-icon"><i class="bi bi-funnel" aria-hidden="true"></i></span>
+            <div class="card-head__title">
+                <span class="icon-box" aria-hidden="true"><i class="bi bi-funnel"></i></span>
                 <div>
                     <h3 id="filterTitle">Choose a period</h3>
-                    <p class="card-sub">{% if period %}Showing: {{ period_label }}{% else %}Pick a school year, semester and term.{% endif %}</p>
+                    <p>{% if period %}Showing: {{ period_label }}{% else %}Pick a school year, semester and term.{% endif %}</p>
                 </div>
             </div>
-            {% if state == "open" %}<span class="ac-chip ac-chip--warn">Open · not final</span>{% elif state == "finished" %}<span class="ac-chip ac-chip--good">Finished</span>{% endif %}
+            {% if state == "open" %}<span class="status-pill status-pill--open"><span class="live-dot" aria-hidden="true"></span> Open &middot; not final</span>{% elif state == "finished" %}<span class="status-pill"><i class="bi bi-lock" aria-hidden="true"></i> Finished</span>{% endif %}
         </div>
 
-        <form method="get" action="{% url 'instructor_evaluation_results' %}" class="filters">
+        <form method="get" action="{% url 'instructor_evaluation_results' %}" class="rs-filters">
             <input type="hidden" name="tab" value="{{ tab }}">
-            <div class="field">
-                <label for="f_sy">School year</label>
-                <select id="f_sy" name="school_year" class="select">
+            <div class="form-group">
+                <label class="form-label" for="f_sy">School year</label>
+                <select id="f_sy" name="school_year" class="select form-input">
                     {% for sy in school_years %}<option value="{{ sy }}" {% if sy == selected.school_year %}selected{% endif %}>{{ sy }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="field">
-                <label for="f_sem">Semester</label>
-                <select id="f_sem" name="semester" class="select">
+            <div class="form-group">
+                <label class="form-label" for="f_sem">Semester</label>
+                <select id="f_sem" name="semester" class="select form-input">
                     {% for value, label in semester_choices %}<option value="{{ value }}" {% if value == selected.semester %}selected{% endif %}>{{ label }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="field">
-                <label for="f_term">Evaluation period</label>
-                <select id="f_term" name="term" class="select">
+            <div class="form-group">
+                <label class="form-label" for="f_term">Evaluation period</label>
+                <select id="f_term" name="term" class="select form-input">
                     {% for value, label in term_choices %}<option value="{{ value }}" {% if value == selected.term %}selected{% endif %}>{{ label }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="filter-actions">
+            <div class="rs-actions">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-search" aria-hidden="true"></i> Show results</button>
                 <a href="{% url 'instructor_evaluation_results' %}" class="btn btn-ghost"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset</a>
             </div>
@@ -69,12 +83,12 @@
     {% else %}
 
     <!-- Tabs: each one is a link, so the page can show the next page of a table or of comments -->
-    <div class="ac-tabbar no-print">
+    <div class="ac-tabbar rs-nav no-print">
         <div class="ai-tabs" role="navigation" aria-label="Result sections">
-            <a class="ai-tab" aria-pressed="{% if tab == 'overview' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=overview"><i class="bi bi-speedometer2" aria-hidden="true"></i> Overview</a>
-            <a class="ai-tab" aria-pressed="{% if tab == 'history' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=history"><i class="bi bi-clock-history" aria-hidden="true"></i> Performance history</a>
-            <a class="ai-tab" aria-pressed="{% if tab == 'ai' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai"><i class="bi bi-stars" aria-hidden="true"></i> AI analysis</a>
-            <a class="ai-tab" aria-pressed="{% if tab == 'comments' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=comments"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Comments</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'overview' %}true{% else %}false{% endif %}"{% if tab == 'overview' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=overview"><i class="bi bi-speedometer2" aria-hidden="true"></i> Overview</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'history' %}true{% else %}false{% endif %}"{% if tab == 'history' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=history"><i class="bi bi-clock-history" aria-hidden="true"></i> Performance history</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'ai' %}true{% else %}false{% endif %}"{% if tab == 'ai' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=ai"><i class="bi bi-stars" aria-hidden="true"></i> AI analysis</a>
+            <a class="ai-tab" aria-pressed="{% if tab == 'comments' %}true{% else %}false{% endif %}"{% if tab == 'comments' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=comments"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Comments</a>
         </div>
         <a class="btn btn-ghost btn-sm" href="{% url 'instructor_reports' %}?period={{ period.pk }}"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Download report</a>
     </div>
@@ -84,6 +98,15 @@
 
     {% elif tab == "history" %}
     <section class="card">
+        <div class="card-head">
+            <div class="card-head__title">
+                <span class="icon-box" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+                <div>
+                    <h3>Performance history</h3>
+                    <p>How your scores changed across finished periods.</p>
+                </div>
+            </div>
+        </div>
         <div class="ac-body">
             <div class="ac-panel">
                 <h3 class="ac-sec">Every area over time</h3>
@@ -91,7 +114,7 @@
             </div>
             <div class="ac-panel">
                 <h3 class="ac-sec">All finished periods <small class="ac-hint">({{ history_total }})</small></h3>
-                <div class="table-wrap"><table class="ac-table">
+                <div class="table-wrap"><table class="ac-table ac-table--wide">
                     <thead><tr><th scope="col">Period</th><th scope="col">Answers</th><th scope="col">Overall</th><th scope="col">Change</th>
                         <th scope="col">Teaching</th><th scope="col">Communication</th><th scope="col">Class mgmt</th><th scope="col">Engagement</th><th scope="col">Professionalism</th></tr></thead>
                     <tbody>
@@ -100,7 +123,7 @@
                         <th scope="row">{{ r.short }}{% if r.low_sample %} <span class="ac-pill ac-pill--warn">few answers</span>{% endif %}</th>
                         <td>{{ r.responses }}</td>
                         <td><b>{{ r.overall|floatformat:2 }}</b></td>
-                        <td>{% if r.diff is None %}—{% else %}<span class="{% if r.diff > 0 %}ac-up{% elif r.diff < 0 %}ac-down{% endif %}">{{ r.diff|stringformat:"+.2f" }}</span>{% endif %}</td>
+                        <td>{% if r.diff is None %}—{% else %}<span class="rs-diff {% if r.diff > 0 %}ac-up{% elif r.diff < 0 %}ac-down{% endif %}"><i class="bi {% if r.diff > 0 %}bi-arrow-up-right{% elif r.diff < 0 %}bi-arrow-down-right{% else %}bi-dash{% endif %}" aria-hidden="true"></i>{{ r.diff|stringformat:"+.2f" }}</span>{% endif %}</td>
                         <td>{{ r.categories.teaching_competence|floatformat:2 }}</td>
                         <td>{{ r.categories.communication_clarity|floatformat:2 }}</td>
                         <td>{{ r.categories.classroom_management|floatformat:2 }}</td>
@@ -118,12 +141,19 @@
     {% elif tab == "ai" %}
     {% if state == "open" %}<div class="ac-note" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i>
         This period is still open. Its AI text is written after it closes and your administrator runs the analysis. The forecast below is based on your finished periods.</div>{% endif %}
-    <section class="card" id="ai-results">
+    <section class="card ai-card" id="ai-results">
         <div class="ac-tabbar">
+            <div class="ac-head">
+                <span class="icon-box" aria-hidden="true"><i class="bi bi-stars"></i></span>
+                <div>
+                    <h3>AI analysis</h3>
+                    <p>{{ period_label }}</p>
+                </div>
+            </div>
             <div class="ai-tabs" role="navigation" aria-label="AI analysis">
-                <a class="ai-tab" aria-pressed="{% if section == 'feedback' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai&amp;section=feedback#ai-results"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</a>
-                <a class="ai-tab" aria-pressed="{% if section == 'suggestions' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai&amp;section=suggestions#ai-results"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions</a>
-                <a class="ai-tab" aria-pressed="{% if section == 'forecast' %}true{% else %}false{% endif %}" href="?{{ keep_filters }}&amp;tab=ai&amp;section=forecast#ai-results"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</a>
+                <a class="ai-tab" aria-pressed="{% if section == 'feedback' %}true{% else %}false{% endif %}"{% if section == 'feedback' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=ai&amp;section=feedback#ai-results"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</a>
+                <a class="ai-tab" aria-pressed="{% if section == 'suggestions' %}true{% else %}false{% endif %}"{% if section == 'suggestions' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=ai&amp;section=suggestions#ai-results"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions</a>
+                <a class="ai-tab" aria-pressed="{% if section == 'forecast' %}true{% else %}false{% endif %}"{% if section == 'forecast' %} aria-current="page"{% endif %} href="?{{ keep_filters }}&amp;tab=ai&amp;section=forecast#ai-results"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</a>
             </div>
         </div>
         <div class="ac-body">
@@ -141,6 +171,15 @@
 
     {% elif tab == "comments" %}
     <section class="card">
+        <div class="card-head">
+            <div class="card-head__title">
+                <span class="icon-box" aria-hidden="true"><i class="bi bi-chat-square-text"></i></span>
+                <div>
+                    <h3>Student comments</h3>
+                    <p>Anonymous, in mixed order.</p>
+                </div>
+            </div>
+        </div>
         <div class="ac-body">
             {% if state == "open" %}
             <div class="ac-panel"><p class="ac-lead">Comments are shown after the period closes, so no one can guess who wrote what while students are still answering.</p></div>
@@ -150,7 +189,7 @@
             <div class="ac-panel"><p class="ac-lead">Students did not write any comment in this period.</p></div>
             {% else %}
             <p class="ac-hint">{{ feedback.count }} anonymous comment{{ feedback.count|pluralize }} from {{ feedback.total }} students, in mixed order.</p>
-            <ul class="ac-comments">{% for c in pager %}<li class="ac-comment">{{ c }}</li>{% endfor %}</ul>
+            <ul class="ac-comments">{% for c in pager %}<li class="ac-comment"><i class="bi bi-quote" aria-hidden="true"></i><span>{{ c }}</span></li>{% endfor %}</ul>
             {% include "ai_insights/_pager.html" with pager=pager keep=keep %}
             {% endif %}
         </div>
@@ -158,7 +197,10 @@
     {% endif %}
 
     {% endif %}
-</div>
+
+    </div><!-- /.dash-stack -->
+</div><!-- /.view -->
+</div><!-- /.page -->
 {% endblock %}
 
 {% block extra_js %}

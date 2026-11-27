@@ -127,14 +127,14 @@ class ThemeTests(SimpleTestCase):
         found = themes.find_themes([("Always late", 'negative'), ("late again", 'negative'),
                                     ("sometimes late but fine", 'neutral')])
         self.assertEqual(len(found), 1)
-        self.assertEqual((found[0]['key'], found[0]['mentions'], found[0]['negative']), ('punctuality', 3, 2))
+        self.assertEqual((found[0]['key'], found[0]['mentions'], found[0]['negative']), ('professionalism_reliability', 3, 2))
 
     def test_words_inside_other_words_do_not_match(self):
         self.assertEqual(themes.find_themes([("translate this", 'neutral'), ("tranquilate", 'neutral')]), [])
 
     def test_filipino_words_work(self):
         found = themes.find_themes([("Laging huli si sir", 'negative'), ("nahuhuli palagi", 'negative')])
-        self.assertEqual(found[0]['key'], 'punctuality')
+        self.assertEqual(found[0]['key'], 'professionalism_reliability')
 
     def test_no_text_leaves_the_function(self):
         found = themes.find_themes([("Always late secretname", 'negative'), ("late late", 'negative')])
@@ -159,7 +159,7 @@ class FeedbackPipelineTests(TestCase):
         self.assertFalse(s.hidden)
         self.assertEqual((s.positive, s.neutral, s.negative), (2, 0, 2))
         self.assertEqual((s.n_comments, s.n_analyzed, s.n_skipped), (4, 4, 0))
-        self.assertIn('punctuality', {t['key'] for t in s.themes})
+        self.assertIn('professionalism_reliability', {t['key'] for t in s.themes})
         self.assertEqual(s.summary_source, 'rule')
         self.assertEqual(CommentSentiment.objects.count(), 4)
 

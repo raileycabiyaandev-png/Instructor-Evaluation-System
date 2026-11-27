@@ -1,108 +1,350 @@
+<!-- academics/section_students.html -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}?v=20261121-directory-1">
+<link rel="stylesheet" href="{% static 'users/css/directory.css' %}?v=20261121-directory-2">
+<link rel="stylesheet" href="{% static 'academics/css/section_students.css' %}?v=20261125-section-2">
 {% endblock %}
 
 {% block page_title %}Section {{ section.name }}{% endblock %}
 
 {% block content %}
-<div class="page-container">
+<div class="page-container user-page section-page" data-section data-section-name="{{ section.name }}">
 
     {% include 'academics/_messages.html' %}
 
-    <div class="page-header">
-        <p class="page-subtitle">
-            {{ section.get_program_display }} &middot; {{ section.department.name }}
-            {% if not section.is_active %}&middot; <strong>Inactive section</strong>{% endif %}
-        </p>
-        <a href="{% url 'section_list' %}" class="btn-secondary">&larr; Back to Sections</a>
+    <!-- Counters the page script updates (not shown: the tabs and filters already carry these numbers) -->
+    <div hidden aria-hidden="true">
+        <span data-stat="total">{{ members|length }}</span>
+        <span data-stat="active">–</span>
     </div>
 
-    <div class="stack">
+    <!-- PAGE INTRO -->
+    <div class="page-intro-row">
+        <p class="section-meta">
+            <span>{{ section.get_program_display }}</span>
+            <span aria-hidden="true">&middot;</span>
+            <span>{{ section.department.name }}</span>
+            {% if not section.is_active %}<span class="status-badge inactive title-badge">Inactive section</span>{% endif %}
+        </p>
 
-        <!-- STUDENTS IN THIS SECTION -->
-        <div class="card">
-            <div class="card-header-area">
-                <div><span class="table-badge">Students in {{ section.name }} ({{ members|length }})</span></div>
+        <a href="{% url 'section_list' %}" class="btn btn-ghost">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back to Sections
+        </a>
+    </div>
+
+    <!-- ONE CARD: TABS + PANELS -->
+    <section class="card records-card">
+
+        <div class="tab-bar" role="tablist" aria-label="Section students">
+
+            <button type="button" role="tab" class="tab is-active" id="tab-enrolled"
+                    aria-controls="panel-enrolled" aria-selected="true" data-tab="enrolled">
+                <i class="bi bi-people" aria-hidden="true"></i>
+                Enrolled
+                <span class="tab-count">{{ members|length }}</span>
+            </button>
+
+            <button type="button" role="tab" class="tab" id="tab-add"
+                    aria-controls="panel-add" aria-selected="false" tabindex="-1" data-tab="add">
+                <i class="bi bi-person-plus" aria-hidden="true"></i>
+                Add students
+                <span class="tab-count">{{ available|length }}</span>
+            </button>
+
+        </div>
+
+        <!-- ================= ENROLLED ================= -->
+        <div role="tabpanel" id="panel-enrolled" aria-labelledby="tab-enrolled" data-panel="enrolled">
+
+            {% if members %}
+
+            <div class="panel-bar">
+
+                <label class="list-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Search enrolled students</span>
+                    <input type="search"
+                           class="search-input"
+                           placeholder="Search by name or email…"
+                           autocomplete="off"
+                           spellcheck="false"
+                           data-search-input>
+                    <button type="button" class="search-clear" data-search-clear aria-label="Clear search" hidden>
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </label>
+
+                <div class="segmented" role="group" aria-label="Filter by account status">
+                    <button type="button" class="segment is-active" data-status-filter="all" aria-pressed="true">
+                        All <span data-count="all">0</span>
+                    </button>
+                    <button type="button" class="segment" data-status-filter="active" aria-pressed="false">
+                        Active <span data-count="active">0</span>
+                    </button>
+                    <button type="button" class="segment" data-status-filter="inactive" aria-pressed="false">
+                        Inactive <span data-count="inactive">0</span>
+                    </button>
+                </div>
+
+                <label class="filter-field">
+                    <span class="visually-hidden">Sort by</span>
+                    <select data-sort-select aria-label="Sort by">
+                        <option value="">Default order</option>
+                        <option value="1">Name (A → Z)</option>
+                        <option value="-1">Name (Z → A)</option>
+                    </select>
+                </label>
+
+                <button type="button" class="btn btn-ghost btn-sm clear-filters" data-clear hidden>
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    Reset
+                </button>
+
             </div>
 
-            <div class="table-wrapper">
-                <table class="custom-table">
+            <p class="visually-hidden" data-heading-count aria-live="polite"><strong>{{ members|length }}</strong> student{{ members|length|pluralize }} enrolled</p>
+
+            <div class="table-wrapper" data-table>
+                <table class="custom-table" id="membersTable">
+
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Account</th>
-                            <th class="actions-column">Action</th>
+                            <th scope="col" aria-sort="none">
+                                <button type="button" class="sort-btn" data-sort-toggle>Student <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button>
+                            </th>
+                            <th scope="col">Account</th>
+                            <th scope="col" class="actions-head">Action</th>
                         </tr>
                     </thead>
+
                     <tbody>
                     {% for s in members %}
-                        <tr>
-                            <td>
-                                <div class="user-details">
-                                    <div class="user-name">{{ s.last_name }}, {{ s.first_name }} {{ s.middle_name|default:'' }}</div>
-                                    <div class="user-subtext">{{ s.email }}</div>
+                        <tr data-row
+                            data-active="{% if s.is_active %}true{% else %}false{% endif %}"
+                            data-search="{{ s.last_name }} {{ s.first_name }} {{ s.middle_name|default:'' }} {{ s.email }}"
+                            data-name="{{ s.last_name }} {{ s.first_name }}">
+
+                            <td class="cell-main" data-label="Student">
+                                <div class="user-info">
+                                    <div class="user-avatar" aria-hidden="true">{{ s.first_name|slice:":1" }}{{ s.last_name|slice:":1" }}</div>
+                                    <div class="user-details">
+                                        <div class="user-name hl">{{ s.last_name }}, {{ s.first_name }} {{ s.middle_name|default:'' }}</div>
+                                        <div class="user-subtext hl">{{ s.email }}</div>
+                                    </div>
                                 </div>
                             </td>
-                            <td>{% if s.is_active %}<span class="status-badge active">Active</span>{% else %}<span class="status-badge inactive">Inactive</span>{% endif %}</td>
-                            <td class="actions-column">
-                                <form method="POST" class="delete-form" data-confirm="Remove this student from {{ section.name }}?">
+
+                            <td data-label="Account">
+                                {% if s.is_active %}
+                                    <span class="status-badge active"><i class="bi bi-circle-fill" aria-hidden="true"></i> Active</span>
+                                {% else %}
+                                    <span class="status-badge inactive"><i class="bi bi-circle" aria-hidden="true"></i> Inactive</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="actions-column" data-label="Action">
+                                <form method="POST" class="delete-form">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="remove">
                                     <input type="hidden" name="student" value="{{ s.pk }}">
-                                    <button type="submit" class="btn-action btn-delete"><i class="fas fa-user-minus"></i> Remove</button>
+                                    <button type="submit"
+                                            class="btn-action btn-delete"
+                                            data-remove
+                                            data-student-name="{{ s.first_name }} {{ s.last_name }}">
+                                        <i class="bi bi-person-dash" aria-hidden="true"></i> Remove
+                                    </button>
                                 </form>
                             </td>
+
                         </tr>
-                    {% empty %}
-                        <tr><td colspan="3" class="empty">No students in this section yet.</td></tr>
                     {% endfor %}
                     </tbody>
+
                 </table>
+            </div>
+
+            <!-- EMPTY: nothing matches the search / filter -->
+            <div class="empty-state" data-empty-match hidden>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <h3>No students match</h3>
+                <button type="button" class="btn btn-ghost" data-clear>Clear search &amp; filters</button>
+            </div>
+
+            <!-- PAGINATION -->
+            <div class="list-footer" data-footer hidden>
+
+                <div class="footer-left">
+                    <p class="result-summary" data-summary aria-live="polite"></p>
+                    <label class="page-size">
+                        <span>Rows</span>
+                        <select data-page-size>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </label>
+                </div>
+
+                <nav class="pager" aria-label="Enrolled students pages" data-pager>
+                    <button type="button" class="page-btn" data-prev aria-label="Previous page">
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <span class="page-numbers" data-pages></span>
+                    <button type="button" class="page-btn" data-next aria-label="Next page">
+                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </nav>
+
+            </div>
+
+            {% else %}
+
+            <div class="empty-state">
+                <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
+                <h3>No students in this section yet</h3>
+                <button type="button" class="btn btn-primary" data-goto-tab="add">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                    Add students
+                </button>
+            </div>
+
+            {% endif %}
+
+        </div>
+
+        <!-- ================= ADD STUDENTS ================= -->
+        <div role="tabpanel" id="panel-add" aria-labelledby="tab-add" data-panel="add">
+
+            {% if available %}
+
+            <form method="POST" data-add-form>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+
+                <div class="panel-bar">
+
+                    <label class="list-search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span class="visually-hidden">Search available students</span>
+                        <input type="search"
+                               class="search-input"
+                               placeholder="Search by name or email…"
+                               autocomplete="off"
+                               spellcheck="false"
+                               data-add-search>
+                        <button type="button" class="search-clear" data-add-search-clear aria-label="Clear search" hidden>
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        </button>
+                    </label>
+
+                    <p class="visually-hidden" data-add-meta aria-live="polite">{{ available|length }} available</p>
+
+                    <div class="add-toolbar-buttons">
+                        <button type="button" class="btn btn-ghost btn-sm" data-select-shown>
+                            <i class="bi bi-check2-all" aria-hidden="true"></i>
+                            Select all shown
+                        </button>
+                        <button type="button" class="btn btn-ghost btn-sm" data-clear-selection>
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>
+                            Clear
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="add-list" data-add-list>
+                    {% for s in available %}
+                        <label class="add-item"
+                               data-item
+                               data-search="{{ s.last_name }} {{ s.first_name }} {{ s.middle_name|default:'' }} {{ s.email }}">
+
+                            <input type="checkbox" name="students" value="{{ s.pk }}">
+
+                            <span class="user-avatar" aria-hidden="true">{{ s.first_name|slice:":1" }}{{ s.last_name|slice:":1" }}</span>
+
+                            <span class="add-text">
+                                <strong class="hl">{{ s.last_name }}, {{ s.first_name }} {{ s.middle_name|default:'' }}</strong>
+                                <span class="user-subtext hl">{{ s.email }}</span>
+                            </span>
+
+                            <span class="add-tick" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
+
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <div class="empty-state compact" data-add-empty hidden>
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <h3>No student matches</h3>
+                </div>
+
+                <div class="action-bar">
+                    <p class="selected-text" data-selected-text aria-live="polite">No students selected</p>
+
+                    <button type="submit" class="btn btn-primary" data-add-submit disabled>
+                        <i class="bi bi-person-plus" aria-hidden="true"></i>
+                        Add to {{ section.name }}
+                    </button>
+                </div>
+
+            </form>
+
+            {% else %}
+
+            <div class="empty-state">
+                <i class="bi bi-person-check" aria-hidden="true"></i>
+                <h3>No available students</h3>
+                <p>Only active {{ section.get_program_display }} students without a section appear here.</p>
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+</div>
+
+<!-- ================= REMOVE CONFIRMATION ================= -->
+<div class="modal user-modal section-modal"
+     role="alertdialog"
+     aria-modal="true"
+     aria-labelledby="removeTitle"
+     aria-describedby="removeText"
+     aria-hidden="true"
+     data-remove-modal>
+
+    <div class="modal-content modern-modal">
+
+        <div class="confirm-body">
+            <span class="confirm-icon" aria-hidden="true"><i class="bi bi-person-dash"></i></span>
+            <div>
+                <h3 id="removeTitle">Remove from {{ section.name }}?</h3>
+                <p id="removeText">
+                    <strong data-remove-name>This student</strong> will be removed from this section. You can add them again later.
+                </p>
             </div>
         </div>
 
-        <!-- ADD STUDENTS -->
-        <div class="card">
-            <div class="card-header-area">
-                <div>
-                    <span class="table-badge">Add students</span>
-                    <p class="page-subtitle">
-                        Shows active {{ section.get_program_display }} students who have no section yet.
-                    </p>
-                </div>
-            </div>
-
-            <div class="card-body-pad">
-            {% if available %}
-                <form method="POST" data-single-submit>
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add">
-
-                    <div class="picker-list">
-                        {% for s in available %}
-                            <label class="picker-item">
-                                <input type="checkbox" name="students" value="{{ s.pk }}">
-                                <span><strong>{{ s.last_name }}, {{ s.first_name }}</strong> <span class="muted">{{ s.email }}</span></span>
-                            </label>
-                        {% endfor %}
-                    </div>
-
-                    <div style="margin-top:16px;">
-                        <button type="submit" class="btn-primary">Add selected to {{ section.name }}</button>
-                    </div>
-                </form>
-            {% else %}
-                <p class="muted">No available students. Create student accounts (with program {{ section.get_program_display }}) or remove a student from another section first.</p>
-            {% endif %}
-            </div>
+        <div class="modal-footer-modern">
+            <button type="button" class="btn btn-ghost" data-close data-autofocus>Cancel</button>
+            <button type="button" class="btn btn-danger" data-confirm-remove>
+                <i class="bi bi-person-dash" aria-hidden="true"></i>
+                Remove
+            </button>
         </div>
 
     </div>
+
 </div>
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'academics/js/section_students.js' %}?v=20261122-section-1"></script>{% endblock %}

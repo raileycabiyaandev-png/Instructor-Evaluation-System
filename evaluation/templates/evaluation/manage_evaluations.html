@@ -5,15 +5,18 @@
 {% block title %}Manage Evaluation | AI Teacher Evaluation System{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
-<link rel="stylesheet" href="{% static 'evaluation/css/manage_evaluations.css' %}">
+<link rel="stylesheet" href="{% static 'evaluation/css/manage_evaluations.css' %}?v=3">
 {% endblock %}
 
 {% block page_title %}Manage Evaluation{% endblock %}
 
 
 {% block content %}
-<div class="admin-page">
+<div class="admin-page mev">
 
     <!-- Messages (saved, deleted, errors) -->
     {% if messages %}
@@ -27,6 +30,9 @@
 
     <!-- Page title + main action -->
     <div class="page-intro page-intro-row">
+        <div>
+            <p>Create a period, set its dates and switch it on when students may evaluate.</p>
+        </div>
         <button type="button" class="btn btn-primary" id="openCreate">
             <i class="bi bi-plus-lg" aria-hidden="true"></i> Create evaluation period
         </button>
@@ -41,6 +47,7 @@
                 <span class="card-icon"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
                 <div>
                     <h3 id="listTitle">Evaluation period</h3>
+                    <p class="card-sub">All periods, with their dates and status.</p>
                 </div>
             </div>
         </div>
@@ -61,8 +68,13 @@
                         data-start="{{ p.start_date|date:'Y-m-d' }}">
 
                         <td>
-                            <div class="period-name">{{ p.school_year }}</div>
-                            <div class="period-sub">{{ p.get_semester_display }} &middot; {{ p.get_term_display }}</div>
+                            <div class="period-cell">
+                                <span class="period-icon" aria-hidden="true"><i class="bi bi-calendar3"></i></span>
+                                <div>
+                                    <div class="period-name">{{ p.school_year }}</div>
+                                    <div class="period-sub">{{ p.get_semester_display }} &middot; {{ p.get_term_display }}</div>
+                                </div>
+                            </div>
                         </td>
 
                         <td class="date-range">
@@ -185,9 +197,6 @@
                         <span class="error">{{ form.end_date.errors }}</span>
                     </div>
 
-                    <div class="form-field full-width">
-                        <span class="form-label-text" style="font-size:15px;font-weight:600;color:var(--navy-800);">Evaluation status</span>
-                    </div>
 
                 </div>
             </div>
@@ -208,8 +217,11 @@
 <div id="confirmModal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
     <div class="modal-content confirm-box">
         <div class="confirm-body">
-            <h3 id="confirmTitle">Delete this evaluation period?</h3>
-            <p id="confirmText">You are about to delete <strong id="confirmName"></strong>. This cannot be undone.</p>
+            <span class="confirm-icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+            <div>
+                <h3 id="confirmTitle">Delete this evaluation period?</h3>
+                <p id="confirmText">You are about to delete <strong id="confirmName"></strong>. This cannot be undone.</p>
+            </div>
         </div>
         <div class="eval-modal__footer">
             <button type="button" class="btn btn-ghost" id="confirmCancel">Cancel</button>

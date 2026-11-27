@@ -64,8 +64,8 @@ class TeacherPageTests(Base):
         self.assertIn('What students liked', html)
         self.assertIn('Rule-based', html)
         self.assertIn('Suggestions', html)
-        for label in ('Teaching Effectiveness', 'Communication Skills', 'Classroom Management',
-                      'Punctuality', 'Student Engagement'):
+        for label in ('Teaching Competence', 'Communication and Clarity', 'Classroom Management',
+                      'Student Engagement and Support', 'Professionalism and Reliability'):
             self.assertIn(label, html)
 
     def test_teacher_never_sees_another_teachers_ai_results(self):
@@ -295,11 +295,11 @@ class DataIntegrityTests(Base):
         self.assertTrue(ForecastResult.objects.filter(instructor=self.rival).exists())
 
     def test_ai_never_changes_real_ratings(self):
-        from evaluation.models import Evaluation
-        before = list(Evaluation.objects.order_by('id').values_list('id', 'teaching_effectiveness', 'comment'))
+        from evaluation.models import Evaluation, EvaluationAnswer
+        before = (list(Evaluation.objects.order_by('id').values_list('id', 'comment')), list(EvaluationAnswer.objects.order_by('id').values_list('id', 'rating')))
         with mock.patch.object(sentiment, 'get_classifier', return_value=fake_classifier()):
             pipeline.run_for_all(force=True)
-        self.assertEqual(before, list(Evaluation.objects.order_by('id').values_list('id', 'teaching_effectiveness', 'comment')))
+        self.assertEqual(before, (list(Evaluation.objects.order_by('id').values_list('id', 'comment')), list(EvaluationAnswer.objects.order_by('id').values_list('id', 'rating'))))
 
     def test_one_teacher_failing_does_not_stop_the_others(self):
         real = pipeline.run_for_instructor

@@ -1,0 +1,109 @@
+/* users/css/update_dialog.css
+   Extras for the Edit modal (list pages) and the standalone update pages.
+   Loaded AFTER create_user.css. */
+
+/* ---------- inputs inside the modal ---------- */
+
+.user-modal .modal-body-modern input[type="checkbox"],
+.user-modal .modal-body-modern input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    padding: 0;
+    accent-color: #223a85;
+}
+
+.user-modal .modal-body-modern textarea {
+    height: auto;
+    min-height: 96px;
+    padding: 10px 14px;
+}
+
+.user-modal .form-group.check-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-modal .form-group.check-row .form-label {
+    margin: 0;
+}
+
+.user-modal .form-group.check-row .error,
+.user-modal .form-group.check-row .field-hint {
+    flex-basis: 100%;
+}
+
+.user-modal .errorlist {
+    list-style: none;
+    padding-left: 0;
+}
+
+.user-modal .form-group .error {
+    display: block;
+}
+
+/* the field that failed validation */
+.user-modal .form-group:has(.error) input:not([type="checkbox"]),
+.user-modal .form-group:has(.error) select,
+.user-modal .form-group:has(.error) textarea {
+    border-color: #d9847c;
+    background: #fff8f7;
+}
+
+/* ---------- loading state (while the edit form is fetched) ---------- */
+
+.edit-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 240px;
+    padding: 32px;
+    color: #5b6585;
+    font-weight: 600;
+}
+
+.edit-spinner {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 3px solid #dbe2f0;
+    border-top-color: #223a85;
+    animation: edit-spin .8s linear infinite;
+}
+
+@keyframes edit-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------- standalone update page (opened directly by URL) ---------- */
+
+.user-modal[data-standalone-modal] .modern-modal {
+    animation: dialog-in .25s ease;
+}
+
+@keyframes dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .edit-spinner {
+        animation-duration: 2s;
+    }
+
+    .user-modal[data-standalone-modal] .modern-modal {
+        animation: none;
+    }
+}

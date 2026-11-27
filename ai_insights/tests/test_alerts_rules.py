@@ -11,8 +11,8 @@ from .test_admin_forecasting import ForecastPageBase
 
 def series(*overalls):
     return [{'label': f"P{i}", 'overall': v, 'responses': 10, 'period': None,
-             'categories': {k: v for k in ('teaching_effectiveness', 'communication_skills', 'classroom_management',
-                                           'punctuality', 'student_engagement')}} for i, v in enumerate(overalls)]
+             'categories': {k: v for k in ('teaching_competence', 'communication_clarity', 'classroom_management',
+                                           'professionalism_reliability', 'student_engagement_support')}} for i, v in enumerate(overalls)]
 
 
 def forecast(predicted):

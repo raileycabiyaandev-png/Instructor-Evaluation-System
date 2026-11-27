@@ -13,8 +13,8 @@ from .factories import build_history, make_period, make_user, rate
 from .fake_llm import fake_generate
 from .test_sentiment import fake_classifier
 
-FIELDS = ['teaching_effectiveness', 'communication_skills', 'classroom_management',
-          'punctuality', 'student_engagement']
+FIELDS = ['teaching_competence', 'communication_clarity', 'classroom_management',
+          'professionalism_reliability', 'student_engagement_support']
 
 
 def row(scores, responses=10, label='Finals · S.Y. 2024-2025'):
@@ -34,28 +34,28 @@ class RuleTests(SimpleTestCase):
 
     def test_thresholds(self):
         items = by_cat(build_rule_suggestions(row([3.2, 4.0, 4.7, 4.0, 4.0])))
-        self.assertEqual(items['teaching_effectiveness']['priority'], 'high')          # below 3.5
+        self.assertEqual(items['teaching_competence']['priority'], 'high')          # below 3.5
         self.assertEqual(items['classroom_management']['priority'], 'strength')        # 4.5 or more
-        self.assertEqual(items['communication_skills']['priority'], 'low')
+        self.assertEqual(items['communication_clarity']['priority'], 'low')
 
     def test_lowest_category_in_the_good_range_becomes_medium(self):
         items = by_cat(build_rule_suggestions(row([4.0, 3.9, 4.0, 4.0, 4.0])))
-        self.assertEqual(items['communication_skills']['priority'], 'medium')
-        self.assertIn('lowest', items['communication_skills']['evidence']['reasons'][0])
+        self.assertEqual(items['communication_clarity']['priority'], 'medium')
+        self.assertIn('lowest', items['communication_clarity']['evidence']['reasons'][0])
 
     def test_a_drop_since_last_period_is_used_and_shown_as_evidence(self):
         items = by_cat(build_rule_suggestions(row([4.0, 4.0, 4.0, 3.8, 4.0]), previous=row([4.0] * 5)))
-        e = items['punctuality']['evidence']
-        self.assertEqual(items['punctuality']['priority'], 'medium')
+        e = items['professionalism_reliability']['evidence']
+        self.assertEqual(items['professionalism_reliability']['priority'], 'medium')
         self.assertEqual((e['score'], e['previous_score'], e['change']), (3.8, 4.0, -0.2))
 
     def test_negative_comments_and_forecast_drop_are_used(self):
-        theme = [{'key': 'student_engagement', 'label': 'x', 'mentions': 4, 'positive': 0, 'negative': 3}]
+        theme = [{'key': 'student_engagement_support', 'label': 'x', 'mentions': 4, 'positive': 0, 'negative': 3}]
         items = by_cat(build_rule_suggestions(row([4.1, 4.1, 4.1, 4.1, 4.1]), themes=theme))
-        self.assertEqual(items['student_engagement']['priority'], 'medium')
-        forecast = {'status': 'ok', 'predicted_categories': {'punctuality': {'value': 3.8}}}
+        self.assertEqual(items['student_engagement_support']['priority'], 'medium')
+        forecast = {'status': 'ok', 'predicted_categories': {'professionalism_reliability': {'value': 3.8}}}
         items = by_cat(build_rule_suggestions(row([4.1, 4.1, 4.1, 4.1, 4.1]), forecast=forecast))
-        self.assertEqual(items['punctuality']['evidence']['predicted_change'], -0.3)
+        self.assertEqual(items['professionalism_reliability']['evidence']['predicted_change'], -0.3)
 
     def test_every_category_has_its_own_fallback_step(self):
         self.assertEqual(set(FALLBACK_ACTION), set(FIELDS))
@@ -71,43 +71,43 @@ class RuleTests(SimpleTestCase):
                 self.assertIn(number, allowed | {f"{float(n):g}" for n in allowed})
 
     def test_steps_come_from_the_topics_students_really_wrote_about(self):
-        subs = [{'key': 'late_start', 'label': 'Class starts or ends late', 'category': 'punctuality',
+        subs = [{'key': 'late_start', 'label': 'Class starts or ends late', 'category': 'professionalism_reliability',
                  'tone': 'problem', 'mentions': 3, 'positive': 0, 'negative': 3}]
         items = by_cat(build_rule_suggestions(row([4.0, 4.0, 4.0, 3.9, 4.0]), subthemes=subs))
-        p = items['punctuality']
+        p = items['professionalism_reliability']
         self.assertEqual(p['priority'], 'medium')
         self.assertIn('3 comments', p['text'])
         self.assertEqual([a['topic'] for a in p['evidence']['actions']], ['Class starts or ends late'])
         self.assertIn('scheduled minute', p['evidence']['actions'][0]['text'])
         # other categories did NOT get this step
-        self.assertTrue(all(not i['evidence']['actions'] or i['category'] == 'punctuality'
+        self.assertTrue(all(not i['evidence']['actions'] or i['category'] == 'professionalism_reliability'
                             for k, i in items.items() if i['priority'] != 'high'))
 
     def test_two_instructors_with_different_comments_get_different_text(self):
-        late = [{'key': 'late_start', 'label': 'Class starts or ends late', 'category': 'punctuality',
+        late = [{'key': 'late_start', 'label': 'Class starts or ends late', 'category': 'professionalism_reliability',
                  'tone': 'problem', 'mentions': 3, 'positive': 0, 'negative': 3}]
         noisy = [{'key': 'noisy', 'label': 'Noisy or out of control class', 'category': 'classroom_management',
                   'tone': 'problem', 'mentions': 4, 'positive': 0, 'negative': 4}]
         a = by_cat(build_rule_suggestions(row([4.0, 4.0, 4.0, 3.9, 4.0]), subthemes=late))
         b = by_cat(build_rule_suggestions(row([4.0, 4.0, 3.9, 4.0, 4.0]), subthemes=noisy))
-        self.assertNotEqual(a['punctuality']['text'], b['classroom_management']['text'])
-        self.assertEqual(b['punctuality']['evidence']['actions'], [])
+        self.assertNotEqual(a['professionalism_reliability']['text'], b['classroom_management']['text'])
+        self.assertEqual(b['professionalism_reliability']['evidence']['actions'], [])
 
     def test_no_topic_found_says_so_and_does_not_invent_a_problem(self):
-        item = by_cat(build_rule_suggestions(row([3.0, 4.0, 4.0, 4.0, 4.0])))['teaching_effectiveness']
+        item = by_cat(build_rule_suggestions(row([3.0, 4.0, 4.0, 4.0, 4.0])))['teaching_competence']
         self.assertIn('No clear topic', item['text'])
         self.assertEqual(item['evidence']['actions'][0]['topic'], 'Find the reason')
 
     def test_low_score_but_praising_comments_is_reported_as_a_mismatch(self):
-        praise = [{'key': 'explains_well', 'label': 'Explains lessons well', 'category': 'teaching_effectiveness',
+        praise = [{'key': 'explains_well', 'label': 'Explains lessons well', 'category': 'teaching_competence',
                    'tone': 'praise', 'mentions': 4, 'positive': 4, 'negative': 0}]
-        item = by_cat(build_rule_suggestions(row([3.0, 4.0, 4.0, 4.0, 4.0]), subthemes=praise))['teaching_effectiveness']
+        item = by_cat(build_rule_suggestions(row([3.0, 4.0, 4.0, 4.0, 4.0]), subthemes=praise))['teaching_competence']
         self.assertIn('do not match', item['text'])
 
     def test_strength_names_what_students_praised(self):
-        praise = [{'key': 'on_time', 'label': 'Comes on time', 'category': 'punctuality',
+        praise = [{'key': 'on_time', 'label': 'Comes on time', 'category': 'professionalism_reliability',
                    'tone': 'praise', 'mentions': 3, 'positive': 3, 'negative': 0}]
-        item = by_cat(build_rule_suggestions(row([4.0, 4.0, 4.0, 4.8, 4.0]), subthemes=praise))['punctuality']
+        item = by_cat(build_rule_suggestions(row([4.0, 4.0, 4.0, 4.8, 4.0]), subthemes=praise))['professionalism_reliability']
         self.assertEqual(item['priority'], 'strength')
         self.assertIn('comes on time', item['text'])
 
@@ -246,7 +246,7 @@ class SuggestionPipelineTests(TestCase):
     def test_ollama_with_invented_numbers_is_not_saved(self):
         self.prepare()
         bad = json.dumps({'overall': 'Great! Your score is 4.99 now, well done.',
-                          'categories': {'punctuality': 'Your punctuality reached 4.99 which is great news.'}})
+                          'categories': {'professionalism_reliability': 'Your professionalism_reliability reached 4.99 which is great news.'}})
         with mock.patch.object(ollama, 'generate', return_value=bad):
             self.run_all(use_llm=True)
         self.assertFalse(Suggestion.objects.filter(source='ollama').exists())
@@ -306,8 +306,8 @@ class TextQualityTests(SimpleTestCase):
 
     def test_suggestion_wording_changes_between_instructors_and_categories(self):
         from ai_insights.services import suggestions
-        cats = {k: 4.0 for k in ('teaching_effectiveness', 'communication_skills', 'classroom_management',
-                                 'punctuality', 'student_engagement')}
+        cats = {k: 4.0 for k in ('teaching_competence', 'communication_clarity', 'classroom_management',
+                                 'professionalism_reliability', 'student_engagement_support')}
         latest = {'categories': cats, 'responses': 5, 'label': 'Midterm'}
         texts = set()
         for seed in ('1-5', '2-5', '3-5', '4-5'):

@@ -1,3 +1,4 @@
+<!--_pager.html -->
 {% comment %} ai_insights/_pager.html  Needs: pager (a Django page) and keep (current filters as a web-address part). {% endcomment %}
 {% if pager.paginator.num_pages > 1 %}
 <nav class="ai-pager" aria-label="Pages">
@@ -8,7 +9,9 @@
         {% for n in pager.paginator.page_range %}
             {% if n == pager.number %}<span class="current" aria-current="page">{{ n }}</span>
             {% elif n <= 2 or n > pager.paginator.num_pages|add:"-2" or n >= pager.number|add:"-1" and n <= pager.number|add:"1" %}
-            <a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ n }}">{{ n }}</a>
+            <a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ n }}" aria-label="Page {{ n }}">{{ n }}</a>
+            {% elif n == 3 and pager.number > 4 %}<span class="gap" aria-hidden="true">…</span>
+            {% elif n == pager.paginator.num_pages|add:"-2" and pager.number < pager.paginator.num_pages|add:"-3" %}<span class="gap" aria-hidden="true">…</span>
             {% endif %}
         {% endfor %}
         {% if pager.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ pager.next_page_number }}" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>

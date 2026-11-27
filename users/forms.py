@@ -136,15 +136,34 @@ class StudentCreateForm(StudentSectionMixin, forms.ModelForm):
 class InstructorCreateForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
 
+    MAX_PHOTO_SIZE = 2 * 1024 * 1024  
+    ALLOWED_PHOTO_TYPES = ('image/jpeg', 'image/png', 'image/webp')
+
     class Meta:
         model = User
-        fields = ['first_name', 'middle_name', 'last_name', 'email', 'department', 'password']
+        fields = ['first_name', 'middle_name', 'last_name', 'email',
+                  'department', 'profile_photo', 'password']
+        widgets = {
+            'profile_photo': forms.FileInput(attrs={
+                'accept': 'image/jpeg,image/png,image/webp',
+            }),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['department'].queryset = active_departments()
         self.fields['department'].empty_label = '— Select department —'
-        self.fields['department'].required = True   # every teacher needs a department
+        self.fields['department'].required = True
+        self.fields['profile_photo'].required = False
+
+    def clean_profile_photo(self):
+        photo = self.cleaned_data.get('profile_photo')
+        if photo and hasattr(photo, 'content_type'):
+            if photo.content_type not in self.ALLOWED_PHOTO_TYPES:
+                raise forms.ValidationError("Upload a JPG, PNG or WEBP image.")
+            if photo.size > self.MAX_PHOTO_SIZE:
+                raise forms.ValidationError("The photo must be 2 MB or smaller.")
+        return photo
 
     def save(self, commit=True):
         user = super().save(commit=False)

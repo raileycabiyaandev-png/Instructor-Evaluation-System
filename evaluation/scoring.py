@@ -1,23 +1,4 @@
 # evaluation/scoring.py
-#
-# THE ONE PLACE WHERE SCORES ARE CALCULATED
-#
-# Every page, report and AI file asks this file for averages, so a number can never be different on two
-# screens. (Before, the same "Avg of 5 columns" was written by hand in about 15 places.)
-#
-# THE RULES
-#   * Each evaluation has 15 answers (3 per dimension), each 1-5.
-#   * Dimension (category) average = the average of its answers.
-#     Every evaluation has exactly 3 answers per dimension, so averaging all answers of a dimension equals
-#     averaging each student's 3-answer average. Both give the same number.
-#   * Overall score = the WEIGHTED mean of the 5 dimension averages:  sum(weight x average) / sum(weight).
-#     Weights come from EvaluationCategory.weight of the period's questionnaire (all 1 = plain mean).
-#   * Never invent a number: a dimension with no answers is None, and no evaluations means no scores at all.
-#
-# PRIVACY: only ratings are read. These queries never select the student column.
-#
-# Every function takes an Evaluation QUERYSET, so each page keeps its own filters
-# (one teacher, one period, one department...).
 
 from collections import defaultdict
 

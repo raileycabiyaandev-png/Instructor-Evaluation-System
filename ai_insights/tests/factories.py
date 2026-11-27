@@ -7,6 +7,8 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 
 from evaluation.models import Evaluation, EvaluationPeriod
+from evaluation.questionnaire_data import CATEGORIES
+from evaluation.submission import create_evaluation
 from users.models import User
 
 TODAY = timezone.now().date()
@@ -70,12 +72,10 @@ def rate(period, teacher, scores, comments=None, categories=None):
         student = make_user(f'student{n}@secret-school.com', 'student')
         student.first_name = f'Secretname{n}'
         student.save()
-        values = dict(teaching_effectiveness=score, communication_skills=score, classroom_management=score,
-                      punctuality=score, student_engagement=score)
+        values = {key: score for key, _ in CATEGORIES}
         values.update(categories or {})
-        made.append(Evaluation.objects.create(
-            student=student, teacher=teacher, period=period,
-            comment=(comments[i] if comments else ''), **values))
+        made.append(create_evaluation(student, teacher, period, scores=values,
+                                      comment=(comments[i] if comments else '')))
     EvaluationPeriod.objects.filter(pk=period.pk).update(is_active=was_active)
     period.refresh_from_db()
     return made

@@ -1,0 +1,54 @@
+/* ============================================================
+   users/static/users/css/instructor_reports.css
+   Reports page. Loads AFTER instructor_dashboard.css and
+   instructor_evaluation_results.css (it reuses their filter
+   form, tables and pager) and only adds what Reports needs.
+   ============================================================ */
+
+/* one wide select, not three columns */
+.rs-filters--one { grid-template-columns: minmax(0, 560px); }
+
+/* grey footer bar of the report card: privacy note on the left, download buttons on the right */
+.rp-footer {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px 20px;
+  padding: 16px var(--pad);
+  border-top: 1px solid var(--line);
+  background: var(--soft);
+}
+.dash .rp-note { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; color: var(--mut); }
+.dash .rp-note i { color: var(--navy); font-size: 16px; }
+.rp-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* two cards side by side */
+.rp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); align-items: stretch; }
+.rp-grid > * { min-width: 0; }
+
+.rp-checklist { display: grid; gap: 12px; }
+.rp-checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; line-height: 1.55; color: var(--text); }
+.rp-checklist i {
+  display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; margin-top: 1px;
+  border-radius: 50%; background: var(--soft-2); border: 1px solid var(--line);
+  color: var(--navy); font-size: 14px;
+}
+
+.rp-glance li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.rp-glance li:first-child { padding-top: 0; }
+.rp-glance li:last-child { padding-bottom: 0; border-bottom: 0; }
+.rp-glance span { font-size: 14.5px; color: var(--mut); }
+.rp-glance b { font-weight: 600; text-align: right; color: var(--ink); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+@container pg (max-width: 900px) {
+  .rp-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container pg (max-width: 520px) {
+  .rp-footer { flex-direction: column; align-items: stretch; }
+  .rp-buttons .btn { flex: 1 1 100%; }
+}
+
+@media print {
+  .rp-footer { display: none; }
+}

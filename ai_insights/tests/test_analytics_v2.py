@@ -135,7 +135,7 @@ class TrendTests(ForecastPageBase):
         self.assertIn('<svg', r.content.decode())
         self.assertTrue(any(m['teacher'] == self.rival for m in data['declined']))
         self.assertTrue(any(m['teacher'] == self.alice for m in data['improved']))
-        for metric in ('overall', 'punctuality', 'bogus'):
+        for metric in ('overall', 'professionalism_reliability', 'bogus'):
             self.assertEqual(self.client.get(reverse('ai_admin_trends'), {'metric': metric}).status_code, 200)
 
 

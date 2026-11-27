@@ -1,3 +1,4 @@
+<!--instructor_qr.html-->
 {% extends "instructor_base.html" %}
 {% load static %}
 
@@ -5,37 +6,48 @@
 {% block page_title %}My QR Code{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
-<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}?v=5">
+<link rel="stylesheet" href="{% static 'users/css/instructor_qr.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="page">
+<div class="view dash active">
 
-    <div class="page-intro">
-        <h2>My QR code</h2>
-        <p>Students scan this code to open your evaluation form. Show it in class while an evaluation is open.</p>
+    <!-- ═══════════ PAGE HEADING ═══════════ -->
+    <div class="dash-hello">
+        <div class="dash-hello__text">
+            <p class="dash-hello__sub">Students scan this code to open your evaluation form. Show it in class while an evaluation is open.</p>
+        </div>
     </div>
 
+    <div class="dash-stack">
+
+    <!-- ═══════════ EVALUATION STATUS ═══════════ -->
     {% if open_period %}
-    <div class="status-bar status-bar--active">
-        <span class="status-pill"><i class="bi bi-broadcast" aria-hidden="true"></i> Evaluation open</span>
-        <div class="status-text">
+    <section class="qr-status qr-status--active" aria-label="Evaluation status">
+        <span class="status-pill status-pill--open"><span class="live-dot" aria-hidden="true"></span> Evaluation open</span>
+        <div class="qr-status__text">
             <strong>{{ open_period }}</strong>
             <span>Students can scan your code until {{ open_period.end_date|date:"M d, Y" }}.</span>
         </div>
-    </div>
+    </section>
     {% else %}
-    <div class="status-bar">
+    <section class="qr-status" aria-label="Evaluation status">
         <span class="status-pill"><i class="bi bi-pause-circle" aria-hidden="true"></i> No evaluation open</span>
-        <div class="status-text">
+        <div class="qr-status__text">
             <strong>Scanning will not work right now</strong>
             <span>Students can only evaluate you while the administrator has an evaluation period open.</span>
         </div>
-    </div>
+    </section>
     {% endif %}
 
+    <!-- ═══════════ QR CODE ═══════════ -->
     {% if qr %}
     <section class="card qr-card" aria-labelledby="qrTitle">
         <div class="qr-box">
@@ -43,19 +55,16 @@
         </div>
         <div class="qr-side">
             <h3 id="qrTitle">{{ request.user.first_name }} {{ request.user.last_name }}</h3>
-            <dl>
+            <p class="qr-role">Faculty / Instructor</p><br>
+            <dl class="qr-meta">
                 <div><dt>Department</dt><dd>{{ request.user.department.name|default:"—" }}</dd></div>
-                <div><dt>Code last updated</dt><dd>{{ qr.updated_at|date:"M d, Y" }}</dd></div>
+                <div><dt>Last created</dt><dd>{{ qr.updated_at|date:"M d, Y" }}</dd></div>
             </dl>
             <div class="qr-actions no-print">
                 <a class="btn btn-primary" href="{{ qr.qr_image.url }}" download><i class="bi bi-download" aria-hidden="true"></i> Download</a>
                 <button type="button" class="btn btn-ghost" onclick="window.print()"><i class="bi bi-printer" aria-hidden="true"></i> Print</button>
             </div>
-            <ul class="qr-tips">
-                <li>This code only opens your evaluation form. It never shows your scores or any student name.</li>
-                <li>Each student can evaluate you only once in each evaluation period.</li>
-                <li>Only the administrator can create or replace your code.</li>
-            </ul>
+
         </div>
     </section>
 
@@ -74,5 +83,7 @@
     </section>
     {% endif %}
 
-</div>
+    </div><!-- /.dash-stack -->
+</div><!-- /.view -->
+</div><!-- /.page -->
 {% endblock %}

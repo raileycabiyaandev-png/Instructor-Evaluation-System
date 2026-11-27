@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, get_user_model
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, F
@@ -37,7 +37,7 @@ from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
@@ -45,6 +45,12 @@ from django.db.models import Avg, Count
 from django.utils import timezone
 from evaluation.models import Evaluation, EvaluationPeriod, QRCode
 from django.db.models import Q
+from django import forms
+
+User = get_user_model()
+
+MAX_PHOTO_SIZE = 2 * 1024 * 1024
+ALLOWED_PHOTO_TYPES = ('image/jpeg', 'image/png', 'image/webp')
 
 
 def no_cache(view_func): # prevent caching 
@@ -274,7 +280,7 @@ def create_instructor(request):
     if request.user.role != 'admin':
         return redirect('login')
 
-    form = InstructorCreateForm(request.POST or None)
+    form = InstructorCreateForm(request.POST or None, request.FILES or None)
 
     if request.method == 'POST':
         if form.is_valid():
@@ -290,6 +296,71 @@ def create_instructor(request):
         'form': form,
         'instructors': instructors
     })
+
+def validate_profile_photo(photo):
+    if getattr(photo, 'content_type', None) not in ALLOWED_PHOTO_TYPES:
+        raise ValidationError("Upload a JPG, PNG or WEBP image.")
+    if photo.size > MAX_PHOTO_SIZE:
+        raise ValidationError("The photo must be 2 MB or smaller.")
+    forms.ImageField().clean(photo)   # real image check (needs Pillow)
+    photo.seek(0)
+
+@login_required
+@no_cache
+def faculty_update_profile(request):
+    if request.user.role != 'instructor':
+        return redirect('login')
+
+    back = reverse('instructor_profile')
+
+    if request.method != 'POST':
+        return redirect(back)
+
+    user = request.user
+
+    first_name = request.POST.get('first_name', '').strip()
+    last_name = request.POST.get('last_name', '').strip()
+    email = request.POST.get('email', '').strip()
+
+    if not first_name or not last_name:
+        messages.error(request, "First name and last name are required.")
+        return redirect(back)
+
+    if email and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+        messages.error(request, "That email address is already in use.")
+        return redirect(back)
+
+    new_photo = request.FILES.get('profile_photo')
+    remove_photo = request.POST.get('remove_photo') == '1'
+
+    if new_photo:
+        try:
+            validate_profile_photo(new_photo)
+        except ValidationError as e:
+            messages.error(request, e.messages[0])
+            return redirect(back)
+
+    old_photo = user.profile_photo.name if user.profile_photo else None
+
+    user.first_name = first_name
+    user.last_name = last_name
+    if email:
+        user.email = email
+
+    if new_photo:
+        user.profile_photo = new_photo
+    elif remove_photo and old_photo:
+        user.profile_photo = None
+
+    user.save()
+
+    # delete the old file only after the save succeeded
+    new_name = user.profile_photo.name if user.profile_photo else None
+    if old_photo and old_photo != new_name:
+        user.profile_photo.storage.delete(old_photo)
+
+    messages.success(request, "Profile updated successfully.")
+    return redirect(back)
 
 @login_required
 @no_cache
@@ -544,7 +615,7 @@ def instructor_dashboard(request):
     history = _period_history(instructor, finished)
 
     # ?tab=profile opens the Profile view (set by the sidebar); ?section= opens one of the AI tabs
-    active_tab = 'profile' if request.GET.get('tab') == 'profile' else 'dashboard'
+    active_tab = 'dashboard'
     start_tab = request.GET.get('section', '')
     if start_tab not in ('forecast', 'feedback', 'suggestions', 'updates'):
         start_tab = 'feedback'
@@ -1044,3 +1115,10 @@ def instructor_qr(request):
         "qr_missing_file": bool(qr) and not file_ok,
         "open_period": get_open_period(),
     })
+
+@login_required
+@no_cache
+def instructor_profile(request):
+    if request.user.role != 'instructor':
+        return redirect('login')
+    return render(request, "users/instructor_profile.html", {"active_tab": "profile"})

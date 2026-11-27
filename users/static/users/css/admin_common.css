@@ -1,21 +1,5 @@
 /* ============================================================
-   users/static/users/css/admin_common.css
-
-   Shared look of the ADMIN pages (Dashboard, Manage Evaluations, ...).
-   Same design language as the instructor pages, but with NO gold:
-   navy + light blue only. (Sidebar + top bar CSS is inline in templates/base.html.)
-
-    1. Tokens          5. Tabs
-    2. Page header     6. Buttons and controls
-    3. Cards           7. Tables, badges, pager
-    4. Stat cards      8. Hero (best instructor), alerts, empty
-                       9. (reserved)   10. KPI cards, progress, tooltip
-                      11. Responsive
-   ============================================================ */
-
-
-/* ============================================================
-   1. TOKENS
+  admin common
    ============================================================ */
 :root {
     --navy-900: #13224f;

@@ -1,399 +1,918 @@
-<!-- evaluation/evaluation_monitoring.html : Admin > Evaluation > Monitoring -->
+<!-- evaluation/evaluation_monitoring.html : Admin > Evaluation > Monitoring (new design) -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Evaluation Monitoring | AI Teacher Evaluation System{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
-<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
-<link rel="stylesheet" href="{% static 'evaluation/css/evaluation_monitoring.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}" />
+<link
+  rel="stylesheet"
+  href="{% static 'evaluation/css/evaluation_monitoring.css' %}?v=3"
+/>
 {% endblock %}
 
 {% block page_title %}Evaluation Monitoring{% endblock %}
 
-
 {% block content %}
-<div class="admin-page">
+<div class="mm">
+  {% if messages %}
+  {% for message in messages %}
+  <div
+    class="mm-alert {% if 'error' in message.tags %}mm-alert--error{% endif %}"
+    role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}"
+  >
+    <i
+      class="bi {% if 'error' in message.tags %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}"
+      aria-hidden="true"
+    ></i>
+    <span>{{ message }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
 
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert {% if 'error' in message.tags %}alert-error{% else %}alert-success{% endif %}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">
-        <i class="bi {% if 'error' in message.tags %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i>
-        <span>{{ message }}</span>
+  <header class="mm-head">
+    {% if stats %}
+    <div class="mm-export" role="group" aria-label="Download these numbers">
+      <a
+        class="mm-btn mm-btn--ghost"
+        href="{% url 'evaluation_monitoring_export' %}?fmt=xlsx{% if query_keep %}&amp;{{ query_keep }}{% endif %}"
+        ><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Excel</a
+      >
+      <a
+        class="mm-btn mm-btn--ghost"
+        href="{% url 'evaluation_monitoring_export' %}?fmt=pdf{% if query_keep %}&amp;{{ query_keep }}{% endif %}"
+        ><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF</a
+      >
     </div>
-    {% endfor %}
     {% endif %}
+  </header>
 
-    <div class="page-intro">
-        <h2>Evaluation monitoring</h2>
-        <p>See how many evaluations are required, done and still missing. Only counts are shown here: no ratings and no comments.</p>
-    </div>
-
-    {% if not data.has_periods %}
-    <!-- ═══════════ NO PERIOD AT ALL ═══════════ -->
-    <section class="card">
-        <div class="empty">
-            <i class="bi bi-calendar-x" aria-hidden="true"></i>
-            <h3>No evaluation period yet</h3>
-            <p>Create one in Evaluation Period &gt; Evaluations. The monitoring numbers will show here.</p>
-        </div>
-    </section>
-
-    {% else %}
-
-    <!-- ═══════════ FILTERS ═══════════ -->
-    <section class="card" aria-labelledby="filterTitle">
-        <div class="card-head">
-            <div class="card-title">
-                <span class="card-icon"><i class="bi bi-funnel" aria-hidden="true"></i></span>
-                <div><h3 id="filterTitle">Filters</h3>
-                    <p class="card-sub">Choose the period, then narrow it down if you want.</p></div>
-            </div>
-            {% if stats %}
-            <div class="tools" role="group" aria-label="Download these numbers">
-                <a class="btn btn-ghost btn-sm" href="{% url 'evaluation_monitoring_export' %}?fmt=xlsx{% if query_keep %}&amp;{{ query_keep }}{% endif %}"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Excel</a>
-                <a class="btn btn-ghost btn-sm" href="{% url 'evaluation_monitoring_export' %}?fmt=pdf{% if query_keep %}&amp;{{ query_keep }}{% endif %}"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF</a>
-            </div>
-            {% endif %}
-        </div>
-        <form method="get" class="card-body mon-filters" action="{% url 'evaluation_monitoring' %}">
-            <label class="mon-field"><span>School year</span>
-                <select class="select" name="school_year">
-                    <option value="">Latest</option>
-                    {% for y in data.options.school_years %}<option value="{{ y }}" {% if y == chosen.school_year %}selected{% endif %}>{{ y }}</option>{% endfor %}
-                </select></label>
-            <label class="mon-field"><span>Semester</span>
-                <select class="select" name="semester">
-                    <option value="">Any</option>
-                    {% for key, label in data.options.semesters %}<option value="{{ key }}" {% if key == chosen.semester %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                </select></label>
-            <label class="mon-field"><span>Term</span>
-                <select class="select" name="term">
-                    <option value="">Any</option>
-                    {% for key, label in data.options.terms %}<option value="{{ key }}" {% if key == chosen.term %}selected{% endif %}>{{ label }}</option>{% endfor %}
-                </select></label>
-            <label class="mon-field"><span>Department</span>
-                <select class="select" name="department">
-                    <option value="">All departments</option>
-                    {% for d in departments %}<option value="{{ d.pk }}" {% if data.filters.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
-                </select></label>
-            <label class="mon-field"><span>Section</span>
-                <select class="select" name="section">
-                    <option value="">All sections</option>
-                    {% for s in sections %}<option value="{{ s.pk }}" {% if data.filters.section.pk == s.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
-                </select></label>
-            <label class="mon-field"><span>Instructor</span>
-                <select class="select" name="instructor">
-                    <option value="">All instructors</option>
-                    {% for t in instructor_choices %}<option value="{{ t.pk }}" {% if data.filters.instructor.pk == t.pk %}selected{% endif %}>{{ t.last_name }}, {{ t.first_name }}</option>{% endfor %}
-                </select></label>
-            <div class="mon-actions">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Apply</button>
-                <a class="btn btn-ghost" href="{% url 'evaluation_monitoring' %}">Reset</a>
-            </div>
-        </form>
-    </section>
-
-    {% if not period %}
-    <!-- ═══════════ NOTHING MATCHES ═══════════ -->
-    <section class="card">
-        <div class="empty">
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <h3>{% if data.failed %}The numbers could not be loaded{% else %}No evaluation period matches these filters{% endif %}</h3>
-            <p>{% if data.failed %}Please try again in a moment.{% else %}Try another school year, semester or term, or press Reset.{% endif %}</p>
-        </div>
-    </section>
-
-    {% else %}
-
-    <!-- ═══════════ PERIOD STATUS ═══════════ -->
-    <section class="card dash-period dash-period--{{ period.status }}" aria-label="Evaluation period status">
-        <div class="dash-period-main">
-            <span class="hero-eyebrow"><i class="bi bi-calendar-check" aria-hidden="true"></i>
-                {% if data.is_default and period.status == 'ongoing' %}Current evaluation period{% elif data.is_default %}Latest evaluation period{% else %}Selected evaluation period{% endif %}</span>
-            <h3 class="dash-period-title">{{ period.term }}</h3>
-            <dl class="dash-facts">
-                <div><dt>School year</dt><dd>{{ period.school_year }}</dd></div>
-                <div><dt>Semester</dt><dd>{{ period.semester }}</dd></div>
-                <div><dt>Term</dt><dd>{{ period.term }}</dd></div>
-                <div><dt>Dates</dt><dd>{{ period.start|date:"M d, Y" }} to {{ period.end|date:"M d, Y" }}</dd></div>
-            </dl>
-        </div>
-        <div class="dash-period-side">
-            <span class="dash-status dash-status--{{ period.status }}">{{ period.status_label }}</span>
-            <div class="dash-completion">
-                <b>{{ stats.overall.percent_text }}{% if stats.overall.percent is not None %}%{% endif %}</b>
-                <span>completion rate</span>
-            </div>
-        </div>
-        <p class="dash-note" role="status"><i class="bi bi-hourglass-split" aria-hidden="true"></i>
-            <span><strong>{{ period.timing }}.</strong>
-            {% if period.status == 'closed' %}Evaluations can no longer be submitted for this period.
-            {% elif period.status == 'not_started' %}Students cannot evaluate until it begins.{% endif %}
-            {% if period.dates_look_wrong %}<em>The end date is before the start date. Please check this period in Evaluations.</em>{% endif %}</span></p>
-    </section>
-
-    {% if data.filters.any_scope %}
-    <p class="mon-scope" role="status"><i class="bi bi-funnel-fill" aria-hidden="true"></i>
-        The numbers below are limited to:
-        {% if data.filters.department %}<b>{{ data.filters.department.name }}</b> department{% endif %}
-        {% if data.filters.section %}{% if data.filters.department %}·{% endif %} section <b>{{ data.filters.section.name }}</b>{% endif %}
-        {% if data.filters.instructor %}{% if data.filters.department or data.filters.section %}·{% endif %} instructor <b>{{ data.filters.instructor.last_name }}, {{ data.filters.instructor.first_name }}</b>{% endif %}.
+  {% if not data.has_periods %}
+  <!-- NO PERIOD AT ALL -->
+  <section class="mm-sheet mm-empty">
+    <i class="bi bi-calendar-x" aria-hidden="true"></i>
+    <h2>No evaluation period yet</h2>
+    <p>
+      Create one in Evaluation Period &gt; Evaluations. The monitoring numbers
+      will show here.
     </p>
-    {% endif %}
+  </section>
 
-    {% if not stats.overall.required %}
-    <!-- ═══════════ NOTHING REQUIRED ═══════════ -->
-    <section class="card">
-        <div class="empty">
-            <i class="bi bi-clipboard-x" aria-hidden="true"></i>
-            <h3>No evaluations are required for this selection</h3>
-            <p>An evaluation is required when an active student is in a section that has a teaching assignment for
-               {{ period.semester }}, S.Y. {{ period.school_year }}. Check Academics &gt; Teaching Assignments and the students' sections.</p>
-        </div>
-    </section>
-    {% else %}
-
-    <!-- ═══════════ SUMMARY CARDS ═══════════ -->
-    <div class="dash-stats mon-stats">
-        <div class="stat"><span class="stat-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>
-            <div><div class="stat-label">Required evaluations</div><div class="stat-value">{{ stats.overall.required }}</div></div></div>
-        <div class="stat"><span class="stat-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
-            <div><div class="stat-label">Completed</div><div class="stat-value">{{ stats.overall.completed }}</div></div></div>
-        <div class="stat"><span class="stat-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
-            <div><div class="stat-label">Remaining</div><div class="stat-value">{{ stats.overall.remaining }}</div></div></div>
-        <div class="stat"><span class="stat-icon"><i class="bi bi-percent" aria-hidden="true"></i></span>
-            <div><div class="stat-label">Completion</div><div class="stat-value">{{ stats.overall.percent_text }}%</div></div></div>
+  {% else %}
+  <div class="mm-layout">
+    <!-- ========== FILTER BAR (open on a computer, folds on a phone) ========== -->
+    <div class="mm-rail" role="search" aria-label="Filters">
+      <details class="mm-filters" id="mmFilters" open>
+        <summary>
+          <span><i class="bi bi-sliders" aria-hidden="true"></i> Filters</span
+          ><i class="bi bi-chevron-down mm-chev" aria-hidden="true"></i>
+        </summary>
+        <form
+          method="get"
+          action="{% url 'evaluation_monitoring' %}"
+          class="mm-form"
+        >
+          <fieldset>
+            <legend>Period</legend>
+            <label class="mm-field"
+              ><span>School year</span>
+              <select name="school_year">
+                <option value="">Latest</option>
+                {% for y in data.options.school_years %}
+                <option value="{{ y }}" {% if y == chosen.school_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              </select></label
+            >
+            <label class="mm-field"
+              ><span>Semester</span>
+              <select name="semester">
+                <option value="">Any</option>
+                {% for key, label in data.options.semesters %}
+                <option value="{{ key }}" {% if key == chosen.semester %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select></label
+            >
+            <label class="mm-field"
+              ><span>Term</span>
+              <select name="term">
+                <option value="">Any</option>
+                {% for key, label in data.options.terms %}
+                <option value="{{ key }}" {% if key == chosen.term %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select></label
+            >
+          </fieldset>
+          <fieldset>
+            <legend>Focus on</legend>
+            <label class="mm-field"
+              ><span>Department</span>
+              <select name="department">
+                <option value="">All departments</option>
+                {% for d in departments %}
+                <option value="{{ d.pk }}" {% if data.filters.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>
+                {% endfor %}
+              </select></label
+            >
+            <label class="mm-field"
+              ><span>Section</span>
+              <select name="section">
+                <option value="">All sections</option>
+                {% for s in sections %}
+                <option value="{{ s.pk }}" {% if data.filters.section.pk == s.pk %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+              </select></label
+            >
+            <label class="mm-field"
+              ><span>Instructor</span>
+              <select name="instructor">
+                <option value="">All instructors</option>
+                {% for t in instructor_choices %}
+                <option value="{{ t.pk }}" {% if data.filters.instructor.pk == t.pk %}selected{% endif %}>{{ t.last_name }}, {{ t.first_name }}</option>
+                {% endfor %}
+              </select></label
+            >
+          </fieldset>
+          <div class="mm-form-actions">
+            <button type="submit" class="mm-btn mm-btn--primary">
+              <i class="bi bi-check2" aria-hidden="true"></i> Apply
+            </button>
+            <a
+              class="mm-btn mm-btn--ghost"
+              href="{% url 'evaluation_monitoring' %}"
+              >Reset</a
+            >
+          </div>
+        </form>
+      </details>
     </div>
 
-    <!-- ═══════════ OVERALL PROGRESS + STUDENT STATUS ═══════════ -->
-    <div class="dash-two">
-        <section class="card" aria-labelledby="overallTitle">
-            <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-bar-chart-steps" aria-hidden="true"></i></span>
-                <div><h3 id="overallTitle">Overall progress</h3>
-                    <p class="card-sub">{{ period.words }}</p></div></div></div>
-            <div class="card-body">
-                <div class="dash-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ stats.overall.percent_text }}" aria-label="Completion of required evaluations">
-                    <div class="dash-bar-fill" style="width: {{ stats.overall.width }}%"></div>
-                </div>
-                <p class="dash-percent"><b>{{ stats.overall.percent_text }}%</b> of the required evaluations are done</p>
-                <ul class="dash-counts">
-                    <li><b>{{ stats.overall.required }}</b><span>Required</span></li>
-                    <li><b>{{ stats.overall.completed }}</b><span>Completed</span></li>
-                    <li><b>{{ stats.overall.remaining }}</b><span>Remaining</span></li>
-                </ul>
-                <p class="card-sub">Required = every active student evaluates every instructor who teaches their section this semester.
-                    An instructor with 2 subjects in the same section is counted once.</p>
+    <!-- ========== MAIN COLUMN ========== -->
+    <div class="mm-main">
+      {% if not period %}
+      <section class="mm-sheet mm-empty">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <h2>
+          {% if data.failed %}The numbers could not be loaded{% else %}No evaluation period matches these filters{% endif %}
+        </h2>
+        <p>
+          {% if data.failed %}Please try again in a moment.{% else %}Try another school year, semester or term, or press Reset.{% endif %}
+        </p>
+      </section>
+
+      {% else %}
+
+      <!-- PERIOD CARD: navy banner (status + time bar) and four small tiles -->
+      <section
+        class="mm-period mm-period--{{ period.status }}"
+        aria-label="Evaluation period"
+      >
+        <div class="mm-banner">
+          <span class="mm-banner-icon" aria-hidden="true"
+            ><i class="bi bi-calendar2-check"></i
+          ></span>
+          <div class="mm-banner-text">
+            <h2 class="mm-banner-title">Evaluation period</h2>
+            <p class="mm-banner-sub">
+              {% if data.is_default and period.status == 'ongoing' %}Current period{% elif data.is_default %}Latest period{% else %}Selected period{% endif %} &middot; {{ period.semester }} &middot; {{ period.term }}
+            </p>
+          </div>
+          <div class="mm-banner-side">
+            <span class="mm-pill mm-pill--{{ period.status }}"
+              >{{ period.status_label }}</span
+            >
+            <p class="mm-timing" role="status">{{ period.timing }}</p>
+          </div>
+          <div
+            class="mm-timeline mm-timeline--{{ period.status }}"
+            id="mmTimeline"
+            data-length="{{ period.length_days }}"
+            data-left="{{ period.days_left|default_if_none:'' }}"
+            aria-hidden="true"
+          >
+            <span class="mm-timeline-fill"></span>
+          </div>
+        </div>
+
+        <div class="mm-tiles">
+          <div class="mm-tile">
+            <span>School year</span><b>{{ period.school_year }}</b>
+          </div>
+          <div class="mm-tile">
+            <span>Semester</span><b>{{ period.semester }}</b>
+          </div>
+          <div class="mm-tile"><span>Term</span><b>{{ period.term }}</b></div>
+          <div class="mm-tile">
+            <span>Period dates</span
+            ><b>{{ period.start|date:"M d, Y"|default:period.start }} to {{ period.end|date:"M d, Y"|default:period.end }}</b>
+          </div>
+        </div>
+
+        <p class="mm-period-note">
+          <span>Today is {% now "M d, Y" %}.</span>
+          {% if period.status == 'closed' %}Evaluations can no longer be submitted for this period.{% elif period.status == 'not_started' %}Students cannot evaluate until it begins.{% endif %}
+          {% if period.dates_look_wrong %}<em class="mm-warn-text">The end date is before the start date. Please check this period in Evaluations.</em>{% endif %}
+        </p>
+      </section>
+
+      {% if data.filters.any_scope %}
+      <p class="mm-scope" role="status">
+        <i class="bi bi-funnel-fill" aria-hidden="true"></i>
+        <span>Limited to:
+          {% if data.filters.department %}<b>{{ data.filters.department.name }}</b> department{% endif %}
+          {% if data.filters.section %}{% if data.filters.department %}·{% endif %} section <b>{{ data.filters.section.name }}</b>{% endif %}
+          {% if data.filters.instructor %}{% if data.filters.department or data.filters.section %}·{% endif %} instructor <b>{{ data.filters.instructor.last_name }}, {{ data.filters.instructor.first_name }}</b>{% endif %}.
+        </span>
+      </p>
+      {% endif %}
+
+      {% if not stats.overall.required %}
+      <section class="mm-sheet mm-empty">
+        <i class="bi bi-clipboard-x" aria-hidden="true"></i>
+        <h2>No evaluations are required for this selection</h2>
+        <p>
+          An evaluation is required when an active student is in a section that
+          has a teaching assignment for {{ period.semester }}, S.Y. {{ period.school_year }}. Check Academics &gt; Teaching Assignments and
+          the students' sections.
+        </p>
+      </section>
+      {% else %}
+
+      <!-- SUMMARY: progress ring + three counts, and the students -->
+      <div class="mm-summary" aria-label="Summary">
+        <section
+          class="mm-sheet mm-summary-evals"
+          aria-labelledby="mmProgTitle"
+        >
+          <div class="mm-card-head">
+            <span class="mm-card-icon" aria-hidden="true"
+              ><i class="bi bi-clipboard-check"></i
+            ></span>
+            <div>
+              <h3 id="mmProgTitle">Evaluation progress</h3>
+              <p>
+                Every active student evaluates every instructor who teaches
+                their section this semester. An instructor with 2 subjects in
+                the same section is counted once.
+              </p>
             </div>
+          </div>
+          <div class="mm-progress">
+            <div
+              class="mm-donut"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="{{ stats.overall.percent_text }}"
+              aria-label="Completion of required evaluations"
+              style="--p: {{ stats.overall.width }}"
+            >
+              <div class="mm-donut-in">
+                <b>{{ stats.overall.percent_text }}<small>%</small></b>
+                <span>done</span>
+              </div>
+            </div>
+            <dl class="mm-counts">
+              <div class="mm-count-tile is-done">
+                <dt><i aria-hidden="true"></i>Completed</dt>
+                <dd>{{ stats.overall.completed }}</dd>
+              </div>
+              <div class="mm-count-tile is-left">
+                <dt><i aria-hidden="true"></i>Remaining</dt>
+                <dd>{{ stats.overall.remaining }}</dd>
+              </div>
+              <div class="mm-count-tile is-req">
+                <dt><i aria-hidden="true"></i>Required</dt>
+                <dd>{{ stats.overall.required }}</dd>
+              </div>
+            </dl>
+          </div>
         </section>
 
-        <section class="card" aria-labelledby="studentTitle">
-            <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
-                <div><h3 id="studentTitle">Students</h3>
-                    <p class="card-sub">{{ stats.students_total }} student{{ stats.students_total|pluralize }} counted</p></div></div></div>
-            <div class="card-body">
-                <ul class="mon-status-list">
-                    <li><span class="badge badge-high">Completed</span><b>{{ stats.student_counts.completed }}</b></li>
-                    <li><span class="badge badge-mid">Partially completed</span><b>{{ stats.student_counts.partial }}</b></li>
-                    <li><span class="badge badge-low">Not started</span><b>{{ stats.student_counts.not_started }}</b></li>
-                </ul>
-                <p class="card-sub">Completed = evaluated all of their instructors. Partially = at least one but not all. Not started = none yet.</p>
-                {% if data.uncounted %}
-                <p class="mon-warn"><i class="bi bi-info-circle" aria-hidden="true"></i>
-                    {{ data.uncounted }} active student{{ data.uncounted|pluralize }} {{ data.uncounted|pluralize:"is,are" }} not counted: no section, or the section has no teaching assignment this semester.</p>
-                {% endif %}
+        <section
+          class="mm-sheet mm-summary-students"
+          aria-labelledby="mmStudTitle"
+        >
+          <div class="mm-card-head">
+            <span class="mm-card-icon" aria-hidden="true"
+              ><i class="bi bi-people"></i
+            ></span>
+            <div>
+              <h3 id="mmStudTitle">Students</h3>
+              <p>{{ stats.students_total }} counted</p>
             </div>
+          </div>
+          <div class="mm-students-body">
+            <div
+              class="mm-stack"
+              role="img"
+              aria-label="Completed {{ stats.student_counts.completed }}, partially completed {{ stats.student_counts.partial }}, not started {{ stats.student_counts.not_started }}"
+            >
+              <i
+                class="is-done"
+                style="flex: {{ stats.student_counts.completed }} 1 0"
+              ></i>
+              <i
+                class="is-part"
+                style="flex: {{ stats.student_counts.partial }} 1 0"
+              ></i>
+              <i
+                class="is-none"
+                style="flex: {{ stats.student_counts.not_started }} 1 0"
+              ></i>
+            </div>
+            <ul class="mm-legend">
+              <li>
+                <i class="is-done" aria-hidden="true"></i
+                ><span
+                  >Completed<small
+                    >Evaluated all of their instructors</small
+                  ></span
+                ><b>{{ stats.student_counts.completed }}</b>
+              </li>
+              <li>
+                <i class="is-part" aria-hidden="true"></i
+                ><span
+                  >Partially completed<small
+                    >At least one, but not all</small
+                  ></span
+                ><b>{{ stats.student_counts.partial }}</b>
+              </li>
+              <li>
+                <i class="is-none" aria-hidden="true"></i
+                ><span>Not started<small>No evaluation yet</small></span
+                ><b>{{ stats.student_counts.not_started }}</b>
+              </li>
+            </ul>
+            {% if data.uncounted %}
+            <p class="mm-note">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              <span>{{ data.uncounted }} active student{{ data.uncounted|pluralize }} {{ data.uncounted|pluralize:"is,are" }} not counted: no section, or the section has no teaching assignment this semester.</span>
+            </p>
+            {% endif %}
+          </div>
         </section>
-    </div>
+      </div>
 
-    <!-- ═══════════ DEPARTMENTS ═══════════ -->
-    <section class="card" aria-labelledby="deptTitle">
-        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
-            <div><h3 id="deptTitle">Progress by department</h3>
-                <p class="card-sub">By the instructor's department. The vertical line is the school average ({{ stats.overall.percent_text }}%).</p></div></div></div>
-        <div class="table-wrap">
-            <table class="data-table mon-table">
-                <thead><tr>
-                    <th scope="col">Department</th><th scope="col">Instructors</th><th scope="col">Required</th>
-                    <th scope="col">Completed</th><th scope="col">Progress</th><th scope="col">Compared with school</th>
-                </tr></thead>
-                <tbody>
-                {% for d in stats.departments %}
-                <tr>
-                    <th scope="row" data-label="Department"><span class="person-name">{{ d.name }}</span>{% if d.code %}<span class="person-role"> {{ d.code }}</span>{% endif %}</th>
-                    <td data-label="Instructors">{{ d.instructors }}</td>
-                    <td data-label="Required">{{ d.required }}</td>
-                    <td data-label="Completed">{{ d.completed }} <span class="mon-sub">({{ d.remaining }} left)</span></td>
-                    <td data-label="Progress" class="mon-bar-cell">
-                        <div class="mon-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ d.percent_text }}" aria-label="{{ d.name }} completion">
-                            <span class="mon-bar-fill" style="width: {{ d.width }}%"></span>
-                            <i class="mon-bar-mark" style="left: {{ stats.overall.width }}%" aria-hidden="true"></i>
-                        </div>
-                        <b class="mon-pct">{{ d.percent_text }}%</b>
-                    </td>
-                    <td data-label="Compared with school">
-                        {% if d.compare == 'above' %}<span class="mon-chip mon-chip--up"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> {{ d.gap_text }} points</span>
-                        {% elif d.compare == 'below' %}<span class="mon-chip mon-chip--down"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> {{ d.gap_text }} points</span>
-                        {% else %}<span class="mon-chip">Same as school</span>{% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
+      <!-- TABS -->
+      <div
+        class="mm-tabs"
+        id="mmTabs"
+        role="tablist"
+        aria-label="Monitoring sections"
+      >
+        <button
+          type="button"
+          role="tab"
+          id="mmtab-departments"
+          data-mm-tab="departments"
+          aria-controls="mm-departments"
+          aria-selected="true"
+        >
+          <i class="bi bi-diagram-3" aria-hidden="true"></i> Departments
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="mmtab-sections"
+          data-mm-tab="sections"
+          aria-controls="mm-sections"
+          aria-selected="false"
+        >
+          <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Sections
+          <em>{{ stats.sections|length }}</em>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="mmtab-instructors"
+          data-mm-tab="instructors"
+          aria-controls="mm-instructors"
+          aria-selected="false"
+        >
+          <i class="bi bi-person-badge" aria-hidden="true"></i> Instructors
+          <em>{{ stats.instructor_count }}</em>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="mmtab-students"
+          data-mm-tab="students"
+          aria-controls="mm-students"
+          aria-selected="false"
+        >
+          <i class="bi bi-person-check" aria-hidden="true"></i> Students
+          <em>{{ student_scope_total }}</em>
+        </button>
+      </div>
 
-    <!-- ═══════════ SECTIONS ═══════════ -->
-    <section class="card" id="sections" aria-labelledby="secTitle">
-        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span>
-            <div><h3 id="secTitle">Progress by section</h3>
-                <p class="card-sub">Each section has its own students. Press "View students" to see who has not finished.</p></div></div>
-            <span class="chip">{{ stats.sections|length }} section{{ stats.sections|length|pluralize }}</span></div>
-        <div class="card-body mon-seg-wrap">
-            <div class="seg" role="group" aria-label="Sort sections">
-                {% for key, label in section_sorts.items %}
-                <a class="mon-seg-link" href="?{% if query_no_ssort %}{{ query_no_ssort }}&amp;{% endif %}ssort={{ key }}#sections" {% if data.filters.section_sort == key or not data.filters.section_sort and key == 'low' %}aria-current="true"{% endif %}>{{ label }}</a>
-                {% endfor %}
+      <!-- ===== DEPARTMENTS ===== -->
+      <section
+        class="mm-sheet mm-panel"
+        role="tabpanel"
+        id="mm-departments"
+        aria-labelledby="mmtab-departments"
+      >
+        <div class="mm-panel-head">
+          <div class="mm-card-head">
+            <span class="mm-card-icon" aria-hidden="true"
+              ><i class="bi bi-diagram-3"></i
+            ></span>
+            <div>
+              <h3>Progress by department</h3>
+              <p>
+                By the instructor's department. The tick on each bar is the
+                school average ({{ stats.overall.percent_text }}%).
+              </p>
             </div>
+          </div>
+          <label class="mm-search"
+            ><i class="bi bi-search" aria-hidden="true"></i>
+            <input
+              type="search"
+              id="mmDeptSearch"
+              placeholder="Search department"
+              aria-label="Search department"
+          /></label>
         </div>
-        <div class="table-wrap">
-            <table class="data-table mon-table">
-                <thead><tr>
-                    <th scope="col">Section</th><th scope="col">Department</th><th scope="col">Students</th>
-                    <th scope="col">Completed / Partial / Not started</th><th scope="col">Evaluations done</th>
-                    <th scope="col">Progress</th><th scope="col"><span class="sr-only">Action</span></th>
-                </tr></thead>
-                <tbody>
-                {% for x in sections_page %}
-                <tr>
-                    <th scope="row" data-label="Section"><span class="person-name">{{ x.name }}</span></th>
-                    <td data-label="Department">{{ x.department }}</td>
-                    <td data-label="Students">{{ x.students }}</td>
-                    <td data-label="Completed / Partial / Not started">
-                        <span class="mon-trio" title="Completed / Partially completed / Not started">
-                            <span class="mon-n mon-n--done">{{ x.completed_students }}</span>
-                            <span class="mon-n mon-n--part">{{ x.partial_students }}</span>
-                            <span class="mon-n mon-n--none">{{ x.not_started_students }}</span>
-                        </span>
-                    </td>
-                    <td data-label="Evaluations done">{{ x.completed }} of {{ x.required }}</td>
-                    <td data-label="Progress" class="mon-bar-cell">
-                        <div class="mon-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ x.percent_text }}" aria-label="{{ x.name }} completion">
-                            <span class="mon-bar-fill" style="width: {{ x.width }}%"></span>
-                            <i class="mon-bar-mark" style="left: {{ stats.overall.width }}%" aria-hidden="true"></i>
-                        </div>
-                        <b class="mon-pct">{{ x.percent_text }}%</b>
-                    </td>
-                    <td class="mon-act"><a class="btn btn-ghost btn-sm" href="?{% if query_students_only_reset %}{{ query_students_only_reset }}&amp;{% endif %}ssection={{ x.pk }}#students">View students</a></td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+        <div class="mm-table-wrap">
+          <table class="mm-table" id="mmDeptTable">
+            <thead>
+              <tr>
+                <th scope="col">Department</th>
+                <th scope="col" class="num">Instructors</th>
+                <th scope="col" class="num">Required</th>
+                <th scope="col" class="num">Completed</th>
+                <th scope="col">Progress</th>
+                <th scope="col">Compared with school</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in stats.departments %}
+              <tr>
+                <th scope="row" data-label="Department">
+                  <span class="mm-name">{{ d.name }}</span>{% if d.code %}<span class="mm-code">{{ d.code }}</span>{% endif %}
+                </th>
+                <td data-label="Instructors" class="num">
+                  {{ d.instructors }}
+                </td>
+                <td data-label="Required" class="num">{{ d.required }}</td>
+                <td data-label="Completed" class="num">
+                  {{ d.completed }}
+                  <span class="mm-sub">({{ d.remaining }} left)</span>
+                </td>
+                <td data-label="Progress" class="mm-bar-cell">
+                  <div
+                    class="mm-prog mm-band-{% if d.percent is None %}none{% elif d.percent >= 80 %}good{% elif d.percent >= 50 %}mid{% else %}low{% endif %}"
+                  >
+                    <div
+                      class="mm-bar"
+                      role="progressbar"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="{{ d.percent_text }}"
+                      aria-label="{{ d.name }} completion"
+                    >
+                      <span style="width: {{ d.width }}%"></span
+                      ><i
+                        style="left: {{ stats.overall.width }}%"
+                        aria-hidden="true"
+                      ></i>
+                    </div>
+                    <b>{{ d.percent_text }}%</b>
+                  </div>
+                </td>
+                <td data-label="Compared with school">
+                  {% if d.compare == 'above' %}<span class="mm-chip mm-chip--up"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> {{ d.gap_text }} points</span>
+                  {% elif d.compare == 'below' %}<span class="mm-chip mm-chip--down"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> {{ d.gap_text }} points</span>
+                  {% else %}<span class="mm-chip">Same as school</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-        {% include 'evaluation/_monitoring_pager.html' with page=sections_page param='secpage' query=query_keep anchor='sections' noun='sections' %}
-    </section>
+        <p class="mm-none" id="mmDeptNone" hidden>
+          No department found. Try a different name.
+        </p>
+      </section>
 
-    <!-- ═══════════ INSTRUCTORS ═══════════ -->
-    <section class="card" id="instructors" aria-labelledby="instTitle">
-        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
-            <div><h3 id="instTitle">Progress by instructor</h3>
-                <p class="card-sub">Lowest completion first, so you can see who needs follow-up.</p></div></div>
-            <span class="chip">{{ stats.instructor_count }} instructor{{ stats.instructor_count|pluralize }}</span></div>
-        <div class="table-wrap">
-            <table class="data-table mon-table">
-                <thead><tr>
-                    <th scope="col">Instructor</th><th scope="col">Department</th><th scope="col">Sections</th>
-                    <th scope="col">Required</th><th scope="col">Completed</th><th scope="col">Progress</th>
-                </tr></thead>
-                <tbody>
-                {% for i in instructors_page %}
-                <tr>
-                    <th scope="row" data-label="Instructor"><span class="person-name">{{ i.name }}</span></th>
-                    <td data-label="Department">{{ i.department }}</td>
-                    <td data-label="Sections">{{ i.sections }}</td>
-                    <td data-label="Required">{{ i.required }}</td>
-                    <td data-label="Completed">{{ i.completed }} <span class="mon-sub">({{ i.remaining }} left)</span></td>
-                    <td data-label="Progress" class="mon-bar-cell">
-                        <div class="mon-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ i.percent_text }}" aria-label="{{ i.name }} completion">
-                            <span class="mon-bar-fill" style="width: {{ i.width }}%"></span>
-                        </div>
-                        <b class="mon-pct">{{ i.percent_text }}%</b>
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% include 'evaluation/_monitoring_pager.html' with page=instructors_page param='ipage' query=query_keep anchor='instructors' noun='instructors' %}
-    </section>
-
-    <!-- ═══════════ STUDENTS ═══════════ -->
-    <section class="card" id="students" aria-labelledby="stuTitle">
-        <div class="card-head"><div class="card-title"><span class="card-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
-            <div><h3 id="stuTitle">Student completion status</h3>
-                <p class="card-sub">Only whether each student has finished. What they rated or wrote is never shown.</p></div></div>
-            <span class="chip">{{ student_scope_total }} student{{ student_scope_total|pluralize }}{% if data.filters.student_section or data.filters.q %} found{% endif %}</span></div>
-
-        <form method="get" class="card-body mon-student-tools" action="{% url 'evaluation_monitoring' %}#students">
-            {% for name, value in hidden_for_search %}{% if name != 'ssection' %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}{% endfor %}
-            <label class="mon-field"><span>Section</span>
-                <select class="select" name="ssection">
-                    <option value="">All sections</option>
-                    {% for c in section_choices %}<option value="{{ c.pk }}" {% if data.filters.student_section.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
-                </select></label>
-            <label class="mon-field mon-field--grow"><span>Search student name</span>
-                <input class="select mon-input" type="search" name="q" value="{{ data.filters.q }}" maxlength="50" placeholder="Type a first or last name"></label>
-            <div class="mon-actions">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search" aria-hidden="true"></i> Search</button>
-                {% if data.filters.student_section or data.filters.q or data.filters.status %}
-                <a class="btn btn-ghost" href="?{% if query_students_only_reset %}{{ query_students_only_reset }}{% endif %}#students">Clear</a>
-                {% endif %}
+      <!-- ===== SECTIONS ===== -->
+      <section
+        class="mm-sheet mm-panel"
+        role="tabpanel"
+        id="mm-sections"
+        aria-labelledby="mmtab-sections"
+        hidden
+      >
+        <div class="mm-panel-head">
+          <div class="mm-card-head">
+            <span class="mm-card-icon" aria-hidden="true"
+              ><i class="bi bi-grid-3x3-gap"></i
+            ></span>
+            <div>
+              <h3>Progress by section</h3>
+              <p>Press "View students" to see who has not finished.</p>
             </div>
+          </div>
+          <div class="mm-seg" role="group" aria-label="Sort sections">
+            {% for key, label in section_sorts.items %}
+            <a
+              href="?{% if query_no_ssort %}{{ query_no_ssort }}&amp;{% endif %}ssort={{ key }}#sections"
+              {% if data.filters.section_sort == key or not data.filters.section_sort and key == "low" %}aria-current="true"{% endif %}
+              >{{ label }}</a
+            >
+            {% endfor %}
+          </div>
+        </div>
+        <p class="mm-key" aria-hidden="true">
+          Students per section: <span><i class="is-done"></i> completed</span
+          ><span><i class="is-part"></i> partially</span
+          ><span><i class="is-none"></i> not started</span>
+        </p>
+        <div class="mm-table-wrap">
+          <table class="mm-table">
+            <thead>
+              <tr>
+                <th scope="col">Section</th>
+                <th scope="col">Department</th>
+                <th scope="col" class="num">Students</th>
+                <th scope="col">Students by status</th>
+                <th scope="col" class="num">Evaluations done</th>
+                <th scope="col">Progress</th>
+                <th scope="col"><span class="sr-only">Action</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for x in sections_page %}
+              <tr>
+                <th scope="row" data-label="Section">
+                  <span class="mm-name">{{ x.name }}</span>
+                </th>
+                <td data-label="Department">{{ x.department }}</td>
+                <td data-label="Students" class="num">{{ x.students }}</td>
+                <td data-label="Students by status">
+                  <span
+                    class="mm-trio"
+                    title="Completed / Partially completed / Not started"
+                  >
+                    <span class="is-done">{{ x.completed_students }}</span>
+                    <span class="is-part">{{ x.partial_students }}</span>
+                    <span class="is-none">{{ x.not_started_students }}</span>
+                  </span>
+                </td>
+                <td data-label="Evaluations done" class="num">
+                  {{ x.completed }} of {{ x.required }}
+                </td>
+                <td data-label="Progress" class="mm-bar-cell">
+                  <div
+                    class="mm-prog mm-band-{% if x.percent is None %}none{% elif x.percent >= 80 %}good{% elif x.percent >= 50 %}mid{% else %}low{% endif %}"
+                  >
+                    <div
+                      class="mm-bar"
+                      role="progressbar"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="{{ x.percent_text }}"
+                      aria-label="{{ x.name }} completion"
+                    >
+                      <span style="width: {{ x.width }}%"></span
+                      ><i
+                        style="left: {{ stats.overall.width }}%"
+                        aria-hidden="true"
+                      ></i>
+                    </div>
+                    <b>{{ x.percent_text }}%</b>
+                  </div>
+                </td>
+                <td class="mm-act">
+                  <a
+                    class="mm-btn mm-btn--ghost mm-btn--sm"
+                    href="?{% if query_students_only_reset %}{{ query_students_only_reset }}&amp;{% endif %}ssection={{ x.pk }}#students"
+                    >View students</a
+                  >
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% include 'evaluation/_monitoring_nav.html' with page=sections_page param='secpage' query=query_keep anchor='sections' noun='sections' %}
+      </section>
+
+      <!-- ===== INSTRUCTORS ===== -->
+      <section
+        class="mm-sheet mm-panel"
+        role="tabpanel"
+        id="mm-instructors"
+        aria-labelledby="mmtab-instructors"
+        hidden
+      >
+        <div class="mm-panel-head">
+          <div class="mm-card-head">
+            <span class="mm-card-icon" aria-hidden="true"
+              ><i class="bi bi-person-badge"></i
+            ></span>
+            <div>
+              <h3>Progress by instructor</h3>
+              <p>
+                Lowest completion first, so you can see who needs follow-up.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="mm-table-wrap">
+          <table class="mm-table">
+            <thead>
+              <tr>
+                <th scope="col">Instructor</th>
+                <th scope="col">Department</th>
+                <th scope="col" class="num">Sections</th>
+                <th scope="col" class="num">Required</th>
+                <th scope="col" class="num">Completed</th>
+                <th scope="col">Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in instructors_page %}
+              <tr>
+                <th scope="row" data-label="Instructor">
+                  <span class="mm-name">{{ i.name }}</span>
+                </th>
+                <td data-label="Department">{{ i.department }}</td>
+                <td data-label="Sections" class="num">{{ i.sections }}</td>
+                <td data-label="Required" class="num">{{ i.required }}</td>
+                <td data-label="Completed" class="num">
+                  {{ i.completed }}
+                  <span class="mm-sub">({{ i.remaining }} left)</span>
+                </td>
+                <td data-label="Progress" class="mm-bar-cell">
+                  <div
+                    class="mm-prog mm-band-{% if i.percent is None %}none{% elif i.percent >= 80 %}good{% elif i.percent >= 50 %}mid{% else %}low{% endif %}"
+                  >
+                    <div
+                      class="mm-bar"
+                      role="progressbar"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="{{ i.percent_text }}"
+                      aria-label="{{ i.name }} completion"
+                    >
+                      <span style="width: {{ i.width }}%"></span>
+                    </div>
+                    <b>{{ i.percent_text }}%</b>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% include 'evaluation/_monitoring_nav.html' with page=instructors_page param='ipage' query=query_keep anchor='instructors' noun='instructors' %}
+      </section>
+
+      <!-- ===== STUDENTS ===== -->
+      <section
+        class="mm-sheet mm-panel"
+        role="tabpanel"
+        id="mm-students"
+        aria-labelledby="mmtab-students"
+        hidden
+      >
+        <div class="mm-panel-head">
+          <div class="mm-card-head">
+            <span class="mm-card-icon" aria-hidden="true"
+              ><i class="bi bi-person-check"></i
+            ></span>
+            <div>
+              <h3>Student completion status</h3>
+              <p>
+                Only whether each student has finished. Ratings and comments are
+                never shown.
+              </p>
+            </div>
+          </div>
+          <span class="mm-count">{{ student_scope_total }} student{{ student_scope_total|pluralize }}{% if data.filters.student_section or data.filters.q %} found{% endif %}</span>
+        </div>
+
+        <form
+          method="get"
+          class="mm-student-tools"
+          action="{% url 'evaluation_monitoring' %}#students"
+        >
+          {% for name, value in hidden_for_search %}{% if name != 'ssection' %}<input type="hidden" name="{{ name }}" value="{{ value }}" />{% endif %}{% endfor %}
+          <label class="mm-field"
+            ><span>Section</span>
+            <select name="ssection">
+              <option value="">All sections</option>
+              {% for c in section_choices %}
+              <option value="{{ c.pk }}" {% if data.filters.student_section.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select></label
+          >
+          <label class="mm-field mm-field--grow"
+            ><span>Student name</span>
+            <input
+              type="search"
+              name="q"
+              value="{{ data.filters.q }}"
+              maxlength="50"
+              placeholder="Type a first or last name"
+          /></label>
+          <div class="mm-form-actions">
+            <button type="submit" class="mm-btn mm-btn--primary">
+              <i class="bi bi-search" aria-hidden="true"></i> Search
+            </button>
+            {% if data.filters.student_section or data.filters.q or data.filters.status %}
+            <a
+              class="mm-btn mm-btn--ghost"
+              href="?{% if query_students_only_reset %}{{ query_students_only_reset }}{% endif %}#students"
+              >Clear</a
+            >
+            {% endif %}
+          </div>
         </form>
 
-        <div class="card-body mon-seg-wrap">
-            <div class="seg" role="group" aria-label="Show students by status">
-                <a class="mon-seg-link" href="?{% if query_no_status %}{{ query_no_status }}{% endif %}#students" {% if not data.filters.status %}aria-current="true"{% endif %}>All <span class="tab-count">{{ student_scope_total }}</span></a>
-                {% for key, label in status_labels.items %}
-                <a class="mon-seg-link" href="?{% if query_no_status %}{{ query_no_status }}&amp;{% endif %}status={{ key }}#students" {% if data.filters.status == key %}aria-current="true"{% endif %}>{{ label }}
-                    <span class="tab-count">{% if key == 'completed' %}{{ student_counts.completed }}{% elif key == 'partial' %}{{ student_counts.partial }}{% else %}{{ student_counts.not_started }}{% endif %}</span></a>
-                {% endfor %}
-            </div>
+        <div
+          class="mm-seg mm-seg--wide"
+          role="group"
+          aria-label="Show students by status"
+        >
+          <a
+            href="?{% if query_no_status %}{{ query_no_status }}{% endif %}#students"
+            {% if not data.filters.status %}aria-current="true"{% endif %}
+            >All <em>{{ student_scope_total }}</em></a
+          >
+          {% for key, label in status_labels.items %}
+          <a
+            href="?{% if query_no_status %}{{ query_no_status }}&amp;{% endif %}status={{ key }}#students"
+            {% if data.filters.status == key %}aria-current="true"{% endif %}
+            >{{ label }}
+            <em>{% if key == 'completed' %}{{ student_counts.completed }}{% elif key == 'partial' %}{{ student_counts.partial }}{% else %}{{ student_counts.not_started }}{% endif %}</em></a
+          >
+          {% endfor %}
         </div>
+
         {% if students_page.object_list %}
-        <div class="table-wrap">
-            <table class="data-table mon-table">
-                <thead><tr>
-                    <th scope="col">Student</th><th scope="col">Section</th><th scope="col">Evaluated</th><th scope="col">Status</th>
-                </tr></thead>
-                <tbody>
-                {% for s in students_page %}
-                <tr>
-                    <th scope="row" data-label="Student"><span class="person-name">{{ s.name }}</span></th>
-                    <td data-label="Section">{{ s.section }}</td>
-                    <td data-label="Evaluated">{{ s.completed }} of {{ s.required }}</td>
-                    <td data-label="Status">
-                        <span class="badge {% if s.status == 'completed' %}badge-high{% elif s.status == 'partial' %}badge-mid{% else %}badge-low{% endif %}">{{ s.status_label }}</span>
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+        <div class="mm-table-wrap">
+          <table class="mm-table">
+            <thead>
+              <tr>
+                <th scope="col">Student</th>
+                <th scope="col">Section</th>
+                <th scope="col" class="num">Evaluated</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in students_page %}
+              <tr>
+                <th scope="row" data-label="Student">
+                  <span class="mm-name">{{ s.name }}</span>
+                </th>
+                <td data-label="Section">{{ s.section }}</td>
+                <td data-label="Evaluated" class="num">
+                  {{ s.completed }} of {{ s.required }}
+                </td>
+                <td data-label="Status">
+                  <span class="mm-badge mm-badge--{{ s.status }}"
+                    >{{ s.status_label }}</span
+                  >
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-        {% include 'evaluation/_monitoring_pager.html' with page=students_page param='spage' query=query_keep anchor='students' noun='students' %}
+        {% include 'evaluation/_monitoring_nav.html' with page=students_page param='spage' query=query_keep anchor='students' noun='students' %}
         {% else %}
-        <div class="empty">
-            <i class="bi bi-person-x" aria-hidden="true"></i>
-            <h3>No students found</h3>
-            <p>Try another section, status or name, or press Clear.</p>
+        <div class="mm-empty mm-empty--inline">
+          <i class="bi bi-person-x" aria-hidden="true"></i>
+          <h2>No students found</h2>
+          <p>Try another section, status or name, or press Clear.</p>
         </div>
         {% endif %}
-    </section>
+      </section>
 
-    {% endif %}{# required #}
-    {% endif %}{# period #}
-    {% endif %}{# has_periods #}
-
+      {% endif %}{# required #}
+      {% endif %}{# period #}
+    </div>
+  </div>
+  {% endif %}{# has_periods #}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'users/js/admin_common.js' %}"></script>
+<script>
+  (function () {
+    /* 1. Filters fold on a phone, stay open on a computer */
+    var box = document.getElementById("mmFilters");
+    if (
+      box &&
+      window.matchMedia &&
+      !window.matchMedia("(min-width: 961px)").matches
+    )
+      box.removeAttribute("open");
+
+    /* 2. Time bar of the period (how far we are between the start and end dates) */
+    var tl = document.getElementById("mmTimeline");
+    if (tl) {
+      var len = parseInt(tl.dataset.length, 10),
+        left = parseInt(tl.dataset.left, 10);
+      if (len > 0 && !isNaN(left)) {
+        var pct = Math.max(
+          0,
+          Math.min(100, Math.round(((len - left) / len) * 100)),
+        );
+        tl.querySelector(".mm-timeline-fill").style.width = pct + "%";
+      }
+    }
+
+    /* 3. Tabs. Server filters and pages are links (?spage=2#students), so open the tab they point to. */
+    var nav = document.getElementById("mmTabs");
+    if (nav) {
+      var names = ["departments", "sections", "instructors", "students"];
+      var hash = location.hash.replace("#", "");
+      var q = new URLSearchParams(location.search);
+      var want =
+        names.indexOf(hash) > -1
+          ? hash
+          : q.has("secpage") || q.has("ssort")
+            ? "sections"
+            : q.has("ipage")
+              ? "instructors"
+              : q.has("spage") ||
+                  q.has("ssection") ||
+                  q.has("q") ||
+                  q.has("status")
+                ? "students"
+                : "departments";
+
+      var show = function (name) {
+        names.forEach(function (n) {
+          var panel = document.getElementById("mm-" + n);
+          var tab = document.getElementById("mmtab-" + n);
+          if (panel) panel.hidden = n !== name;
+          if (tab) {
+            tab.setAttribute("aria-selected", n === name ? "true" : "false");
+            tab.tabIndex = n === name ? 0 : -1;
+          }
+        });
+      };
+      nav.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-mm-tab]");
+        if (!b) return;
+        show(b.dataset.mmTab);
+        if (history.replaceState)
+          history.replaceState(null, "", "#" + b.dataset.mmTab);
+      });
+      nav.addEventListener("keydown", function (e) {
+        /* arrow keys move between tabs */
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        var tabs = Array.prototype.slice.call(
+          nav.querySelectorAll('[role="tab"]'),
+        );
+        var i = tabs.indexOf(document.activeElement);
+        if (i < 0) return;
+        var next =
+          tabs[
+            (i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length
+          ];
+        next.focus();
+        next.click();
+      });
+      show(want);
+      var target = document.getElementById("mm-" + hash);
+      if (target && names.indexOf(hash) > -1)
+        setTimeout(function () {
+          target.scrollIntoView();
+        }, 0);
+    }
+
+    /* 4. Department search (a school has only a few departments, so no paging is needed) */
+    var search = document.getElementById("mmDeptSearch"),
+      table = document.getElementById("mmDeptTable");
+    if (search && table) {
+      var rows = table.querySelectorAll("tbody tr"),
+        none = document.getElementById("mmDeptNone");
+      search.addEventListener("input", function () {
+        var term = search.value.trim().toLowerCase(),
+          shown = 0;
+        Array.prototype.forEach.call(rows, function (r) {
+          var ok = !term || r.textContent.toLowerCase().indexOf(term) > -1;
+          r.hidden = !ok;
+          if (ok) shown++;
+        });
+        if (none) none.hidden = shown > 0;
+      });
+    }
+  })();
+</script>
 {% endblock %}

@@ -1,10 +1,4 @@
-/* ============================================================
-   users/static/users/js/admin_common.js
-   Helpers shared by the admin pages.
-
-   - Admin.tabs()       tab buttons that show one section at a time
-   - Admin.listTable()  search + filter + sort + pages for a table
-   ============================================================ */
+/* ---------- admin common js ---------- */
 var Admin = (function () {
     'use strict';
 

@@ -1,9 +1,4 @@
-/* academics.css
-   Extra styles for Academic Management pages and the Active/Inactive
-   buttons. It re-uses the colours/variables from users/css/create_user.css,
-   so always load create_user.css BEFORE this file. */
-
-/* ---------- messages ---------- */
+/* academics/css/academic.css */
 .alert.error   { background: var(--red-100); color: var(--red-700); }
 .alert.warning { background: #fef9c3; color: #854d0e; }
 .alert.info    { background: #e0f2fe; color: #075985; }

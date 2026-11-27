@@ -17,7 +17,7 @@ class TrendsPageTests(Base):
     def test_table_has_five_categories_and_radar(self):
         r = self.get()
         html = r.content.decode()
-        for label in ('Teaching Effectiveness', 'Communication Skills', 'Classroom Management', 'Punctuality', 'Student Engagement'):
+        for label in ('Teaching Competence', 'Communication and Clarity', 'Classroom Management', 'Student Engagement and Support', 'Professionalism and Reliability'):
             self.assertIn(label, html)
         self.assertIn('ai-svg--radar', html)
         self.assertGreaterEqual(r.context['data']['row_count'], 1)

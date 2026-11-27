@@ -1,49 +1,106 @@
+<!-- users/instructor_update.html -->
 {% extends 'base.html' %}
 {% load static %}
 
+{% block page_title %}Update Instructor{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/instructor_update.css' %}">
+<link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}?v=20261121-directory-1">
+<link rel="stylesheet" href="{% static 'users/css/update_dialog.css' %}?v=20261121-update-1">
 {% endblock %}
 
 {% block content %}
 
-<div class="instructor-update-wrapper container-fluid py-4 px-3 px-lg-5">
+<div class="modal user-modal show"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="instructorUpdateTitle"
+     data-standalone-modal>
 
-    <!-- Main Form Container -->
-    <div class="update-card">
+    <div class="modal-content modern-modal" data-update-dialog>
 
-        <!-- Decorative Header -->
-        <div class="update-card-header">
+        <div class="modal-header-modern">
+
             <div>
-                <span class="section-badge">Instructor Record</span>
-                <h2>Edit Instructor Information</h2>
-                <p>Ensure all fields are accurate before saving updates.</p>
+                <span class="page-eyebrow">Instructor record</span>
+                <h3 id="instructorUpdateTitle">Edit instructor</h3>
+                <p>Make sure all details are accurate before saving.</p>
             </div>
+
+            <button type="button" class="close-btn" data-close-edit aria-label="Close dialog">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+
         </div>
 
-        <!-- Form Section -->
-        <div class="update-card-body">
-            <form method="POST" novalidate>
-                {% csrf_token %}
+        <form method="POST" data-update-form novalidate>
 
-                <div class="custom-form-fields">
-                    {{ form.as_p }}
+            {% csrf_token %}
+
+            <div class="modal-body-modern">
+
+                <div class="form-grid">
+
+                    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+                    {% if form.non_field_errors %}
+                    <div class="form-group full-width">
+                        <span class="error">{{ form.non_field_errors }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% for field in form.visible_fields %}
+
+                    <div class="form-group{% if field.name != 'first_name' and field.name != 'middle_name' and field.name != 'last_name' and field.name != 'email' %} full-width{% endif %}{% if field.field.widget.input_type == 'checkbox' %} check-row{% endif %}">
+
+                        {% if field.field.widget.input_type == 'checkbox' %}
+
+                            {{ field }}
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+                        {% else %}
+
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span>(optional)</span>{% endif %}</label>
+                            {{ field }}
+
+                        {% endif %}
+
+                        {% if field.help_text %}
+                            <span class="field-hint">{{ field.help_text }}</span>
+                        {% endif %}
+
+                        {% if field.errors %}
+                            <span class="error">{{ field.errors }}</span>
+                        {% endif %}
+
+                    </div>
+
+                    {% endfor %}
+
                 </div>
 
-                <!-- Buttons -->
-                <div class="form-actions">
-                    <button type="submit" class="btn save-btn">
-                        <i class="fas fa-save me-2"></i> Save Changes
-                    </button>
+            </div>
 
-                    <button type="button" onclick="history.back()" class="btn cancel-btn">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
+            <div class="modal-footer-modern">
+
+                <button type="button" class="btn-secondary" data-close-edit>
+                    Cancel
+                </button>
+
+                <button type="submit" class="btn-primary" data-submit>
+                    <i class="fas fa-save" aria-hidden="true"></i>
+                    Save changes
+                </button>
+
+            </div>
+
+        </form>
 
     </div>
+
 </div>
+
+<script src="{% static 'users/js/directory.js' %}?v=20261121-directory-3"></script>
 
 {% endblock %}

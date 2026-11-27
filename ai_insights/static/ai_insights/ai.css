@@ -1,7 +1,6 @@
-/* ai_insights/static/ai_insights/ai.css
-   Styles for the AI blocks. Uses the same colour tokens as instructor_common.css
-   (navy + gold). Load AFTER instructor_common.css. */
-
+/* ============================================================
+  ai.css
+   ============================================================ */
 .ai-body {
   display: grid;
   gap: 14px;

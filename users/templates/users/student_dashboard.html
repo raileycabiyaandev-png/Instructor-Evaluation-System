@@ -1,500 +1,831 @@
+{# student dashboard #}
+{# IMPORTANT: every template tag must stay on ONE line. Turn off auto-format (Prettier) for .html files, or it breaks them again. #}
 {% load static %}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Student Evaluation Portal</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    {# Loaded AFTER Bootstrap so our styles win #}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="{% static 'users/css/ses_shell.css' %}" />
     {% block extra_css %}
-        <link rel="stylesheet" href="{% static 'users/css/student_dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'users/css/student_dashboard.css' %}?v=7" />
     {% endblock %}
-</head>
+  </head>
 
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
 
-<div class="app-shell">
-
-    <!-- ═════════ SIDEBAR ═════════ -->
-    <aside class="sidebar" id="sidebar" aria-label="Student navigation">
+    <div class="app-shell">
+      <!-- ═════════ SIDEBAR ═════════ -->
+      <aside class="sidebar" id="sidebar" aria-label="Student sidebar">
         <div class="sidebar-inner">
+          <div class="brand">
+            <div class="brand-logo-row">
+              <div class="brand-logo-ring">
+                <img src="{% static 'images/aclc_logo.jpg' %}" class="brand-logo" width="48" height="48" alt="ACLC College of Tacloban logo" />
+              </div>
+              <div class="brand-text">
+                <span class="brand-name">ACLC Tacloban</span>
+                <span class="brand-sub">Student Portal</span>
+              </div>
+            </div>
+            <div class="brand-divider"></div>
+          </div>
 
-            <div class="sb-brand">
-                <div class="sb-logo-ring"><img src="{% static 'images/aclc_logo.jpg' %}" alt="ACLC logo"></div>
-                <div>
-                    <div class="sb-brand-name">ACLC · SES</div>
-                    <div class="sb-brand-sub">Student Portal</div>
-                </div>
+          <nav class="nav" aria-label="Student navigation">
+            <div class="nav-section">
+              <span class="nav-label">Main</span>
+              <button type="button" class="nav-link active" data-view="dashboard">
+                <i class="bi bi-grid-1x2 nav-icon" aria-hidden="true"></i> Dashboard
+              </button>
             </div>
 
-            <nav class="sb-nav">
-                <span class="sb-nav-label">Main</span>
-                <button type="button" class="sb-link active" data-view="dashboard">
-                    <i class="bi bi-grid-1x2" aria-hidden="true"></i> Dashboard
-                </button>
-
-                <span class="sb-nav-label">Evaluation</span>
-                {% if state == 'ready' %}
-                <a class="sb-link" href="{% url 'scan_qr_page' %}">
-                    <i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan QR Code
-                </a>
-                {% endif %}
-                <button type="button" class="sb-link" data-view="history">
-                    <i class="bi bi-clipboard-check" aria-hidden="true"></i> My Evaluations
-                </button>
-
-                <span class="sb-nav-label">Account</span>
-                <button type="button" class="sb-link" data-view="profile">
-                    <i class="bi bi-person-circle" aria-hidden="true"></i> Profile
-                </button>
-            </nav>
-
-            <div class="sb-footer">
-                <div class="sb-user">
-                    <div class="sb-avatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
-                    <div class="sb-user-text">
-                        <div class="sb-user-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
-                        <div class="sb-user-role">Student</div>
-                    </div>
-                </div>
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="sb-logout"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out</button>
-                </form>
+            <div class="nav-section">
+              <span class="nav-label">Evaluation</span>
+              <button type="button" class="nav-link" data-view="history">
+                <i class="bi bi-clipboard-check nav-icon" aria-hidden="true"></i> My Evaluations
+              </button>
             </div>
 
+            <div class="nav-section">
+              <span class="nav-label">Account</span>
+              <button type="button" class="nav-link" data-view="profile">
+                <i class="bi bi-person-circle nav-icon" aria-hidden="true"></i> Profile
+              </button>
+            </div>
+          </nav>
+
+          <div class="sidebar-footer">
+            <div class="user-strip">
+              <div class="user-avatar" aria-hidden="true">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+              <div class="user-info">
+                <div class="user-name">{{ request.user.first_name }} {{ request.user.last_name }}</div>
+                <div class="user-role">Student</div>
+              </div>
+            </div>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="logout-btn">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+              </button>
+            </form>
+          </div>
         </div>
-    </aside>
-    <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+      </aside>
+      <div class="sb-overlay" id="sbOverlay"></div>
 
-
-    <!-- ═════════ MAIN ═════════ -->
-    <div class="main-col">
-
+      <!-- ═════════ MAIN ═════════ -->
+      <div class="main-col">
         <header class="topbar">
-            <div class="topbar-left">
-                <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Open menu" aria-controls="sidebar"><i class="bi bi-list" aria-hidden="true"></i></button>
-                <h1 class="topbar-title" id="topbarTitle">Dashboard</h1>
-            </div>
-            <span class="role-badge">Student</span>
+          <div class="topbar-left">
+            <button type="button" class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+              <i class="bi bi-list" aria-hidden="true"></i>
+            </button>
+            <h1 class="topbar-title" id="topbarTitle">Dashboard</h1>
+          </div>
+          <span class="topbar-badge">Student</span>
         </header>
 
         <main class="page-scroll" id="main">
-            <div class="page-wrap">
-
-                {% if messages %}
-                {% for message in messages %}
-                <div class="page-msg {{ message.tags }}" role="{% if message.tags == 'success' %}status{% else %}alert{% endif %}">
-                    <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
-                    <span>{{ message }}</span>
-                </div>
-                {% endfor %}
-                {% endif %}
-
-
-                <!-- ══════ DASHBOARD ══════ -->
-                <div class="view active" id="view-dashboard">
-
-                    <p class="page-date">{% now "l, F j, Y" %}</p>
-
-                    {% if active_period %}
-                    <div class="top-row">
-
-                        <!-- Period -->
-                        <section class="panel panel--accent" aria-label="Evaluation period">
-                            <span class="pill pill--live"><i class="bi bi-broadcast" aria-hidden="true"></i> Active evaluation period</span>
-                            <h2 class="period-year">{{ active_period.school_year }}</h2>
-                            <p class="period-sub">{{ active_period.get_semester_display }} · {{ active_period.get_term_display }}</p>
-
-                            <dl class="facts">
-                                {% if active_period.start_date %}
-                                <div><dt>Start date</dt><dd>{{ active_period.start_date|date:"M d, Y" }}</dd></div>
-                                {% endif %}
-                                <div><dt>End date</dt><dd>{{ active_period.end_date|date:"M d, Y" }}</dd></div>
-                                <div>
-                                    <dt>Time left</dt>
-                                    <dd class="{% if days_left <= 2 %}is-urgent{% endif %}">
-                                        {% if days_left == 0 %}Closes today{% elif days_left == 1 %}1 day{% else %}{{ days_left }} days{% endif %}
-                                    </dd>
-                                </div>
-                            </dl>
-
-                            {% if state == 'ready' %}
-                            <div class="cta-row">
-                                <a href="{% url 'scan_qr_page' %}" class="btn-main"><i class="bi bi-qr-code-scan" aria-hidden="true"></i> Scan QR code</a>
-                                <span class="cta-hint">Ask your instructor to show their QR code.</span>
-                            </div>
-                            {% endif %}
-                        </section>
-
-                        <!-- Progress -->
-                        {% if state == 'ready' %}
-                        <section class="panel panel--navy" aria-label="My progress">
-                            <span class="pill pill--dark"><i class="bi bi-bar-chart-steps" aria-hidden="true"></i> My progress</span>
-                            <div class="big-number">{{ progress_percent }}<small>%</small></div>
-                            <div class="track" role="progressbar" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Evaluation progress">
-                                <span style="width: {{ progress_percent }}%"></span>
-                            </div>
-                            <p class="progress-note">
-                                {{ evaluated_count }} of {{ total_instructors }} evaluated ·
-                                {% if pending_count %}{{ pending_count }} left{% else %}All done{% endif %}
-                            </p>
-                        </section>
-                        {% endif %}
-
-                    </div>
-                    {% else %}
-                    <div class="panel empty">
-                        <i class="bi bi-calendar-x" aria-hidden="true"></i>
-                        <h3>No active evaluation period</h3>
-                        <p>Evaluations open when the administrator starts a period.</p>
-                    </div>
-                    {% endif %}
-
-                    {% if state == 'no_section' %}
-                    <div class="panel empty">
-                        <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
-                        <h3>No section assigned</h3>
-                        <p>Ask your administrator to place you in a section.</p>
-                    </div>
-                    {% elif state == 'no_assignments' %}
-                    <div class="panel empty">
-                        <i class="bi bi-journal-x" aria-hidden="true"></i>
-                        <h3>No instructors for {{ request.user.section.name }}</h3>
-                        <p>Instructors have not been assigned to your section yet.</p>
-                    </div>
-                    {% endif %}
-
-
-                    <!-- Instructors: one tab at a time -->
-                    {% if state == 'ready' %}
-                    <section class="panel tabbed" aria-label="My instructors">
-                        <div class="tabs" role="tablist" aria-label="Instructor status">
-                            <button type="button" class="tab" role="tab" id="tab-pending" data-tab="pending" aria-controls="panel-pending" aria-selected="true">
-                                <i class="bi bi-hourglass-split" aria-hidden="true"></i> To evaluate <span class="tab-count tab-count--gold">{{ pending_count }}</span>
-                            </button>
-                            <button type="button" class="tab" role="tab" id="tab-done" data-tab="done" aria-controls="panel-done" aria-selected="false">
-                                <i class="bi bi-check-circle" aria-hidden="true"></i> Evaluated <span class="tab-count">{{ evaluated_count }}</span>
-                            </button>
-                        </div>
-
-                        <div class="tab-panel" role="tabpanel" id="panel-pending" aria-labelledby="tab-pending">
-                            {% if pending_cards %}
-                            <div class="table-wrap">
-                                <table class="data-table">
-                                    <thead><tr><th scope="col">Instructor</th><th scope="col">Subjects</th><th scope="col">Status</th></tr></thead>
-                                    <tbody data-paged>
-                                    {% for item in pending_cards %}
-                                        <tr>
-                                            <th scope="row">
-                                                <div class="person">
-                                                    <span class="avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</span>
-                                                    <span><strong>{{ item.teacher.first_name }} {{ item.teacher.last_name }}</strong><small>{{ item.teacher.department.name|default:"—" }}</small></span>
-                                                </div>
-                                            </th>
-                                            <td>{% for subject in item.subjects %}<span class="chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}</td>
-                                            <td><span class="tag tag-wait"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Not evaluated</span></td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="pager" hidden>
-                                <span class="pager-info" data-pager-info aria-live="polite"></span>
-                                <div class="pager-buttons">
-                                    <button type="button" class="btn-ghost" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                                    <button type="button" class="btn-ghost" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="empty empty--flat">
-                                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
-                                <h3>All done</h3>
-                                <p>You evaluated every instructor for this period.</p>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="tab-panel" role="tabpanel" id="panel-done" aria-labelledby="tab-done" hidden>
-                            {% if evaluated_cards %}
-                            <div class="table-wrap">
-                                <table class="data-table">
-                                    <thead><tr><th scope="col">Instructor</th><th scope="col">Subjects</th><th scope="col">Status</th></tr></thead>
-                                    <tbody data-paged>
-                                    {% for item in evaluated_cards %}
-                                        <tr>
-                                            <th scope="row">
-                                                <div class="person">
-                                                    <span class="avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</span>
-                                                    <span><strong>{{ item.teacher.first_name }} {{ item.teacher.last_name }}</strong><small>{{ item.teacher.department.name|default:"—" }}</small></span>
-                                                </div>
-                                            </th>
-                                            <td>{% for subject in item.subjects %}<span class="chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}</td>
-                                            <td><span class="tag tag-ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Evaluated</span></td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="pager" hidden>
-                                <span class="pager-info" data-pager-info aria-live="polite"></span>
-                                <div class="pager-buttons">
-                                    <button type="button" class="btn-ghost" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                                    <button type="button" class="btn-ghost" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="empty empty--flat">
-                                <i class="bi bi-inbox" aria-hidden="true"></i>
-                                <h3>Nothing evaluated yet</h3>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </section>
-                    {% endif %}
-
-                </div>
-
-
-                <!-- ══════ MY EVALUATIONS ══════ -->
-                <div class="view" id="view-history">
-                    {% if history %}
-                    <section class="panel">
-                        <div class="panel-head">
-                            <h2>Submitted evaluations <span class="tab-count">{{ history|length }}</span></h2>
-                            <span class="muted"><i class="bi bi-incognito" aria-hidden="true"></i> Your comments stay anonymous</span>
-                        </div>
-                        <div class="table-wrap">
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th scope="col">Instructor</th><th scope="col">Period</th><th scope="col">Submitted</th><th scope="col">Your average</th></tr>
-                                </thead>
-                                <tbody data-paged>
-                                {% for e in history %}
-                                    <tr>
-                                        <th scope="row"><strong>{{ e.teacher.first_name }} {{ e.teacher.last_name }}</strong></th>
-                                        <td data-label="Period">{{ e.period.get_term_display }}<small class="block">S.Y. {{ e.period.school_year }} · {{ e.period.get_semester_display }}</small></td>
-                                        <td data-label="Submitted">{{ e.created_at|date:"M d, Y" }}</td>
-                                        <td class="score" data-label="Average"><i class="bi bi-star-fill" aria-hidden="true"></i> {{ e.average_score }} / 5</td>
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="pager" hidden>
-                            <span class="pager-info" data-pager-info aria-live="polite"></span>
-                            <div class="pager-buttons">
-                                <button type="button" class="btn-ghost" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                                <button type="button" class="btn-ghost" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                            </div>
-                        </div>
-                    </section>
-                    {% else %}
-                    <div class="panel empty">
-                        <i class="bi bi-clipboard-check" aria-hidden="true"></i>
-                        <h3>No evaluations submitted yet</h3>
-                        <p>Evaluations you submit will be listed here.</p>
-                    </div>
-                    {% endif %}
-                </div>
-
-
-                <!-- ══════ PROFILE ══════ -->
-                <div class="view" id="view-profile">
-
-                    <section class="panel panel--navy profile-hero" aria-label="Account">
-                        <div class="hero-avatar" id="heroAvatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
-                        <div>
-                            <h2 class="hero-name" id="heroName">{{ request.user.first_name }} {{ request.user.last_name }}</h2>
-                            <p class="hero-role">Student{% if request.user.section %} · {{ request.user.section.name }}{% endif %}</p>
-                        </div>
-                    </section>
-
-                    <div class="profile-grid">
-
-                        <section class="panel" aria-labelledby="editTitle">
-                            <div class="panel-head">
-                                <h2 id="editTitle"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit details</h2>
-                                <span class="pill pill--gold" id="changesPill" hidden>Unsaved changes</span>
-                            </div>
-                            <form method="post" action="{% url 'student_update_profile' %}" class="form" id="profileForm">
-                                {% csrf_token %}
-                                <div class="form-two">
-                                    <div>
-                                        <label class="label" for="id_first_name">First name</label>
-                                        <input type="text" id="id_first_name" name="first_name" class="input" value="{{ request.user.first_name }}" autocomplete="given-name" required>
-                                    </div>
-                                    <div>
-                                        <label class="label" for="id_last_name">Last name</label>
-                                        <input type="text" id="id_last_name" name="last_name" class="input" value="{{ request.user.last_name }}" autocomplete="family-name" required>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="label" for="id_middle_name">Middle name</label>
-                                    <input type="text" id="id_middle_name" name="middle_name" class="input" value="{{ request.user.middle_name }}" autocomplete="additional-name">
-                                </div>
-                                <div>
-                                    <label class="label" for="id_email">Email address</label>
-                                    <input type="email" id="id_email" name="email" class="input" value="{{ request.user.email }}" autocomplete="email" required>
-                                </div>
-                                <div>
-                                    <label class="label" for="id_program">Program &amp; section</label>
-                                    <input type="text" id="id_program" class="input" disabled value="{{ request.user.get_program_display|default:'—' }} · {{ request.user.section.name|default:'No section yet' }}" aria-describedby="programHint">
-                                    <span class="hint" id="programHint">Set by the administrator.</span>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn-main" id="pfSaveBtn" disabled><i class="bi bi-check2-circle" aria-hidden="true"></i> Save changes</button>
-                                </div>
-                            </form>
-                        </section>
-
-                        <section class="panel" aria-labelledby="pwTitle">
-                            <div class="panel-head">
-                                <h2 id="pwTitle"><i class="bi bi-key" aria-hidden="true"></i> Change password</h2>
-                            </div>
-                            <form method="post" action="{% url 'student_change_password' %}" class="form">
-                                {% csrf_token %}
-                                <div>
-                                    <label class="label" for="id_old_password">Current password</label>
-                                    <input type="password" id="id_old_password" name="old_password" class="input" autocomplete="current-password" required>
-                                </div>
-                                <div>
-                                    <label class="label" for="id_new_password1">New password</label>
-                                    <input type="password" id="id_new_password1" name="new_password1" class="input" autocomplete="new-password" required aria-describedby="pwHint">
-                                    <span class="hint" id="pwHint">At least 8 characters, not too common, not only numbers.</span>
-                                </div>
-                                <div>
-                                    <label class="label" for="id_new_password2">Confirm new password</label>
-                                    <input type="password" id="id_new_password2" name="new_password2" class="input" autocomplete="new-password" required>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn-main"><i class="bi bi-key-fill" aria-hidden="true"></i> Update password</button>
-                                </div>
-                            </form>
-                        </section>
-
-                    </div>
-                </div>
-
+          <div class="page-wrap">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="page-msg {{ message.tags }}" role="{% if message.tags == 'success' %}status{% else %}alert{% endif %}">
+              <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
+              <span>{{ message }}</span>
             </div>
+            {% endfor %}
+            {% endif %}
+
+            <!-- ══════ DASHBOARD ══════ -->
+            <div class="view active" id="view-dashboard">
+              <div class="page-intro page-intro--row">
+                <div>
+                  <p><b>{% now "l, F j, Y" %}</b></p>
+                </div>
+                {% if state == 'ready' %}
+                <a href="{% url 'scan_qr_page' %}" class="scan-btn" aria-label="Scan QR code" title="Scan QR code">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M3 8V6a3 3 0 0 1 3-3h2M16 3h2a3 3 0 0 1 3 3v2M21 16v2a3 3 0 0 1-3 3h-2M8 21H6a3 3 0 0 1-3-3v-2" />
+                    <rect x="7.5" y="7.5" width="3" height="3" rx="0.8" />
+                    <rect x="13.5" y="7.5" width="3" height="3" rx="0.8" />
+                    <rect x="7.5" y="13.5" width="3" height="3" rx="0.8" />
+                    <rect class="qr-dot" x="14" y="14" width="2.5" height="2.5" rx="0.6" />
+                  </svg>
+                </a>
+                {% endif %}
+              </div>
+
+              {% if active_period %}
+              <!-- Period -->
+              <section class="panel" aria-labelledby="periodTitle">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2 id="periodTitle">Evaluation period</h2><p>{{ active_period.get_semester_display }} · {{ active_period.get_term_display }}</p></div>
+                  </div>
+                  <span class="status status--live"><span class="dot" aria-hidden="true"></span> Open</span>
+                </div>
+                <div class="panel-body">
+                  <dl class="facts">
+                    <div class="fact">
+                      <dt>School year</dt>
+                      <dd>{{ active_period.school_year }}</dd>
+                    </div>
+                    {% if active_period.start_date %}
+                    <div class="fact">
+                      <dt>Start date</dt>
+                      <dd>{{ active_period.start_date|date:"M d, Y" }}</dd>
+                    </div>
+                    {% endif %}
+                    <div class="fact">
+                      <dt>End date</dt>
+                      <dd>{{ active_period.end_date|date:"M d, Y" }}</dd>
+                    </div>
+                    <div class="fact{% if days_left <= 2 %} is-urgent{% endif %}">
+                      <dt>Time left</dt>
+                      <dd>{% if days_left == 0 %}Closes today{% elif days_left == 1 %}1 day{% else %}{{ days_left }} days{% endif %}</dd>
+                    </div>
+                  </dl>
+
+                  {% if state == 'ready' %}
+                  <p class="cta-hint"><i class="bi bi-info-circle" aria-hidden="true"></i> Ask your instructor for their QR code, then use the Scan QR code button at the top right.</p>
+                  {% endif %}
+                </div>
+              </section>
+
+              <!-- Progress -->
+              {% if state == 'ready' %}
+              <section class="panel" aria-labelledby="progTitle">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2 id="progTitle">My progress</h2><p>Instructors you evaluated</p></div>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="prog">
+                    <div class="ring" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress_percent }}" aria-label="{{ progress_percent }} percent of your evaluations are done">
+                      <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <circle class="ring-bg" cx="60" cy="60" r="50" pathLength="100" />
+                        <circle class="ring-fg" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="{{ progress_percent }} 100" transform="rotate(-90 60 60)" />
+                      </svg>
+                      <div class="ring-center"><b>{{ progress_percent }}%</b><span>done</span></div>
+                    </div>
+                    <ul class="counts">
+                      <li class="is-done"><span>Evaluated</span><b>{{ evaluated_count }}</b></li>
+                      <li class="is-left"><span>Remaining</span><b>{{ pending_count }}</b></li>
+                      <li class="is-total"><span>Total instructors</span><b>{{ total_instructors }}</b></li>
+                    </ul>
+                  </div>
+                  <p class="progress-note">{% if pending_count %}{{ pending_count }} instructor{{ pending_count|pluralize }} left to evaluate.{% else %}All done. Thank you!{% endif %}</p>
+                </div>
+              </section>
+              {% endif %}
+              {% else %}
+              <div class="panel empty">
+                <i class="bi bi-calendar-x" aria-hidden="true"></i>
+                <h3>No active evaluation period</h3>
+                <p>Evaluations open when the administrator starts a period.</p>
+                <button type="button" class="btn-ghost" data-goto="history"><i class="bi bi-clipboard-check" aria-hidden="true"></i> View my evaluations</button>
+              </div>
+              {% endif %}
+
+              {% if state == 'no_section' %}
+              <div class="panel empty">
+                <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
+                <h3>No section assigned</h3>
+                <p>Ask your administrator to place you in a section.</p>
+              </div>
+              {% elif state == 'no_assignments' %}
+              <div class="panel empty">
+                <i class="bi bi-journal-x" aria-hidden="true"></i>
+                <h3>No instructors for {{ request.user.section.name }}</h3>
+                <p>Instructors have not been assigned to your section yet.</p>
+              </div>
+              {% endif %}
+
+              {% if state == 'ready' %}
+              <!-- Instructors -->
+              <section class="panel tabbed" aria-label="My instructors">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2>My instructors</h2><p>One evaluation for each instructor</p></div>
+                  </div>
+                  <div class="tabs" role="tablist" aria-label="Instructor status">
+                    <button type="button" class="tab" role="tab" id="tab-pending" data-tab="pending" aria-controls="panel-pending" aria-selected="true">
+                      To evaluate <span class="count">{{ pending_count }}</span>
+                    </button>
+                    <button type="button" class="tab" role="tab" id="tab-done" data-tab="done" aria-controls="panel-done" aria-selected="false">
+                      Evaluated <span class="count">{{ evaluated_count }}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="tab-panel" role="tabpanel" id="panel-pending" aria-labelledby="tab-pending">
+                  {% if pending_cards %}
+                  <ul class="inst-list" data-paged="6">
+                    {% for item in pending_cards %}
+                    <li class="inst-item">
+                      <div class="person">
+                        <span class="avatar" aria-hidden="true">{{ item.teacher.first_name|first|upper }}{{ item.teacher.last_name|first|upper }}</span>
+                        <span class="person-text"><strong>{{ item.teacher.first_name }} {{ item.teacher.last_name }}</strong><small>{{ item.teacher.department.name|default:"—" }}</small></span>
+                      </div>
+                      <div class="inst-subjects" aria-label="Subjects">{% for subject in item.subjects %}<span class="chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}</div>
+                      <span class="tag tag-wait"><i class="bi bi-circle" aria-hidden="true"></i> Not evaluated</span>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% else %}
+                  <div class="empty empty--flat">
+                    <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                    <h3>All done</h3>
+                    <p>You evaluated every instructor for this period.</p>
+                  </div>
+                  {% endif %}
+                </div>
+
+                <div class="tab-panel" role="tabpanel" id="panel-done" aria-labelledby="tab-done" hidden>
+                  {% if evaluated_cards %}
+                  <ul class="inst-list" data-paged="6">
+                    {% for item in evaluated_cards %}
+                    <li class="inst-item">
+                      <div class="person">
+                        <span class="avatar" aria-hidden="true">{{ item.teacher.first_name|first|upper }}{{ item.teacher.last_name|first|upper }}</span>
+                        <span class="person-text"><strong>{{ item.teacher.first_name }} {{ item.teacher.last_name }}</strong><small>{{ item.teacher.department.name|default:"—" }}</small></span>
+                      </div>
+                      <div class="inst-subjects" aria-label="Subjects">{% for subject in item.subjects %}<span class="chip" title="{{ subject.name }}">{{ subject.code }}</span>{% endfor %}</div>
+                      <span class="tag tag-ok"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Evaluated</span>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% else %}
+                  <div class="empty empty--flat">
+                    <i class="bi bi-inbox" aria-hidden="true"></i>
+                    <h3>Nothing evaluated yet</h3>
+                    <p>Instructors you evaluate will appear here.</p>
+                  </div>
+                  {% endif %}
+                </div>
+              </section>
+
+              <!-- How it works -->
+              <section class="panel" aria-labelledby="howTitle">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2 id="howTitle">How to evaluate</h2><p>Takes about a minute</p></div>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <ol class="steps">
+                    <li><div><strong>Ask for the QR code</strong><span>Your instructor shows it in class.</span></div></li>
+                    <li><div><strong>Scan it</strong><span>Use the Scan QR code button at the top right and point your camera.</span></div></li>
+                    <li><div><strong>Rate and submit</strong><span>Your comments stay anonymous.</span></div></li>
+                  </ol>
+                </div>
+              </section>
+              {% endif %}
+            </div>
+
+            <!-- ══════ MY EVALUATIONS ══════ -->
+            <div class="view" id="view-history">
+              <div class="page-intro">
+                <p>Everything you submitted.</p>
+              </div>
+
+              {% if history %}
+              <section class="panel" aria-labelledby="histTitle">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2 id="histTitle">Submitted evaluations <span class="count">{{ history|length }}</span></h2><p>Grouped by date</p></div>
+                  </div>
+                  <span class="note-chip"><i class="bi bi-incognito" aria-hidden="true"></i> Your comments stay anonymous</span>
+                </div>
+
+                <!-- Filled by the script below, grouped by date. If JavaScript is off, this plain list shows instead. -->
+                <div class="hist-groups" id="histGroups" aria-live="polite"></div>
+                <ul class="hist-list" id="histSource">
+                  {% for e in history %}
+                  <li class="hist-item" data-date="{{ e.created_at|date:'Y-m-d' }}" data-ts="{{ e.created_at|date:'U' }}">
+                    <div class="person">
+                      <span class="avatar" aria-hidden="true">{{ e.teacher.first_name|first|upper }}{{ e.teacher.last_name|first|upper }}</span>
+                      <span class="person-text"><strong>{{ e.teacher.first_name }} {{ e.teacher.last_name }}</strong><small>Submitted {{ e.created_at|date:"g:i A" }}</small></span>
+                    </div>
+                    <div class="hist-meta"><b>{{ e.period.get_term_display }}</b>S.Y. {{ e.period.school_year }} · {{ e.period.get_semester_display }}</div>
+                    <div class="hist-score">
+                      <b><i class="bi bi-star-fill" aria-hidden="true"></i> {{ e.average_score }} <small>/ 5</small></b>
+                      <div class="bar" role="img" aria-label="Your average rating: {{ e.average_score }} out of 5"><i style="width: {% widthratio e.average_score 5 100 %}%"></i></div>
+                    </div>
+                  </li>
+                  {% endfor %}
+                </ul>
+                <nav class="pager" id="histPager" aria-label="Pagination" hidden></nav>
+              </section>
+              {% else %}
+              <div class="panel empty">
+                <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                <h3>No evaluations submitted yet</h3>
+                <p>Evaluations you submit will be listed here.</p>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- ══════ PROFILE ══════ -->
+            <div class="view" id="view-profile">
+              <div class="page-intro">
+                <p>Your account details and password.</p>
+              </div>
+
+              <section class="panel" aria-label="Account">
+                <div class="panel-body profile-hero">
+                  <div class="hero-avatar" aria-hidden="true">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+                  <div>
+                    <h2 class="hero-name">{{ request.user.first_name }} {{ request.user.last_name }}</h2>
+                    <div class="hero-chips">
+                      <span class="pill"><i class="bi bi-mortarboard" aria-hidden="true"></i> Student</span>
+                      {% if request.user.section %}<span class="pill"><i class="bi bi-people" aria-hidden="true"></i> {{ request.user.section.name }}</span>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Details: read-only summary, edited in the window below -->
+              <section class="panel" aria-labelledby="editTitle">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2 id="editTitle">Personal details</h2><p>Your name and email on this account.</p></div>
+                  </div>
+                  <button type="button" class="btn-ghost" id="openProfile" aria-haspopup="dialog" aria-controls="profileModal"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit profile</button>
+                </div>
+                <div class="panel-body">
+                  <dl class="details">
+                    <div><dt>First name</dt><dd>{{ request.user.first_name|default:"—" }}</dd></div>
+                    <div><dt>Middle name</dt><dd>{{ request.user.middle_name|default:"—" }}</dd></div>
+                    <div><dt>Last name</dt><dd>{{ request.user.last_name|default:"—" }}</dd></div>
+                    <div><dt>Email address</dt><dd>{{ request.user.email|default:"—" }}</dd></div>
+                    <div class="details-wide">
+                      <dt>Program &amp; section</dt>
+                      <dd>{{ request.user.get_program_display|default:'—' }} · {{ request.user.section.name|default:'No section yet' }}</dd>
+                      <small class="details-note"><i class="bi bi-lock" aria-hidden="true"></i> Set by the administrator.</small>
+                    </div>
+                  </dl>
+                </div>
+              </section>
+
+              <!-- Password: edited in the window below -->
+              <section class="panel" aria-labelledby="pwTitle">
+                <div class="panel-head">
+                  <div class="panel-title">
+                    <div><h2 id="pwTitle">Change password</h2><p>Choose a new password for your account.</p></div>
+                  </div>
+                  <button type="button" class="btn-ghost" id="openPassword" aria-haspopup="dialog" aria-controls="pwModal"><i class="bi bi-key" aria-hidden="true"></i> Change password</button>
+                </div>
+                <div class="panel-body">
+                  <p class="lock-note"><i class="bi bi-shield-lock" aria-hidden="true"></i> Your password is hidden for your safety.</p>
+                </div>
+              </section>
+            </div>
+          </div>
         </main>
+      </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-/* ---------- Sidebar views (hash based: #dashboard, #history, #profile) ---------- */
-var VIEW_TITLES = { dashboard: 'Dashboard', history: 'My Evaluations', profile: 'Profile' };
-var DEFAULT_VIEW = 'dashboard';
+    <!-- ═════════ EDIT PROFILE WINDOW ═════════ -->
+    <div class="modal" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="pmTitle" aria-describedby="pmSub" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <h2 id="pmTitle">Edit profile</h2>
+            <p id="pmSub">Update your name and email address.</p>
+          </div>
+          <button type="button" class="modal-x" id="pmClose" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
 
-function showView(view) {
-    if (!VIEW_TITLES[view]) view = DEFAULT_VIEW;
-    document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
-    document.querySelectorAll('.sb-link[data-view]').forEach(function (l) {
-        var on = l.dataset.view === view;
-        l.classList.toggle('active', on);
-        if (on) l.setAttribute('aria-current', 'page'); else l.removeAttribute('aria-current');
-    });
-    document.getElementById('topbarTitle').textContent = VIEW_TITLES[view];
-    document.getElementById('main').scrollTop = 0;
-    closeSidebar();
-}
-function viewFromHash() { return window.location.hash.replace('#', '').trim(); }
+        <form method="post" action="{% url 'student_update_profile' %}" id="profileForm">
+          {% csrf_token %}
+          <div class="modal-body form">
+            <div class="form-two">
+              <div>
+                <label class="label" for="id_first_name">First name</label>
+                <input type="text" id="id_first_name" name="first_name" class="input" value="{{ request.user.first_name }}" autocomplete="given-name" required />
+              </div>
+              <div>
+                <label class="label" for="id_last_name">Last name</label>
+                <input type="text" id="id_last_name" name="last_name" class="input" value="{{ request.user.last_name }}" autocomplete="family-name" required />
+              </div>
+            </div>
+            <div>
+              <label class="label" for="id_middle_name">Middle name</label>
+              <input type="text" id="id_middle_name" name="middle_name" class="input" value="{{ request.user.middle_name }}" autocomplete="additional-name" />
+            </div>
+            <div>
+              <label class="label" for="id_email">Email address</label>
+              <input type="email" id="id_email" name="email" class="input" value="{{ request.user.email }}" autocomplete="email" required />
+            </div>
+            <div>
+              <label class="label" for="id_program">Program &amp; section</label>
+              <input type="text" id="id_program" class="input" disabled value="{{ request.user.get_program_display|default:'—' }} · {{ request.user.section.name|default:'No section yet' }}" aria-describedby="programHint" />
+              <span class="hint" id="programHint">Set by the administrator.</span>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <span class="pill pill--warn" id="changesPill" hidden><i class="bi bi-pencil" aria-hidden="true"></i> Unsaved changes</span>
+            <button type="button" class="btn-ghost" id="cancelBtn">Cancel</button>
+            <button type="submit" class="btn-main" id="pfSaveBtn" disabled><i class="bi bi-check2-circle" aria-hidden="true"></i> Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-document.querySelectorAll('.sb-link[data-view]').forEach(function (btn) {
-    btn.addEventListener('click', function () { window.location.hash = this.dataset.view; });
-});
-window.addEventListener('hashchange', function () { if (VIEW_TITLES[viewFromHash()]) showView(viewFromHash()); });
-document.addEventListener('DOMContentLoaded', function () { showView(viewFromHash()); });
+    <!-- ═════════ CHANGE PASSWORD WINDOW ═════════ -->
+    <div class="modal" id="pwModal" role="dialog" aria-modal="true" aria-labelledby="pwModalTitle" aria-describedby="pwModalSub" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <h2 id="pwModalTitle">Change password</h2>
+            <p id="pwModalSub">Enter your current password, then choose a new one.</p>
+          </div>
+          <button type="button" class="modal-x" id="pwClose" aria-label="Close"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
 
-function toggleSidebar() {
-    var open = document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('sbOverlay').style.display = open ? 'block' : 'none';
-}
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sbOverlay').style.display = 'none';
-}
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSidebar(); });
+        <form method="post" action="{% url 'student_change_password' %}" id="pwForm">
+          {% csrf_token %}
+          <div class="modal-body form">
+            <div>
+              <label class="label" for="id_old_password">Current password</label>
+              <input type="password" id="id_old_password" name="old_password" class="input" autocomplete="current-password" required />
+            </div>
+            <div>
+              <label class="label" for="id_new_password1">New password</label>
+              <input type="password" id="id_new_password1" name="new_password1" class="input" autocomplete="new-password" required aria-describedby="pwHint" />
+              <span class="hint" id="pwHint">At least 8 characters, not too common, not only numbers.</span>
+            </div>
+            <div>
+              <label class="label" for="id_new_password2">Confirm new password</label>
+              <input type="password" id="id_new_password2" name="new_password2" class="input" autocomplete="new-password" required aria-describedby="pwMatch" />
+              <span class="hint hint--error" id="pwMatch" role="status" aria-live="polite" hidden>The two new passwords do not match.</span>
+            </div>
+            <label class="show-pw"><input type="checkbox" id="pwShow" /> Show passwords</label>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn-ghost" id="pwCancelBtn">Cancel</button>
+            <button type="submit" class="btn-main" id="pwSaveBtn" disabled><i class="bi bi-key-fill" aria-hidden="true"></i> Update password</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {# Sidebar drawer (shared). Must load before the page script below. #}
+    <script src="{% static 'users/js/ses_shell.js' %}"></script>
+    <script>
+      /* ---------- Sidebar views (hash based: #dashboard, #history, #profile) ---------- */
+      var VIEW_TITLES = { dashboard: "Dashboard", history: "My Evaluations", profile: "Profile" };
+      var DEFAULT_VIEW = "dashboard";
 
-/* ---------- Tabs (arrow keys work) ---------- */
-(function () {
-    var root = document.querySelector('.tabbed');
-    if (!root) return;
-    var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
-    function select(tab, focus) {
-        tabs.forEach(function (t) {
-            var on = t === tab;
-            t.setAttribute('aria-selected', on ? 'true' : 'false');
-            t.tabIndex = on ? 0 : -1;
-            document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      function showView(view) {
+        if (!VIEW_TITLES[view]) view = DEFAULT_VIEW;
+        document.querySelectorAll(".view").forEach(function (v) {
+          v.classList.toggle("active", v.id === "view-" + view);
         });
-        if (focus) tab.focus();
-    }
-    tabs.forEach(function (tab, i) {
-        tab.addEventListener('click', function () { select(tab, false); });
-        tab.addEventListener('keydown', function (e) {
-            var n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i + tabs.length - 1) % tabs.length : -1;
+        document.querySelectorAll(".nav-link[data-view]").forEach(function (l) {
+          var on = l.dataset.view === view;
+          l.classList.toggle("active", on);
+          if (on) l.setAttribute("aria-current", "page");
+          else l.removeAttribute("aria-current");
+        });
+        document.getElementById("topbarTitle").textContent = VIEW_TITLES[view];
+        document.getElementById("main").scrollTop = 0;
+        closeSidebar();
+      }
+      function viewFromHash() { return window.location.hash.replace("#", "").trim(); }
+
+      document.querySelectorAll("[data-view], [data-goto]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          window.location.hash = this.dataset.view || this.dataset.goto;
+        });
+      });
+      window.addEventListener("hashchange", function () {
+        if (VIEW_TITLES[viewFromHash()]) showView(viewFromHash());
+      });
+      document.addEventListener("DOMContentLoaded", function () { showView(viewFromHash()); });
+
+      /* ---------- Tabs: To evaluate / Evaluated (arrow keys work) ---------- */
+      (function () {
+        var root = document.querySelector(".tabbed");
+        if (!root) return;
+        var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+        function select(tab, focus) {
+          tabs.forEach(function (t) {
+            var on = t === tab;
+            t.setAttribute("aria-selected", on ? "true" : "false");
+            t.tabIndex = on ? 0 : -1;
+            document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+          });
+          if (focus) tab.focus();
+        }
+        tabs.forEach(function (tab, i) {
+          tab.addEventListener("click", function () { select(tab, false); });
+          tab.addEventListener("keydown", function (e) {
+            var n = e.key === "ArrowRight" ? (i + 1) % tabs.length : e.key === "ArrowLeft" ? (i + tabs.length - 1) % tabs.length : -1;
             if (n < 0) return;
             e.preventDefault();
             select(tabs[n], true);
+          });
         });
-    });
-    select(tabs[0], false);
-})();
+        select(tabs[0], false);
+      })();
 
+      /* ---------- One pager, used by the instructor lists and by My Evaluations ---------- */
+      function makePager(nav, total, size, onPage) {
+        var page = 1;
+        var pages = Math.max(1, Math.ceil(total / size));
+        function numbers() {
+          var out = [], i;
+          for (i = 1; i <= pages; i++) {
+            if (i === 1 || i === pages || Math.abs(i - page) <= 1) out.push(i);
+            else if (out[out.length - 1] !== "…") out.push("…");
+          }
+          return out;
+        }
+        function draw(animate) {
+          var start = (page - 1) * size;
+          onPage(start, Math.min(start + size, total), animate);
+          nav.hidden = pages <= 1;
+          if (pages <= 1) return;
+          var html = '<span class="pager-info" aria-live="polite">Showing ' + (start + 1) + "–" + Math.min(start + size, total) + " of " + total + "</span>" +
+            '<div class="pager-buttons"><button type="button" class="pg-btn" data-go="prev" aria-label="Previous page"' + (page === 1 ? " disabled" : "") + '><i class="bi bi-chevron-left" aria-hidden="true"></i></button>';
+          numbers().forEach(function (n) {
+            html += n === "…" ? '<span class="pg-gap pg-num">…</span>' :
+              '<button type="button" class="pg-btn pg-num" data-go="' + n + '" aria-label="Page ' + n + '"' + (n === page ? ' aria-current="page"' : "") + ">" + n + "</button>";
+          });
+          html += '<span class="pg-status">' + page + " / " + pages + "</span>" +
+            '<button type="button" class="pg-btn" data-go="next" aria-label="Next page"' + (page === pages ? " disabled" : "") + '><i class="bi bi-chevron-right" aria-hidden="true"></i></button></div>';
+          nav.innerHTML = html;
+        }
+        nav.addEventListener("click", function (e) {
+          var b = e.target.closest("[data-go]");
+          if (!b || b.disabled) return;
+          var go = b.getAttribute("data-go");
+          page = go === "prev" ? page - 1 : go === "next" ? page + 1 : parseInt(go, 10);
+          draw(true);
+          nav.parentNode.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        draw(false);
+      }
 
-/* ---------- Pagination: 6 rows per page, hidden when 1 page ---------- */
-document.querySelectorAll('tbody[data-paged]').forEach(function (body) {
-    var pager = body.closest('.tab-panel, .panel').querySelector('.pager');
-    var rows = Array.prototype.slice.call(body.children), size = 6, page = 1;
-    var pages = Math.max(1, Math.ceil(rows.length / size));
-    if (!pager || pages === 1) return;
-    var info = pager.querySelector('[data-pager-info]');
-    var prev = pager.querySelector('[data-pager-prev]');
-    var next = pager.querySelector('[data-pager-next]');
-    function render() {
-        rows.forEach(function (tr, i) { tr.hidden = i < (page - 1) * size || i >= page * size; });
-        info.textContent = 'Page ' + page + ' of ' + pages;
-        prev.disabled = page === 1;
-        next.disabled = page === pages;
-    }
-    prev.addEventListener('click', function () { page--; render(); });
-    next.addEventListener('click', function () { page++; render(); });
-    pager.hidden = false;
-    render();
-});
+      /* ---------- Instructor lists: 6 per page ---------- */
+      document.querySelectorAll("ul[data-paged]").forEach(function (list) {
+        var size = parseInt(list.getAttribute("data-paged"), 10) || 6;
+        var items = Array.prototype.slice.call(list.children);
+        if (items.length <= size) return;
+        var nav = document.createElement("nav");
+        nav.className = "pager";
+        nav.setAttribute("aria-label", "Pagination");
+        list.insertAdjacentElement("afterend", nav);
+        makePager(nav, items.length, size, function (from, to) {
+          items.forEach(function (el, i) {
+            el.classList.toggle("is-paged-out", !(i >= from && i < to));
+          });
+        });
+      });
 
+      /* ---------- My Evaluations: grouped by date, 8 per page ---------- */
+      (function () {
+        var source = document.getElementById("histSource");
+        var box = document.getElementById("histGroups");
+        var nav = document.getElementById("histPager");
+        if (!source || !box || !nav) return;
 
-/* ---------- Profile form: Save turns on only after a change ---------- */
-(function () {
-    var form = document.getElementById('profileForm');
-    if (!form) return;
-    var save = document.getElementById('pfSaveBtn');
-    var pill = document.getElementById('changesPill');
-    var fields = form.querySelectorAll('.input:not([disabled])');
-    var first = document.getElementById('id_first_name');
-    var last = document.getElementById('id_last_name');
-    var initial = {};
-    fields.forEach(function (f) { initial[f.name] = f.value; });
+        var items = Array.prototype.slice.call(source.children).sort(function (a, b) {
+          if (a.dataset.date !== b.dataset.date) return a.dataset.date < b.dataset.date ? 1 : -1;
+          return (parseInt(b.dataset.ts, 10) || 0) - (parseInt(a.dataset.ts, 10) || 0);
+        });
+        source.hidden = true;
 
-    function check() {
-        var dirty = false;
-        fields.forEach(function (f) { if (f.value !== initial[f.name]) dirty = true; });
-        save.disabled = !dirty;
-        pill.hidden = !dirty;
-        document.getElementById('heroAvatar').textContent = (first.value.trim().charAt(0) + last.value.trim().charAt(0)).toUpperCase();
-        document.getElementById('heroName').textContent = (first.value.trim() + ' ' + last.value.trim()).trim() || '—';
-    }
-    fields.forEach(function (f) { f.addEventListener('input', check); });
-})();
-</script>
-</body>
+        function parts(key) { var p = key.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+        function label(key) {
+          var d = parts(key), t = new Date();
+          var today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+          var diff = Math.round((today - d) / 86400000);
+          var text = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+          if (diff === 0) return "Today · " + text;
+          if (diff === 1) return "Yesterday · " + text;
+          return text;
+        }
+
+        makePager(nav, items.length, 8, function (from, to) {
+          box.innerHTML = "";
+          var group = null, list = null, key = null, n = 0;
+          items.slice(from, to).forEach(function (li) {
+            if (li.dataset.date !== key) {
+              key = li.dataset.date;
+              group = document.createElement("section");
+              group.className = "hist-group";
+              var h = document.createElement("h3");
+              h.className = "hist-date";
+              h.innerHTML = '<i class="bi bi-calendar3" aria-hidden="true"></i> ';
+              h.appendChild(document.createTextNode(label(key) + " "));
+              list = document.createElement("ul");
+              list.className = "hist-list";
+              group.appendChild(h);
+              group.appendChild(list);
+              box.appendChild(group);
+              n = 0;
+            }
+            list.appendChild(li.cloneNode(true));
+            n++;
+            var c = group.querySelector(".count");
+            if (!c) { c = document.createElement("span"); c.className = "count"; group.firstChild.appendChild(c); }
+            c.textContent = n;
+            c.setAttribute("aria-label", n + (n === 1 ? " evaluation" : " evaluations"));
+          });
+        });
+      })();
+
+      /* ---------- Edit profile window: Save only after a change, closes without saving ---------- */
+      (function () {
+        var modal = document.getElementById("profileModal");
+        var form = document.getElementById("profileForm");
+        if (!modal || !form) return;
+        var card = modal.querySelector(".modal-card");
+        var shell = document.querySelector(".app-shell");
+        var openBtn = document.getElementById("openProfile");
+        var closeBtn = document.getElementById("pmClose");
+        var cancelBtn = document.getElementById("cancelBtn");
+        var save = document.getElementById("pfSaveBtn");
+        var pill = document.getElementById("changesPill");
+        var first = document.getElementById("id_first_name");
+        var fields = Array.prototype.slice.call(form.querySelectorAll(".input:not([disabled])"));
+        var initial = {};
+        var lastFocus = null;
+        var closeTimer = null;
+        var saveHtml = save.innerHTML;
+        fields.forEach(function (f) { initial[f.name] = f.value; });
+
+        function changed(f) { return f.value.trim() !== initial[f.name].trim(); }
+        function dirty() { return fields.some(changed); }
+        function check() {
+          var isDirty = dirty();
+          fields.forEach(function (f) { f.classList.toggle("is-changed", changed(f)); });
+          save.disabled = !(isDirty && form.checkValidity());   /* unclickable with no change or a blank required field */
+          pill.hidden = !isDirty;
+        }
+        function setBackground(locked) {
+          document.documentElement.classList.toggle("modal-open", locked);
+          if (shell && "inert" in shell) shell.inert = locked;
+        }
+        function open() {
+          clearTimeout(closeTimer);
+          lastFocus = document.activeElement;
+          modal.classList.remove("is-closing");
+          modal.hidden = false;
+          setBackground(true);
+          check();
+          first.focus();
+        }
+        function close() {
+          if (modal.hidden || modal.classList.contains("is-closing")) return;
+          fields.forEach(function (f) { f.value = initial[f.name]; });
+          save.innerHTML = saveHtml;
+          check();
+          modal.classList.add("is-closing");
+          closeTimer = setTimeout(function () {
+            modal.hidden = true;
+            modal.classList.remove("is-closing");
+            setBackground(false);
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+          }, 170);
+        }
+        function nudge() {
+          card.classList.remove("is-nudge");
+          void card.offsetWidth;
+          card.classList.add("is-nudge");
+        }
+
+        openBtn.addEventListener("click", open);
+        closeBtn.addEventListener("click", close);
+        cancelBtn.addEventListener("click", close);
+        modal.addEventListener("mousedown", function (e) {
+          if (e.target !== modal) return;
+          if (dirty()) nudge();          /* do not lose typed changes by a stray click */
+          else close();
+        });
+        document.addEventListener("keydown", function (e) {
+          if (modal.hidden) return;
+          if (e.key === "Escape") { e.preventDefault(); close(); return; }
+          if (e.key !== "Tab") return;
+          var items = Array.prototype.slice.call(modal.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href]"));
+          if (!items.length) return;
+          var firstEl = items[0], lastEl = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+          else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+        });
+        fields.forEach(function (f) { f.addEventListener("input", check); });
+        form.addEventListener("submit", function (e) {
+          if (save.disabled) { e.preventDefault(); return; }
+          save.disabled = true;           /* stops a double send */
+          save.innerHTML = '<i class="bi bi-arrow-repeat spin" aria-hidden="true"></i> Saving…';
+        });
+        check();
+      })();
+
+      /* ---------- Change password window: Save only when filled and matching ---------- */
+      (function () {
+        var modal = document.getElementById("pwModal");
+        var form = document.getElementById("pwForm");
+        if (!modal || !form) return;
+        var card = modal.querySelector(".modal-card");
+        var shell = document.querySelector(".app-shell");
+        var openBtn = document.getElementById("openPassword");
+        var closeBtn = document.getElementById("pwClose");
+        var cancelBtn = document.getElementById("pwCancelBtn");
+        var save = document.getElementById("pwSaveBtn");
+        var warn = document.getElementById("pwMatch");
+        var show = document.getElementById("pwShow");
+        var old = document.getElementById("id_old_password");
+        var n1 = document.getElementById("id_new_password1");
+        var n2 = document.getElementById("id_new_password2");
+        var inputs = [old, n1, n2];
+        var lastFocus = null;
+        var closeTimer = null;
+        var saveHtml = save.innerHTML;
+
+        function dirty() { return inputs.some(function (f) { return f.value !== ""; }); }
+        function check() {
+          var filled = old.value && n1.value && n2.value;
+          var mismatch = n2.value && n1.value !== n2.value;
+          warn.hidden = !mismatch;
+          save.disabled = !(filled && !mismatch);   /* unclickable until everything is filled and matches */
+        }
+        function setBackground(locked) {
+          document.documentElement.classList.toggle("modal-open", locked);
+          if (shell && "inert" in shell) shell.inert = locked;
+        }
+        function open() {
+          clearTimeout(closeTimer);
+          lastFocus = document.activeElement;
+          modal.classList.remove("is-closing");
+          modal.hidden = false;
+          setBackground(true);
+          check();
+          old.focus();
+        }
+        function close() {
+          if (modal.hidden || modal.classList.contains("is-closing")) return;
+          inputs.forEach(function (f) { f.value = ""; f.type = "password"; });
+          show.checked = false;
+          save.innerHTML = saveHtml;
+          check();
+          modal.classList.add("is-closing");
+          closeTimer = setTimeout(function () {
+            modal.hidden = true;
+            modal.classList.remove("is-closing");
+            setBackground(false);
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+          }, 170);
+        }
+        function nudge() {
+          card.classList.remove("is-nudge");
+          void card.offsetWidth;
+          card.classList.add("is-nudge");
+        }
+
+        openBtn.addEventListener("click", open);
+        closeBtn.addEventListener("click", close);
+        cancelBtn.addEventListener("click", close);
+        modal.addEventListener("mousedown", function (e) {
+          if (e.target !== modal) return;
+          if (dirty()) nudge();          /* do not lose typed passwords by a stray click */
+          else close();
+        });
+        document.addEventListener("keydown", function (e) {
+          if (modal.hidden) return;
+          if (e.key === "Escape") { e.preventDefault(); close(); return; }
+          if (e.key !== "Tab") return;
+          var items = Array.prototype.slice.call(modal.querySelectorAll("button:not([disabled]), input:not([disabled])"));
+          if (!items.length) return;
+          var firstEl = items[0], lastEl = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+          else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+        });
+        show.addEventListener("change", function () {
+          inputs.forEach(function (f) { f.type = show.checked ? "text" : "password"; });
+        });
+        inputs.forEach(function (f) { f.addEventListener("input", check); });
+        form.addEventListener("submit", function (e) {
+          if (save.disabled) { e.preventDefault(); return; }
+          save.disabled = true;           /* stops a double send */
+          save.innerHTML = '<i class="bi bi-arrow-repeat spin" aria-hidden="true"></i> Saving…';
+        });
+        check();
+      })();
+    </script>
+  </body>
 </html>

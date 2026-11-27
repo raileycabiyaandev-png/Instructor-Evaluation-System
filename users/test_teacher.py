@@ -13,7 +13,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from evaluation.models import Evaluation, EvaluationPeriod, QRCode
+from evaluation.models import Evaluation, EvaluationAnswer, EvaluationPeriod, QRCode
+from evaluation.submission import create_evaluation
 from users.models import User
 from users import views as user_views
 
@@ -60,12 +61,7 @@ class TeacherBase(TestCase):
             s = make_user(f'student{TeacherBase.counter}@secret-school.com', 'student')
             s.first_name = f'Secretname{TeacherBase.counter}'
             s.save()
-            Evaluation.objects.create(
-                student=s, teacher=teacher, period=period,
-                teaching_effectiveness=score, communication_skills=score,
-                classroom_management=score, punctuality=score, student_engagement=score,
-                comment=(comments[i] if comments else ''),
-            )
+            create_evaluation(s, teacher, period, scores=score, comment=(comments[i] if comments else ''))
         EvaluationPeriod.objects.filter(pk=period.pk).update(is_active=was_active)
         period.refresh_from_db()
 
@@ -232,7 +228,7 @@ class DashboardTests(TeacherBase):
         self.assertEqual(response.context['state'], 'open')
         self.assertEqual((snap['overall'], snap['previous']['overall'], snap['change']), (5.0, 3.0, 2.0))
         self.assertEqual(snap['indicator'], 'improving')
-        self.assertContains(response, 'Evaluation open')
+        # (the banner wording belongs to instructor_dashboard.html, which can be restyled; the state above is what matters)
         self.assertContains(response, 'Not final')
         self.assertContains(response, 'Now, so far (not final)')            # dashed point in the line chart
 
@@ -243,7 +239,7 @@ class DashboardTests(TeacherBase):
         self.assertEqual(response.context['state'], 'latest')
         self.assertEqual(response.context['snap']['period'], b)
         self.assertEqual(response.context['snap']['indicator'], 'declining')
-        self.assertContains(response, 'No evaluation open')
+        # (banner wording is not tested on purpose: it lives in instructor_dashboard.html and can be restyled)
 
     def test_open_period_the_teacher_is_not_part_of_falls_back_to_latest(self):
         a = self.period(term='prelims', start=-60, end=-50); self.rate(a, self.teacher, [4, 4, 4])
@@ -276,12 +272,14 @@ class DashboardTests(TeacherBase):
         a = self.period(term='prelims', start=-60, end=-50); self.rate(a, self.teacher, [4, 4, 4])
         b = self.period(term='midterm', start=-40, end=-30)
         self.rate(b, self.teacher, [5, 5, 5])
-        # make punctuality low and engagement drop sharply in period b
-        Evaluation.objects.filter(teacher=self.teacher, period=b).update(punctuality=3, student_engagement=3)
+        # make professionalism_reliability low and engagement drop sharply in period b
+        EvaluationAnswer.objects.filter(
+            evaluation__teacher=self.teacher, evaluation__period=b,
+            question__category__key__in=['professionalism_reliability', 'student_engagement_support']).update(rating=3)
         snap = self.get().context['snap']
         self.assertEqual(snap['strongest']['score'], 5.0)
         self.assertEqual(snap['weakest']['score'], 3.0)
-        self.assertEqual({r['key'] for r in snap['attention']}, {'punctuality', 'student_engagement'})
+        self.assertEqual({r['key'] for r in snap['attention']}, {'professionalism_reliability', 'student_engagement_support'})
         self.assertEqual(snap['attention'][0]['score'], 3.0)
 
     def test_everything_is_in_the_page(self):

@@ -4,7 +4,8 @@
    forecast : fc (forecast block), fchart, progress, min_periods
    feedback : fb (feedback block), label (the period the text is about)
    suggestions : sg (suggestions block), label
-   Only SAVED results are shown. Nothing here runs a model. {% endcomment %}
+   Only SAVED results are shown. Nothing here runs a model.
+   Numbers that go into CSS use the stringformat filter, so no extra tag library is needed. {% endcomment %}
 
 {% if part == "forecast" %}
     {% if fc.state == "ok" %}
@@ -25,11 +26,18 @@
     </div>
     <div class="ac-panel">
         <h3 class="ac-sec">Predicted score per area</h3>
+        <p class="ac-key" aria-hidden="true">
+            <span><i class="ac-key-bar"></i> Predicted score (out of 5)</span>
+            <span><i class="ac-key-tick"></i> Last real score</span>
+        </p>
         <div class="table-wrap"><table class="ac-table">
-            <thead><tr><th scope="col">Area</th><th scope="col">Last real</th><th scope="col">Predicted</th><th scope="col" class="ac-hide-sm">Range</th></tr></thead>
+            <thead><tr><th scope="col">Area</th><th scope="col">Last real</th><th scope="col">Predicted</th><th scope="col" class="ac-hide-sm">Score view</th><th scope="col" class="ac-hide-sm">Range</th></tr></thead>
             <tbody>{% for c in fc.categories %}
             <tr><th scope="row">{{ c.label }}</th><td>{{ c.last_actual|floatformat:2 }}</td>
                 <td><span class="ac-forecast">{{ c.value|floatformat:2 }}</span></td>
+                <td class="ac-hide-sm ac-meter-cell" aria-hidden="true">
+                    <span class="ac-meter"><span class="ac-meter-fill" style="width: {% widthratio c.value 5 100 %}%;"></span><i class="ac-meter-tick" style="left: {% widthratio c.last_actual 5 100 %}%;"></i></span>
+                </td>
                 <td class="ac-hide-sm">{{ c.low|floatformat:2 }}–{{ c.high|floatformat:2 }}</td></tr>
             {% endfor %}</tbody>
         </table></div>
@@ -69,6 +77,19 @@
         <div class="ac-kpi ac-kpi--good"><span class="ac-kpi-label">Positive</span><span class="ac-kpi-value">{{ fb.bars.0.percent }}%</span></div>
         <div class="ac-kpi"><span class="ac-kpi-label">Neutral</span><span class="ac-kpi-value">{{ fb.bars.1.percent }}%</span></div>
         <div class="ac-kpi ac-kpi--bad"><span class="ac-kpi-label">Negative</span><span class="ac-kpi-value">{{ fb.bars.2.percent }}%</span></div>
+    </div>
+    <div class="ac-panel">
+        <h3 class="ac-sec">How students feel</h3>
+        <div class="ac-sent" role="img" aria-label="Positive {{ fb.bars.0.percent }} percent, neutral {{ fb.bars.1.percent }} percent, negative {{ fb.bars.2.percent }} percent">
+            <span class="is-pos" style="width: {{ fb.bars.0.percent|stringformat:'s' }}%;"></span>
+            <span class="is-neu" style="width: {{ fb.bars.1.percent|stringformat:'s' }}%;"></span>
+            <span class="is-neg" style="width: {{ fb.bars.2.percent|stringformat:'s' }}%;"></span>
+        </div>
+        <ul class="ac-sent-legend">
+            <li><i class="is-pos" aria-hidden="true"></i> Positive <b>{{ fb.bars.0.percent }}%</b></li>
+            <li><i class="is-neu" aria-hidden="true"></i> Neutral <b>{{ fb.bars.1.percent }}%</b></li>
+            <li><i class="is-neg" aria-hidden="true"></i> Negative <b>{{ fb.bars.2.percent }}%</b></li>
+        </ul>
     </div>
     <div class="ac-grid ac-grid--2">
         <div class="ac-panel ac-panel--good"><h3 class="ac-sec">What students liked</h3>
@@ -113,6 +134,7 @@
                 <span><span class="ac-pill {% if s.priority == 'high' %}ac-pill--bad{% elif s.priority == 'strength' %}ac-pill--good{% elif s.priority == 'medium' %}ac-pill--warn{% endif %}">{{ s.priority_text }}</span>
                 <span class="ac-pill">{{ s.score }} / 5</span>
                 <span class="ac-pill ac-pill--ai">{% if s.ai %}AI{% else %}Rules{% endif %}</span></span></div>
+            <span class="ac-meter ac-meter--sm {% if s.priority == 'high' %}ac-meter--bad{% elif s.priority == 'strength' %}ac-meter--good{% elif s.priority == 'medium' %}ac-meter--warn{% endif %}" aria-hidden="true"><span class="ac-meter-fill" style="width: {% widthratio s.score 5 100 %}%;"></span></span>
             <p class="ac-lead">{{ s.text }}</p>
             {% if s.actions %}<ul class="ac-list">{% for a in s.actions %}<li><b>{{ a.topic }}:</b> {{ a.text }}</li>{% endfor %}</ul>{% endif %}
         </article>

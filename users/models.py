@@ -23,6 +23,8 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     middle_name = models.CharField(max_length=50, blank=True)
 
+    profile_photo = models.ImageField(upload_to='instructor_photos/%Y/%m/',blank=True,null=True,)
+
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     # Teachers belong to a department (Academic Management > Departments)
     department = models.ForeignKey(

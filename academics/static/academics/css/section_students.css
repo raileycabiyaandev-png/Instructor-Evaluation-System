@@ -1,0 +1,641 @@
+/* ============================================================
+   academics/css/section_students.css
+   Section roster. Same look as Manage Evaluation: soft blue-grey
+   page, one white card with an accent line, IBM Plex Sans, navy
+   as the only accent (green and red only for good / bad states).
+   No blur anywhere.
+
+   1. Tokens          5. Table
+   2. Intro           6. Footer + pager
+   3. Card + tabs     7. Add students
+   4. Toolbar         8. Empty states, 9. Remove dialog, 10. Responsive
+   ============================================================ */
+
+
+/* ============================================================
+   1. TOKENS
+   ============================================================ */
+.section-page,
+.section-modal {
+    --navy-900: #13224f;
+    --accent: #1f3585;
+    --accent-dark: #172a6b;
+    --blue-100: #e6ecf9;
+    --blue-300: #a9b9e2;
+    --blue-400: #6f86c9;
+    --soft: #eef2f9;
+    --soft-2: #f6f8fc;
+    --ink: #111827;
+    --text: #374151;
+    --muted: #6b7280;
+    --line: #e3e8f1;
+    --line-strong: #cfd6e4;
+    --ok: #15803d;
+    --bad: #b42318;
+    --bad-bg: #fef3f2;
+    --focus: rgba(31, 53, 133, 0.18);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --shadow: 0 1px 2px rgba(19, 34, 79, 0.05), 0 4px 14px rgba(19, 34, 79, 0.05);
+    --shadow-up: 0 2px 4px rgba(19, 34, 79, 0.06), 0 12px 28px rgba(19, 34, 79, 0.1);
+    --shadow-md: 0 24px 60px rgba(6, 9, 26, 0.28);
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body:has(.section-page) { background: #eef1f7; }
+
+.section-page,
+.section-page *,
+.section-modal,
+.section-modal * { font-family: var(--font-body); }
+
+.section-page.page-container { background: transparent; color: var(--text); }
+.section-page [hidden],
+.section-modal [hidden] { display: none !important; }
+.section-page :focus-visible,
+.section-modal :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.section-page h3, .section-page p,
+.section-modal h3, .section-modal p { margin: 0; }
+
+.section-page .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes rowIn { from { opacity: 0; transform: translateX(-8px); } }
+@keyframes lineIn { from { transform: scaleX(0); } }
+@keyframes blink { 50% { opacity: 0.35; } }
+@keyframes pop { from { opacity: 0; transform: translateY(18px) scale(0.97); } }
+
+
+/* ============================================================
+   2. INTRO  (one line + Back button)
+   ============================================================ */
+.section-page .page-intro-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    margin-bottom: 22px;
+    animation: rise 0.5s var(--ease) both;
+}
+.section-page .section-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+
+/* ============================================================
+   3. CARD + TABS + BUTTONS
+   ============================================================ */
+.section-page .card {
+    position: relative;
+    margin-bottom: 20px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    animation: rise 0.55s var(--ease) 0.08s both;
+    transition: box-shadow 0.25s var(--ease);
+}
+.section-page .card:hover { box-shadow: var(--shadow-up); }
+.section-page .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 1;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--blue-400));
+    transform-origin: left;
+    animation: lineIn 0.9s var(--ease) 0.25s both;
+}
+
+/* Buttons */
+.section-page .btn,
+.section-modal .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.18s, border-color 0.18s, color 0.18s, transform 0.18s var(--ease), box-shadow 0.18s;
+}
+.section-page .btn-sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.section-page .btn-ghost,
+.section-modal .btn-ghost { border-color: var(--line-strong); background: #fff; color: var(--ink); box-shadow: none; }
+.section-page .btn-ghost:hover:not(:disabled),
+.section-modal .btn-ghost:hover:not(:disabled) { background: var(--blue-100); border-color: var(--blue-300); color: var(--accent); }
+.section-page .btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(31, 53, 133, 0.28); }
+.section-page .btn-primary:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(31, 53, 133, 0.34); }
+.section-modal .btn-danger { border-color: var(--bad); background: var(--bad); color: #fff; box-shadow: 0 4px 12px rgba(180, 35, 24, 0.25); }
+.section-modal .btn-danger:hover:not(:disabled) { background: #8f1c12; border-color: #8f1c12; transform: translateY(-1px); }
+.section-page .btn:active:not(:disabled),
+.section-modal .btn:active:not(:disabled) { transform: scale(0.97); }
+.section-page .btn:disabled,
+.section-modal .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+/* Tabs (act as the card header) */
+.section-page .tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 18px 0;
+    padding-top: 11px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fafbfe, #f3f6fc);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.section-page .tab-bar::-webkit-scrollbar { display: none; }
+.section-page .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 16px;
+    margin-bottom: -1px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    font-size: 14.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.section-page .tab:hover { color: var(--accent); }
+.section-page .tab.is-active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+.section-page .tab-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--soft);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+.section-page .tab.is-active .tab-count { background: var(--accent); color: #fff; }
+
+.section-page:not(.js) .tab-bar { display: none; }
+.section-page [data-panel] { animation: rise 0.3s var(--ease) both; }
+
+
+/* ============================================================
+   4. TOOLBAR  (search + filter + sort in one row)
+   ============================================================ */
+.section-page .panel-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line);
+}
+
+.section-page .list-search { position: relative; display: block; flex: 1 1 260px; min-width: 0; margin: 0; }
+.section-page .list-search > i { position: absolute; top: 50%; left: 13px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.section-page .search-input {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 38px 0 38px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 15px;
+    color: var(--ink);
+    transition: border-color 0.18s, box-shadow 0.2s var(--ease);
+}
+.section-page .search-input:hover { border-color: var(--blue-400); }
+.section-page .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
+.section-page .search-clear {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+.section-page .search-clear:hover { background: var(--blue-100); color: var(--accent); }
+
+/* All / Active / Inactive */
+.section-page .panel-bar .segmented {
+    display: inline-flex !important;
+    align-items: center;
+    align-self: center;
+    gap: 2px;
+    height: 40px;
+    margin: 0;
+    padding: 3px !important;
+    border: 1px solid var(--line-strong) !important;
+    border-radius: 10px !important;
+    background: var(--soft-2) !important;
+    box-shadow: none;
+}
+.section-page .panel-bar .segmented .segment {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 32px !important;
+    min-height: 0 !important;
+    margin: 0;
+    padding: 0 12px !important;
+    border: 0 !important;
+    border-radius: 7px !important;
+    background: transparent !important;
+    box-shadow: none;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--muted) !important;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+.section-page .panel-bar .segmented .segment:hover:not(.is-active):not([aria-pressed="true"]) {
+    background: var(--blue-100) !important;
+    color: var(--accent) !important;
+}
+.section-page .panel-bar .segmented .segment.is-active,
+.section-page .panel-bar .segmented .segment[aria-pressed="true"] {
+    background: var(--accent) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 6px rgba(31, 53, 133, 0.25);
+}
+.section-page .panel-bar .segmented .segment span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--soft) !important;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--muted) !important;
+    font-variant-numeric: tabular-nums;
+}
+.section-page .panel-bar .segmented .segment.is-active span,
+.section-page .panel-bar .segmented .segment[aria-pressed="true"] span {
+    background: rgba(255, 255, 255, 0.22) !important;
+    color: #fff !important;
+}
+
+
+/* ============================================================
+   5. TABLE
+   ============================================================ */
+.section-page .table-wrapper { overflow-x: auto; }
+.section-page .custom-table { width: 100%; min-width: 0; border-collapse: collapse; }
+.section-page .custom-table th {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--line-strong);
+    background: var(--soft);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-align: left;
+    text-transform: uppercase;
+    color: var(--navy-900);
+}
+.section-page .custom-table th.actions-head { text-align: right; }
+.section-page .sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+.section-page .sort-btn:hover { color: var(--accent); }
+.section-page .custom-table td { padding: 14px 24px; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--ink); }
+.section-page .custom-table tbody tr:last-child td { border-bottom: 0; }
+.section-page .custom-table tbody tr { transition: background-color 0.15s ease; animation: rowIn 0.4s var(--ease) both; }
+.section-page .custom-table tbody tr:hover { background: #f3f6fd; }
+.section-page tbody > :nth-child(8n + 2) { animation-delay: 0.05s; }
+.section-page tbody > :nth-child(8n + 3) { animation-delay: 0.1s; }
+.section-page tbody > :nth-child(8n + 4) { animation-delay: 0.15s; }
+.section-page tbody > :nth-child(8n + 5) { animation-delay: 0.2s; }
+.section-page tbody > :nth-child(8n + 6) { animation-delay: 0.25s; }
+.section-page tbody > :nth-child(8n + 7) { animation-delay: 0.3s; }
+.section-page tbody > :nth-child(8n) { animation-delay: 0.35s; }
+
+.section-page .user-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.section-page .user-avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue-100), #d3ddf4);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.section-page .user-details { min-width: 0; }
+.section-page .user-name { font-weight: 600; color: var(--ink); }
+.section-page .user-subtext { font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.section-page mark { padding: 0 2px; border-radius: 3px; background: #fff0a8; color: inherit; }
+
+/* Status badge: icon + word */
+.section-page .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--soft-2);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--muted);
+}
+.section-page .status-badge i { font-size: 8px; }
+.section-page .status-badge.active { border-color: #bfe3cb; background: #f0fdf4; color: var(--ok); }
+.section-page .status-badge.active i { animation: blink 1.8s ease-in-out infinite; }
+
+/* Remove button */
+.section-page .actions-column { width: 170px; text-align: right; }
+.section-page .actions-column form { display: inline-block; margin: 0; }
+.section-page .btn-action.btn-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #f0c4be;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bad);
+    cursor: pointer;
+    transition: background-color 0.18s, border-color 0.18s, transform 0.18s var(--ease);
+}
+.section-page .btn-action.btn-delete:hover:not(:disabled) { background: var(--bad-bg); border-color: #e6a39b; color: var(--bad); }
+.section-page .btn-action.btn-delete:active:not(:disabled) { transform: scale(0.97); }
+.section-page .btn-action.btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+/* ============================================================
+   6. FOOTER + PAGER
+   ============================================================ */
+.section-page .list-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--line);
+    background: var(--soft-2);
+}
+.section-page .footer-left { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.section-page .result-summary { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.section-page .page-size { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--muted); }
+.section-page .pager { display: flex; align-items: center; gap: 6px; }
+.section-page .page-numbers { display: inline-flex; align-items: center; gap: 4px; }
+.section-page .page-btn {
+    display: inline-grid;
+    place-items: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background-color 0.18s, border-color 0.18s, color 0.18s;
+}
+.section-page .page-btn:hover:not(:disabled) { background: var(--blue-100); border-color: var(--blue-300); color: var(--accent); }
+.section-page .page-btn.is-active,
+.section-page .page-btn.active,
+.section-page .page-btn.is-current,
+.section-page .page-btn[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.section-page .page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+
+/* ============================================================
+   7. ADD STUDENTS
+   ============================================================ */
+.section-page .add-list { max-height: min(58vh, 480px); overflow-y: auto; overscroll-behavior: contain; }
+.section-page .add-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.section-page .add-item:last-child { border-bottom: 0; }
+.section-page .add-item:hover { background: #f3f6fd; }
+.section-page .add-item.is-checked { background: var(--blue-100); }
+
+/* the real checkbox stays (keyboard + screen readers) but is invisible */
+.section-page .add-item input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.section-page .add-item input:focus-visible ~ .add-tick { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.section-page .add-text { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.section-page .add-text strong { font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--ink); }
+
+.section-page .add-tick {
+    display: grid;
+    place-items: center;
+    flex: 0 0 26px;
+    height: 26px;
+    border: 2px solid var(--line-strong);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+    color: transparent;
+    transition: background-color 0.18s, border-color 0.18s, color 0.18s;
+}
+.section-page .add-item.is-checked .add-tick { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.section-page .action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--line);
+    background: var(--soft-2);
+}
+.section-page .selected-text { font-size: 14px; font-weight: 500; color: var(--muted); }
+.section-page .selected-text.has-selection { color: var(--accent); font-weight: 600; }
+
+
+/* ============================================================
+   8. EMPTY STATES
+   ============================================================ */
+.section-page .empty-state { padding: 48px 20px; text-align: center; }
+.section-page .empty-state.compact { padding: 32px 20px; }
+.section-page .empty-state > i { display: block; margin-bottom: 10px; font-size: 32px; color: var(--blue-400); }
+.section-page .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--ink); }
+.section-page .empty-state p { max-width: 420px; margin: 6px auto 0; font-size: 14px; color: var(--muted); }
+.section-page .empty-state .btn { margin-top: 16px; }
+
+
+/* ============================================================
+   9. REMOVE DIALOG  (same as the Manage Evaluation confirm box)
+   Opening / closing is still handled by the existing modal styles.
+   ============================================================ */
+.section-modal {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(11, 18, 41, 0.55);
+}
+.section-modal .modern-modal {
+    width: min(100%, 460px);
+    max-width: 460px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: var(--shadow-md);
+}
+.section-modal.show .modern-modal,
+.section-modal.is-open .modern-modal,
+.section-modal.open .modern-modal { animation: pop 0.35s var(--ease) both; }
+
+.section-modal .confirm-body { display: flex; align-items: flex-start; gap: 16px; padding: 24px 26px; }
+.section-modal .confirm-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bad-bg);
+    font-size: 20px;
+    color: var(--bad);
+}
+.section-modal .confirm-body h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; color: var(--ink); }
+.section-modal .confirm-body p { font-size: 15px; line-height: 1.55; color: var(--muted); }
+.section-modal .confirm-body strong { color: var(--ink); }
+.section-modal .modal-footer-modern {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 26px;
+    border-top: 1px solid var(--line);
+    background: var(--soft-2);
+}
+
+
+/* ============================================================
+   10. RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+    .section-page .list-search { flex-basis: 100%; }
+}
+
+@media (max-width: 700px) {
+    .section-page .panel-bar,
+    .section-page .list-footer,
+    .section-page .action-bar { padding-left: 16px; padding-right: 16px; }
+    .section-page .tab-bar { padding-left: 8px; padding-right: 8px; }
+    .section-page .tab { flex: 1; justify-content: center; padding: 0 10px; }
+
+    /* each table row becomes a small card */
+    .section-page .custom-table thead { display: none; }
+    .section-page .custom-table,
+    .section-page .custom-table tbody { display: block; width: 100%; }
+    .section-page .custom-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px 12px;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+    }
+    .section-page .custom-table tbody tr:last-child { border-bottom: 0; }
+    .section-page .custom-table td { display: block; padding: 0; border: 0; }
+    .section-page .custom-table td.cell-main { grid-column: 1 / -1; }
+    .section-page .actions-column { width: auto; }
+
+    .section-page .add-item { padding: 12px 16px; }
+    .section-page .add-toolbar-buttons { width: 100%; }
+    .section-page .add-toolbar-buttons .btn { flex: 1; }
+}
+
+@media (max-width: 520px) {
+    .section-page .page-intro-row .btn { width: 100%; }
+    .section-page .segmented { width: 100%; }
+    .section-page .segment { flex: 1; justify-content: center; padding: 0 8px; }
+    .section-page .filter-field { flex: 1; }
+    .section-page .filter-field select { width: 100%; }
+    .section-page .list-footer { flex-direction: column; align-items: stretch; text-align: center; }
+    .section-page .footer-left { justify-content: space-between; }
+    .section-page .pager { justify-content: space-between; }
+    .section-page .action-bar { flex-direction: column; align-items: stretch; text-align: center; }
+    .section-page .action-bar .btn { width: 100%; }
+    .section-modal .confirm-body,
+    .section-modal .modal-footer-modern { padding-left: 18px; padding-right: 18px; }
+    .section-modal .modal-footer-modern { flex-direction: column-reverse; }
+    .section-modal .modal-footer-modern .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .section-page *, .section-page *::before, .section-page *::after,
+    .section-modal, .section-modal * { animation: none !important; transition: none !important; }
+}

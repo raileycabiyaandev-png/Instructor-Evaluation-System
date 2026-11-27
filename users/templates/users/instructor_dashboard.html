@@ -1,81 +1,108 @@
-<!-- users/Instructor Dashboard -->
+<!-- users/instructor_dashboard -->
 {% extends "instructor_base.html" %}
 {% load static %}
 
-{% block title %}{% if active_tab == 'profile' %}Profile{% else %}Dashboard{% endif %}{% endblock %}
-{% block page_title %}{% if active_tab == 'profile' %}Profile{% else %}Dashboard{% endif %}{% endblock %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
-<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
 <link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
 <link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_dashboard.css' %}?v=9">
 {% endblock %}
 
 
 {% block content %}
 <div class="page">
 
-    <!-- ═══════════════════════════════════════════════
-         DASHBOARD VIEW
-    ═══════════════════════════════════════════════ -->
-    <div class="view dash {% if active_tab != 'profile' %}active{% endif %}" id="view-dashboard">
+    <div class="view dash active" id="view-dashboard">
 
-        <!-- Greeting + evaluation period -->
-        <header class="dash-head">
-            <div class="dash-head__text">
-                <h2>Welcome back, {{ request.user.first_name }}</h2>
-                <p>{% now "l, F j, Y" %}</p>
+        <!-- ═══════════ PAGE HEADING ═══════════ -->
+        <div class="dash-hello">
+            <div class="dash-hello__text">
+                <p class="dash-hello__date">{% now "l, F j, Y" %}</p>
+                <h1>Welcome back, {{ request.user.first_name|default:request.user.username }}</h1>
+                <p class="dash-hello__sub">Here is how your evaluations are doing.</p>
             </div>
+            {% if focus and state != "empty" %}
+            <a class="btn btn-primary" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+            {% endif %}
+        </div>
 
-            <div class="dash-head__side">
+        <!-- ═══════════ EVALUATION PERIOD ═══════════ -->
+        <section class="period-card period-card--{{ state }}" aria-label="Evaluation status">
+
+            <div class="period-card__head">
+                <div class="period-card__title">
+                    <span class="icon-box" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
+                    <div>
+                        {% if state == "open" %}
+                        <h2>Evaluation period</h2>
+                        <p>Current period &middot; {{ focus.get_semester_display }} &middot; {{ focus.get_term_display }}</p>
+                        {% elif state == "latest" %}
+                        <h2>Evaluation period</h2>
+                        <p>Latest finished &middot; {{ focus.get_semester_display }} &middot; {{ focus.get_term_display }}</p>
+                        {% elif open_period %}
+                        <h2>An evaluation is open</h2>
+                        <p>You are not part of it, so there are no results to show yet.</p>
+                        {% else %}
+                        <h2>No evaluation is active</h2>
+                        <p>Results will appear after a period is finished.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
                 {% if state == "open" %}
-                <div class="period period--open">
-                    <span class="period__dot" aria-hidden="true"></span>
-                    <div>
-                        <strong>{{ focus }}</strong>
-                        <small>Open · closes {{ focus.end_date|date:"M d, Y" }}{% if days_left is not None %} · {% if days_left <= 0 %}last day{% else %}{{ days_left }} day{{ days_left|pluralize }} left{% endif %}{% endif %}</small>
-                    </div>
-                </div>
+                <span class="status-pill status-pill--open"><span class="live-dot" aria-hidden="true"></span> Ongoing</span>
                 {% elif state == "latest" %}
-                <div class="period">
-                    <span class="period__dot" aria-hidden="true"></span>
-                    <div>
-                        <strong>{{ snap.label }}</strong>
-                        <small>Latest finished period</small>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if state != "empty" %}
-                <a class="btn btn-primary" href="{% url 'instructor_evaluation_results' %}"><i class="bi bi-clipboard-data" aria-hidden="true"></i> Detailed results</a>
+                <span class="status-pill"><i class="bi bi-lock" aria-hidden="true"></i> Finished</span>
+                {% else %}
+                <span class="status-pill"><i class="bi bi-dash-circle" aria-hidden="true"></i> Not active</span>
                 {% endif %}
             </div>
-        </header>
 
-        {% if state == "empty" %}
-        <section class="card"><div class="empty"><i class="bi bi-inbox" aria-hidden="true"></i>
-            <h3>No evaluation results yet</h3>
-            <p>{% if open_period %}An evaluation is open, but you are not part of it.{% else %}There is no open evaluation and you have no finished results yet.{% endif %}</p></div></section>
-        {% endif %}
+            {% if focus and state != "empty" %}
+            <div class="period-card__body">
+                <dl class="period-tiles{% if state != 'open' %} period-tiles--3{% endif %}">
+                    <div class="period-tile"><dt>School year</dt><dd>{{ focus.school_year }}</dd></div>
+                    <div class="period-tile"><dt>Start date</dt><dd>{{ focus.start_date|date:"M d, Y" }}</dd></div>
+                    <div class="period-tile"><dt>End date</dt><dd>{{ focus.end_date|date:"M d, Y" }}</dd></div>
+                    {% if state == "open" %}
+                    <div class="period-tile {% if days_left is not None and days_left <= 3 %}period-tile--urgent{% elif days_left is not None and days_left <= 7 %}period-tile--soon{% endif %}">
+                        <dt>Time left</dt>
+                        <dd>{% if days_left is None %}&mdash;{% elif days_left <= 0 %}Last day{% else %}{{ days_left }} day{{ days_left|pluralize }}{% endif %}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+            {% endif %}
+        </section>
 
         <div class="dash-stack">
 
-            <!-- The numbers (same block as the Evaluation Results page) -->
             {% include "users/_instructor_overview.html" %}
 
-            <!-- AI: feedback summary, suggestions, forecast, updates -->
             {% if state != "empty" %}
             <section class="card ai-card" id="ai-results">
                 <div class="ac-tabbar">
-                    <!-- Real links (not JavaScript): the chosen section is drawn by the server, so it always shows -->
+                    <div class="ac-head">
+                        <span class="icon-box" aria-hidden="true"><i class="bi bi-stars"></i></span>
+                        <div>
+                            <h3>AI insights</h3>
+                            <p>Feedback, suggestions and forecasts from your finished periods.</p>
+                        </div>
+                    </div>
                     <div class="ai-tabs" role="navigation" aria-label="AI results and updates">
-                        <a class="ai-tab" aria-pressed="{% if start_tab == 'feedback' %}true{% else %}false{% endif %}" href="?section=feedback#ai-results"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</a>
-                        <a class="ai-tab" aria-pressed="{% if start_tab == 'suggestions' %}true{% else %}false{% endif %}" href="?section=suggestions#ai-results"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions</a>
-                        <a class="ai-tab" aria-pressed="{% if start_tab == 'forecast' %}true{% else %}false{% endif %}" href="?section=forecast#ai-results"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</a>
-                        <a class="ai-tab" aria-pressed="{% if start_tab == 'updates' %}true{% else %}false{% endif %}" href="?section=updates#ai-results"><i class="bi bi-bell" aria-hidden="true"></i> Updates
-                            {% if ai.notices.unread %}<span class="ai-tab-count">{{ ai.notices.unread }}</span>{% endif %}</a>
+                        <a class="ai-tab" aria-pressed="{% if start_tab == 'feedback' %}true{% else %}false{% endif %}"{% if start_tab == 'feedback' %} aria-current="page"{% endif %} href="?section=feedback#ai-results"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback summary</a>
+                        <a class="ai-tab" aria-pressed="{% if start_tab == 'suggestions' %}true{% else %}false{% endif %}"{% if start_tab == 'suggestions' %} aria-current="page"{% endif %} href="?section=suggestions#ai-results"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions</a>
+                        <a class="ai-tab" aria-pressed="{% if start_tab == 'forecast' %}true{% else %}false{% endif %}"{% if start_tab == 'forecast' %} aria-current="page"{% endif %} href="?section=forecast#ai-results"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</a>
+                        <a class="ai-tab" aria-pressed="{% if start_tab == 'updates' %}true{% else %}false{% endif %}"{% if start_tab == 'updates' %} aria-current="page"{% endif %} href="?section=updates#ai-results"><i class="bi bi-bell" aria-hidden="true"></i> Updates
+                            {% if ai.notices.unread %}<span class="ai-tab-count">{{ ai.notices.unread }}<span class="sr-only"> unread</span></span>{% endif %}</a>
                     </div>
                 </div>
 
@@ -99,7 +126,7 @@
                 </div>
                 {% else %}
                 <div class="ac-body">
-                    {% if ai.notices.items %}
+                    {% if ai.notices.items or notifications %}
                         {% if ai.notices.unread %}
                         <form method="post" action="{% url 'ai_notices_read' %}" class="ac-actions">{% csrf_token %}
                             <button type="submit" class="btn btn-ghost btn-sm">Mark all as read</button></form>
@@ -111,10 +138,6 @@
                                 <div><strong>{{ n.title }}</strong><span>{{ n.message }}</span><small>{{ n.created_at|date:"M d, Y" }}</small></div>
                             </li>
                         {% endfor %}
-                        </ul>
-                    {% endif %}
-                    {% if notifications %}
-                        <ul class="ai-notice-list">
                         {% for n in notifications %}
                             <li class="ai-notice ai-notice--{{ n.kind }}">
                                 <i class="bi {{ n.icon }}" aria-hidden="true"></i>
@@ -122,82 +145,16 @@
                             </li>
                         {% endfor %}
                         </ul>
+                    {% else %}
+                        <div class="ac-panel"><p class="ac-lead">No updates yet.</p></div>
                     {% endif %}
-                    {% if not ai.notices.items and not notifications %}<div class="ac-panel"><p class="ac-lead">No updates yet.</p></div>{% endif %}
                 </div>
                 {% endif %}
             </section>
             {% endif %}
 
-        </div><!-- /dash-stack -->
-    </div><!-- /view-dashboard -->
-
-
-    <!-- ═══════════════════════════════════════════════
-         PROFILE VIEW
-    ═══════════════════════════════════════════════ -->
-    <div class="view profile {% if active_tab == 'profile' %}active{% endif %}" id="view-profile">
-
-        {% if messages %}
-        {% for message in messages %}
-        <div class="msg {% if 'success' in message.tags %}msg-success{% else %}msg-error{% endif %}" role="{% if 'success' in message.tags %}status{% else %}alert{% endif %}">
-            <i class="bi {% if 'success' in message.tags %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
-            <span>{{ message }}</span>
         </div>
-        {% endfor %}
-        {% endif %}
-
-        <div class="profile-grid">
-
-            <!-- Summary -->
-            <aside class="card profile-card">
-                <div class="profile-card__top">
-                    <div class="profile-avatar" id="heroAvatar" aria-hidden="true">{{ request.user.first_name|first }}{{ request.user.last_name|first }}</div>
-                    <h3 id="heroName">{{ request.user.first_name }} {{ request.user.last_name }}</h3>
-                    <p>Faculty / Instructor</p>
-                </div>
-
-                <dl class="detail-list">
-                    <div class="detail"><dt>Username</dt><dd>{{ request.user.username }}</dd></div>
-                    <div class="detail"><dt>Department</dt><dd>{{ request.user.department.name|default:"—" }}</dd></div>
-                </dl>
-            </aside>
-
-            <!-- Edit form -->
-            <section class="card" aria-labelledby="editTitle">
-                <div class="card-head">
-                    <h3 id="editTitle">Edit details</h3>
-                    <span class="changes-pill" id="changesPill"><i class="bi bi-pencil" aria-hidden="true"></i> Unsaved changes</span>
-                </div>
-
-                <form method="POST" action="{% url 'faculty_update_profile' %}" id="profileForm">
-                    {% csrf_token %}
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="id_first_name">First name</label>
-                            <input type="text" id="id_first_name" name="first_name" class="form-input" required value="{{ request.user.first_name }}" data-original="{{ request.user.first_name }}" autocomplete="given-name">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="id_last_name">Last name</label>
-                            <input type="text" id="id_last_name" name="last_name" class="form-input" required value="{{ request.user.last_name }}" data-original="{{ request.user.last_name }}" autocomplete="family-name">
-                        </div>
-                        <div class="form-group full">
-                            <label class="form-label" for="id_email">Email address</label>
-                            <input type="email" id="id_email" name="email" class="form-input" value="{{ request.user.email }}" data-original="{{ request.user.email }}" autocomplete="email" aria-describedby="emailHint">
-                            <span class="form-hint" id="emailHint">Used for notifications and account recovery.</span>
-                        </div>
-                    </div>
-                    <div class="form-footer">
-                        <button type="button" id="discardBtn" class="btn btn-ghost" hidden>Discard</button>
-                        <button type="submit" id="updateBtn" class="btn btn-primary" disabled><i class="bi bi-check2-circle" aria-hidden="true"></i> Save changes</button>
-                    </div>
-                </form>
-            </section>
-
-        </div><!-- /profile-grid -->
-    </div><!-- /view-profile -->
-
-</div>
+    </div>
 
 </div>
 {% endblock %}
@@ -205,9 +162,10 @@
 
 {% block extra_js %}
 <script src="{% static 'ai_insights/ai_tabs.js' %}"></script>
+<script src="{% static 'users/js/instructor_motion.js' %}?v=3"></script>
 
 <script>
-/* ── Pagination for long lists inside the AI card (feedback, suggestions, updates) ── */
+/* AI insight lists: split long lists into pages */
 (function () {
     "use strict";
     var root = document.getElementById('ai-results');
@@ -239,7 +197,7 @@
 
         function items() {
             return Array.prototype.filter.call(list.children, function (el) {
-                return el.matches(itemSel) && !el.hidden;       /* respects the filter chips */
+                return el.matches(itemSel) && !el.hidden;
             });
         }
 
@@ -253,6 +211,7 @@
                 var show = i >= start && i < start + size;
                 el.classList.toggle('is-paged-out', !show);
                 if (show && animate) {
+                    el.style.setProperty('--i', i - start);
                     el.classList.remove('pg-in');
                     void el.offsetWidth;
                     el.classList.add('pg-in');
@@ -263,16 +222,16 @@
             if (pages <= 1) return;
 
             var from = start + 1, to = Math.min(start + size, all.length);
-            var html = '<span class="pager-info">Showing ' + from + '–' + to + ' of ' + all.length + '</span>' +
+            var html = '<span class="pager-info" aria-live="polite">Showing ' + from + '–' + to + ' of ' + all.length + '</span>' +
                        '<div class="pager-buttons">' +
-                       '<button type="button" class="pg-btn" data-go="prev" aria-label="Previous page"' + (page === 1 ? ' disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
+                       '<button type="button" class="pg-btn" data-go="prev" aria-label="Previous page"' + (page === 1 ? ' disabled' : '') + '><i class="bi bi-chevron-left" aria-hidden="true"></i></button>';
             pageNumbers(page, pages).forEach(function (n) {
                 html += (n === '…')
                     ? '<span class="pg-gap pg-num">…</span>'
-                    : '<button type="button" class="pg-btn pg-num" data-go="' + n + '"' + (n === page ? ' aria-current="page"' : '') + '>' + n + '</button>';
+                    : '<button type="button" class="pg-btn pg-num" data-go="' + n + '" aria-label="Page ' + n + '"' + (n === page ? ' aria-current="page"' : '') + '>' + n + '</button>';
             });
             html += '<span class="pg-status">' + page + ' / ' + pages + '</span>' +
-                    '<button type="button" class="pg-btn" data-go="next" aria-label="Next page"' + (page === pages ? ' disabled' : '') + '><i class="bi bi-chevron-right"></i></button>' +
+                    '<button type="button" class="pg-btn" data-go="next" aria-label="Next page"' + (page === pages ? ' disabled' : '') + '><i class="bi bi-chevron-right" aria-hidden="true"></i></button>' +
                     '</div>';
             nav.innerHTML = html;
         }
@@ -286,7 +245,6 @@
             list.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
 
-        /* When a filter chip hides or shows items, start again from page 1 */
         new MutationObserver(function () { page = 1; render(false); })
             .observe(list, { attributes: true, attributeFilter: ['hidden'], subtree: true });
 
@@ -298,45 +256,6 @@
             if (list.children.length > s.size) setup(list, s.item, s.size);
         });
     });
-})();
-</script>
-
-<script>
-/* ── Profile form: turn the Save button on only after a change ── */
-(function () {
-    var form = document.getElementById('profileForm');
-    if (!form) return;
-
-    var updateBtn  = document.getElementById('updateBtn');
-    var discardBtn = document.getElementById('discardBtn');
-    var pill       = document.getElementById('changesPill');
-    var heroName   = document.getElementById('heroName');
-    var heroAvatar = document.getElementById('heroAvatar');
-    var first      = document.getElementById('id_first_name');
-    var lastName   = document.getElementById('id_last_name');
-    var inputs     = form.querySelectorAll('.form-input[data-original]');
-
-    function evaluate() {
-        var any = false;
-        inputs.forEach(function (inp) {
-            var changed = inp.value.trim() !== inp.dataset.original.trim();
-            inp.classList.toggle('input-changed', changed);
-            if (changed) any = true;
-        });
-        updateBtn.disabled = !any;
-        pill.classList.toggle('visible', any);
-        discardBtn.hidden = !any;
-
-        heroAvatar.textContent = (first.value.trim().charAt(0) + lastName.value.trim().charAt(0)).toUpperCase();
-        heroName.textContent   = (first.value.trim() + ' ' + lastName.value.trim()).trim() || '—';
-    }
-
-    inputs.forEach(function (inp) { inp.addEventListener('input', evaluate); });
-    discardBtn.addEventListener('click', function () {
-        inputs.forEach(function (inp) { inp.value = inp.dataset.original; });
-        evaluate();
-    });
-    evaluate();
 })();
 </script>
 {% endblock %}

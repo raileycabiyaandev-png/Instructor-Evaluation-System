@@ -17,15 +17,8 @@
         <!-- BACK BUTTON -->
         <a href="{% url 'student_dashboard' %}" class="back-link">
 
-            <svg width="15"
-                 height="15"
-                 viewBox="0 0 24 24"
-                 fill="none"
-                 stroke="currentColor"
-                 stroke-width="2.2">
-
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                 <polyline points="15 18 9 12 15 6"/>
-
             </svg>
 
             Back to Dashboard
@@ -38,20 +31,12 @@
             <div class="teacher-left">
 
                 <div class="teacher-avatar">
-
                     {{ teacher.first_name|slice:":1" }}{{ teacher.last_name|slice:":1" }}
-
                 </div>
 
                 <div class="teacher-details">
 
-                    <div class="header-badge">
-                        Instructor Evaluation
-                    </div>
-
-                    <h1>
-                        {{ teacher.first_name }} {{ teacher.last_name }}
-                    </h1>
+                    <h1>{{ teacher.first_name }} {{ teacher.last_name }}</h1>
 
                     <p>
                         {{ teacher.department.code|default:"INSTRUCTOR" }}
@@ -59,23 +44,13 @@
                         S.Y. {{ period.school_year }} {{ period.get_semester_display }} — {{ period.get_term_display }}
                     </p>
 
-                    {% if subjects %}
-                    <p>
-                        Teaches your section:
-                        {% for subject in subjects %}{{ subject.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                    </p>
-                    {% endif %}
-
                 </div>
 
             </div>
 
             <div class="evaluation-status">
-
                 <span class="status-dot"></span>
-
                 Active Evaluation
-
             </div>
 
         </div>
@@ -86,22 +61,13 @@
 
                 <div class="alert-box danger">
 
-                    <svg width="18"
-                         height="18"
-                         viewBox="0 0 24 24"
-                         fill="none"
-                         stroke="currentColor"
-                         stroke-width="2">
-
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
                         <line x1="12" y1="8" x2="12" y2="12"/>
                         <line x1="12" y1="16" x2="12.01" y2="16"/>
-
                     </svg>
 
-                    <div>
-                        {{ message }}
-                    </div>
+                    <div>{{ message }}</div>
 
                 </div>
 
@@ -113,17 +79,10 @@
 
             <div class="alert-box warning">
 
-                <svg width="18"
-                     height="18"
-                     viewBox="0 0 24 24"
-                     fill="none"
-                     stroke="currentColor"
-                     stroke-width="2">
-
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                     <line x1="12" y1="9" x2="12" y2="13"/>
                     <line x1="12" y1="17" x2="12.01" y2="17"/>
-
                 </svg>
 
                 <div>
@@ -137,58 +96,103 @@
         <!-- FORM -->
         <form method="POST"
               action="{% url 'submit_evaluation' teacher.id period.id %}"
-              id="evalForm">
+              id="evalForm"
+              novalidate>
 
             {% csrf_token %}
 
             <div class="evaluation-card">
 
-                <!-- FORM HEADER -->
+                <!-- CARD HEADER -->
                 <div class="evaluation-card-header">
-
                     <div>
-
-                        <h2>
-                            Evaluation Questionnaire
-                        </h2>
-
                         <p>
-                            Rate each of the {{ total_statements }} statements from 1 to 5. Think about this instructor in this period.
+                            Rate each of the {{ total_statements }} statements from 1 to 5.
+                            Think about this instructor in this period.
                         </p>
-
                     </div>
-
-                    <div class="score-guide">
-
-                        5 Excellent • 4 Very Good • 3 Satisfactory • 2 Needs Improvement • 1 Poor
-
-                    </div>
-
                 </div>
 
                 {% if groups %}
 
-                <!-- PROGRESS -->
+                <!-- GUIDE -->
+                <details class="guide" open>
+
+                    <summary>
+                        <span class="guide-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                        </span>
+                        <span class="guide-toggle" aria-hidden="true"></span>
+                    </summary>
+
+                    <div class="guide-body">
+
+                        <div class="scale-legend" aria-label="Rating scale">
+                            {% for value, label in scale reversed %}
+                                <div class="scale-item scale-{{ value }}">
+                                    <b>{{ value }}</b>
+                                    <span>{{ label }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+
+                </details>
+
+                <!-- STEP TRACKER -->
+                <nav class="stepper" id="stepper" aria-label="Questionnaire steps">
+
+                    {% for group in groups %}
+                        <button type="button" class="step-item" data-goto="{{ forloop.counter0 }}">
+                            <span class="step-circle">{{ forloop.counter }}</span>
+                            <span class="step-label">{{ group.name }}</span>
+                        </button>
+                    {% endfor %}
+
+                    <button type="button" class="step-item" data-goto="{{ groups|length }}">
+                        <span class="step-circle">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </span>
+                        <span class="step-label">Review</span>
+                    </button>
+
+                </nav>
+
+                <!-- OVERALL PROGRESS -->
                 <div class="progress-row" role="status" aria-live="polite">
                     <span id="progressText">0 of {{ total_statements }} statements rated</span>
                     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
                 </div>
 
-                <!-- FORM BODY -->
+                <!-- STEP PANELS -->
                 <div class="evaluation-body">
 
                     {% for group in groups %}
 
-                        <section class="dimension" aria-labelledby="dim-{{ group.key }}">
+                        <section class="step-panel dimension"
+                                 data-step="{{ forloop.counter0 }}"
+                                 data-name="{{ group.name }}"
+                                 aria-labelledby="dim-{{ group.key }}"
+                                 {% if not forloop.first %}hidden{% endif %}>
 
                             <div class="dimension-head">
 
                                 <span class="dimension-number">{{ forloop.counter }}</span>
 
-                                <div>
+                                <div class="dimension-text">
+                                    <span class="step-kicker">Step {{ forloop.counter }} of {{ groups|length|add:1 }}</span>
                                     <h3 id="dim-{{ group.key }}">{{ group.name }}</h3>
                                     <p>{{ group.description }}</p>
                                 </div>
+
+                                <span class="panel-count" data-panel-count>0 of 3 answered</span>
 
                             </div>
 
@@ -201,6 +205,11 @@
                                     <legend>
                                         <span class="statement-no">{{ q.number }}.</span> {{ q.text }}
                                     </legend>
+
+                                    <div class="likert-ends" aria-hidden="true">
+                                        <span>Excellent</span>
+                                        <span>Poor</span>
+                                    </div>
 
                                     <div class="likert">
 
@@ -232,27 +241,52 @@
 
                     {% endfor %}
 
-                    <!-- COMMENT -->
-                    <div class="comment-box">
+                    <!-- REVIEW + COMMENT PANEL -->
+                    <section class="step-panel review-panel"
+                             data-step="{{ groups|length }}"
+                             data-name="Review"
+                             hidden>
 
-                        <label for="comment">
+                        <div class="dimension-head">
 
-                            Additional Comments
+                            <span class="dimension-number">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </span>
 
-                            <span>(Optional)</span>
+                            <div class="dimension-text">
+                                <span class="step-kicker">Step {{ groups|length|add:1 }} of {{ groups|length|add:1 }}</span>
+                                <h3>Review &amp; Submit</h3>
+                                <p>Check your ratings, add an optional comment, then submit.</p>
+                            </div>
 
-                        </label>
+                        </div>
 
-                        <textarea
-                            name="comment"
-                            id="comment"
-                            maxlength="1000"
-                            {% if already_evaluated %}disabled{% endif %}
-                            placeholder="Provide additional feedback, observations, or recommendations..."></textarea>
+                        <div class="review-list" id="reviewList"></div>
 
-                        <p class="comment-note">Your comment is anonymous. Instructors see comments without your name.</p>
+                        <div class="comment-box">
 
-                    </div>
+                            <label for="comment">
+                                Additional Comments
+                                <span>(Optional)</span>
+                            </label>
+
+                            <textarea
+                                name="comment"
+                                id="comment"
+                                maxlength="1000"
+                                {% if already_evaluated %}disabled{% endif %}
+                                placeholder="Provide additional feedback, observations, or recommendations..."></textarea>
+
+                            <div class="comment-meta">
+                                <p class="comment-note">Your comment is anonymous. Instructors see comments without your name.</p>
+                                <span class="char-count" id="charCount">0 / 1000</span>
+                            </div>
+
+                        </div>
+
+                    </section>
 
                 </div>
 
@@ -266,48 +300,54 @@
 
                 {% endif %}
 
-                <!-- FOOTER -->
+                <!-- FOOTER / NAVIGATION -->
                 <div class="evaluation-footer">
 
-                    <div class="form-note"
-                         id="formNote">
-
+                    <div class="form-note" id="formNote">
                         All {{ total_statements }} statements must be rated.
-
                     </div>
 
-                    {% if not already_evaluated and groups %}
+                    <div class="nav-buttons">
 
-                        <button type="submit"
-                                class="submit-btn"
-                                id="submitBtn">
+                        {% if groups %}
 
-                            <svg width="16"
-                                 height="16"
-                                 viewBox="0 0 24 24"
-                                 fill="none"
-                                 stroke="currentColor"
-                                 stroke-width="2">
+                            <button type="button" class="nav-btn nav-prev" id="prevBtn" hidden>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <polyline points="15 18 9 12 15 6"/>
+                                </svg>
+                                Back
+                            </button>
 
-                                <polyline points="20 6 9 17 4 12"/>
+                            <button type="button" class="nav-btn nav-next" id="nextBtn">
+                                Next
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
 
-                            </svg>
+                        {% endif %}
 
-                            Submit Evaluation
+                        {% if not already_evaluated and groups %}
 
-                        </button>
+                            <button type="submit" class="submit-btn" id="submitBtn" hidden>
 
-                    {% else %}
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
 
-                        <button type="button"
-                                class="submitted-btn"
-                                disabled>
+                                Submit Evaluation
 
-                            Evaluation Submitted
+                            </button>
 
-                        </button>
+                        {% else %}
 
-                    {% endif %}
+                            <button type="button" class="submitted-btn" disabled>
+                                Evaluation Submitted
+                            </button>
+
+                        {% endif %}
+
+                    </div>
 
                 </div>
 
@@ -321,19 +361,137 @@
 
 <script>
 
-/* Likert form: counts rated statements, shows the chosen word, enables Submit when all are rated.
-   The server checks everything again, so this script is only for comfort. */
+/* Paged Likert form.
+   - One dimension per page + a final Review page.
+   - Counts rated statements, shows the chosen word, enables Submit when all are rated.
+   The server validates everything again, so this script is only for comfort. */
 (function () {
 
     const form = document.getElementById('evalForm');
     if (!form) return;
 
-    const statements = form.querySelectorAll('.statement');
+    const panels = Array.from(form.querySelectorAll('.step-panel'));
+    if (!panels.length) return;
+
+    const stepItems = Array.from(form.querySelectorAll('.step-item'));
+    const statements = Array.from(form.querySelectorAll('.statement'));
     const total = statements.length;
+    const lastIndex = panels.length - 1;
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
     const btn = document.getElementById('submitBtn');
     const note = document.getElementById('formNote');
     const text = document.getElementById('progressText');
     const fill = document.getElementById('progressFill');
+    const reviewList = document.getElementById('reviewList');
+    const comment = document.getElementById('comment');
+    const charCount = document.getElementById('charCount');
+    const card = form.querySelector('.evaluation-card');
+
+    let current = 0;
+    let submitting = false;
+
+    function panelStatements(i) {
+        return Array.from(panels[i].querySelectorAll('.statement'));
+    }
+
+    function isAnswered(statement) {
+        return !!statement.querySelector('input:checked');
+    }
+
+    function panelRated(i) {
+        return panelStatements(i).filter(isAnswered).length;
+    }
+
+    function panelComplete(i) {
+        const list = panelStatements(i);
+        return list.length > 0 && list.every(isAnswered);
+    }
+
+    function show(i, scroll) {
+
+        current = Math.max(0, Math.min(lastIndex, i));
+
+        panels.forEach((p, idx) => { p.hidden = idx !== current; });
+
+        stepItems.forEach((item, idx) => {
+            item.classList.toggle('current', idx === current);
+            if (idx === current) item.setAttribute('aria-current', 'step');
+            else item.removeAttribute('aria-current');
+        });
+
+        if (prevBtn) prevBtn.hidden = current === 0;
+        if (nextBtn) nextBtn.hidden = current === lastIndex;
+        if (btn) btn.hidden = current !== lastIndex;
+
+        if (current === lastIndex) buildReview();
+
+        update();
+
+        if (scroll !== false && card) {
+            const top = card.getBoundingClientRect().top + window.pageYOffset - 12;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        }
+    }
+
+    function buildReview() {
+
+        if (!reviewList) return;
+
+        reviewList.innerHTML = '';
+
+        panels.forEach((panel, idx) => {
+
+            if (idx === lastIndex) return;
+
+            const list = panelStatements(idx);
+            const rated = list.filter(isAnswered);
+            const complete = rated.length === list.length;
+
+            let sum = 0;
+            rated.forEach(s => { sum += Number(s.querySelector('input:checked').value); });
+            const avg = rated.length ? (sum / rated.length).toFixed(1) : '—';
+
+            const row = document.createElement('div');
+            row.className = 'review-row ' + (complete ? 'complete' : 'incomplete');
+
+            const num = document.createElement('span');
+            num.className = 'review-num';
+            num.textContent = idx + 1;
+
+            const info = document.createElement('div');
+            info.className = 'review-info';
+
+            const name = document.createElement('strong');
+            name.textContent = panel.dataset.name;
+
+            const meta = document.createElement('small');
+            meta.textContent = complete
+                ? 'All ' + list.length + ' rated'
+                : (list.length - rated.length) + ' not rated yet';
+
+            info.appendChild(name);
+            info.appendChild(meta);
+
+            const score = document.createElement('span');
+            score.className = 'review-score';
+            score.textContent = avg + ' / 5';
+
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.className = 'review-edit';
+            edit.textContent = complete ? 'Edit' : 'Answer';
+            edit.addEventListener('click', () => show(idx));
+
+            row.appendChild(num);
+            row.appendChild(info);
+            row.appendChild(score);
+            row.appendChild(edit);
+
+            reviewList.appendChild(row);
+        });
+    }
 
     function update() {
 
@@ -346,38 +504,116 @@
 
             if (picked) {
                 rated++;
-                shown.textContent = picked.value + '/5 — ' + picked.dataset.label;
+                shown.textContent = 'Your rating: ' + picked.value + '/5 — ' + picked.dataset.label;
                 shown.classList.add('active');
+                group.classList.remove('missing');
             } else {
                 shown.textContent = 'Not rated';
                 shown.classList.remove('active');
             }
+
+            group.classList.toggle('answered', !!picked);
         });
+
+        panels.forEach((panel, idx) => {
+
+            if (idx === lastIndex) return;
+
+            const count = panel.querySelector('[data-panel-count]');
+            const n = panelStatements(idx).length;
+            const r = panelRated(idx);
+
+            if (count) {
+                count.textContent = r + ' of ' + n + ' answered';
+                count.classList.toggle('done', r === n);
+            }
+
+            if (stepItems[idx]) stepItems[idx].classList.toggle('done', r === n && n > 0);
+        });
+
+        if (stepItems[lastIndex]) stepItems[lastIndex].classList.toggle('done', rated === total && total > 0);
 
         const left = total - rated;
 
         if (text) text.textContent = rated + ' of ' + total + ' statements rated';
         if (fill) fill.style.width = (total ? rated / total * 100 : 0) + '%';
 
-        if (btn) btn.disabled = left !== 0;
+        if (btn && !submitting) btn.disabled = left !== 0;
 
         if (note) {
             if (left === 0) {
                 note.textContent = 'All statements rated — ready for submission.';
+                note.classList.remove('error');
                 note.style.color = '#166534';
             } else {
                 note.textContent = left + ' statement' + (left === 1 ? '' : 's') + ' remaining.';
                 note.style.color = '';
             }
         }
+
+        if (current === lastIndex) buildReview();
     }
 
-    form.addEventListener('change', update);
+    function goNext() {
 
-    form.addEventListener('submit', function () {
+        if (current < lastIndex && !panelComplete(current)) {
+
+            const missing = panelStatements(current).filter(s => !isAnswered(s));
+
+            panelStatements(current).forEach(s => s.classList.remove('missing'));
+            missing.forEach(s => s.classList.add('missing'));
+
+            if (note) {
+                note.textContent = 'Please rate all statements on this page to continue (' + missing.length + ' left).';
+                note.classList.add('error');
+                note.style.color = '';
+            }
+
+            if (missing[0]) missing[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            return;
+        }
+
+        if (note) note.classList.remove('error');
+        show(current + 1);
+    }
+
+    if (nextBtn) nextBtn.addEventListener('click', goNext);
+    if (prevBtn) prevBtn.addEventListener('click', () => show(current - 1));
+
+    stepItems.forEach(item => {
+        item.addEventListener('click', () => show(Number(item.dataset.goto)));
+    });
+
+    form.addEventListener('change', function (e) {
+
+        update();
+
+        /* After the last statement of a page is answered, hint the student to continue. */
+        if (e.target && e.target.type === 'radio' && current < lastIndex && panelComplete(current) && note) {
+            note.classList.remove('error');
+            note.textContent = 'Page complete — click Next to continue.';
+            note.style.color = '#166534';
+        }
+    });
+
+    if (comment && charCount) {
+        const max = comment.getAttribute('maxlength') || 1000;
+        const count = () => { charCount.textContent = comment.value.length + ' / ' + max; };
+        comment.addEventListener('input', count);
+        count();
+    }
+
+    form.addEventListener('submit', function (e) {
 
         if (!btn) return;
 
+        if (total - statements.filter(isAnswered).length !== 0) {
+            e.preventDefault();
+            return;
+        }
+
+        submitting = true;
         btn.disabled = true;
 
         btn.innerHTML = `
@@ -399,7 +635,7 @@
         `;
     });
 
-    update();
+    show(0, false);
 
 })();
 

@@ -1,0 +1,36 @@
+{% comment %} ai_insights/_alert_card.html  Needs: a (alert with name/department/period_text), qs (current filters), back ("instructor" or empty). {% endcomment %}
+<article class="ai-alert ai-alert--{{ a.severity }} ai-alert--{{ a.status }}">
+    <div class="ai-rec-head">
+        <div>
+            <strong>{{ a.title }}</strong><br>
+            <span class="ai-who">{% if not hide_name %}<a href="{% url 'ai_admin_instructor' a.instructor_id %}">{{ a.name }}</a> · {{ a.department }} · {% endif %}{{ a.period_text }}</span>
+        </div>
+        <span>
+            <span class="ai-badge ai-badge--{% if a.severity == 'high' %}bad{% elif a.severity == 'medium' %}warn{% else %}good{% endif %}">{{ a.get_severity_display }}</span>
+            <span class="ai-badge {% if a.status == 'resolved' %}ai-badge--good{% elif a.status == 'new' %}ai-badge--ai{% endif %}">{{ a.get_status_display }}</span>
+            <span class="ai-badge">{{ a.get_kind_display }}</span>
+        </span>
+    </div>
+    <p><b>Why:</b> {{ a.message }}</p>
+    {% if a.support %}<details class="ai-details"><summary>Supporting data</summary>
+        <ul class="ai-points">{% for label, value in a.support %}<li>{{ label }}: <b>{{ value }}</b></li>{% endfor %}</ul></details>{% endif %}
+    {% if a.status == 'new' %}
+    <form method="post" action="{% url 'ai_admin_alert_update' a.pk %}" class="ai-alert-quick">
+        {% csrf_token %}<input type="hidden" name="qs" value="{{ qs }}">{% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
+        <input type="hidden" name="status" value="reviewed"><input type="hidden" name="note" value="{{ a.note }}">
+        <button type="submit" class="btn btn-ghost btn-sm"><i class="bi bi-check2-circle" aria-hidden="true"></i> Mark as reviewed</button>
+    </form>{% endif %}
+    <form method="post" action="{% url 'ai_admin_alert_update' a.pk %}" class="ai-alert-form">
+        {% csrf_token %}
+        <input type="hidden" name="qs" value="{{ qs }}">
+        {% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
+        <div class="field"><label for="st-{{ a.pk }}">Status</label>
+            <select id="st-{{ a.pk }}" name="status" class="select">
+                {% for value, label in statuses.items %}<option value="{{ value }}" {% if value == a.status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select></div>
+        <div class="field ai-alert-note"><label for="nt-{{ a.pk }}">Your note</label>
+            <input id="nt-{{ a.pk }}" name="note" type="text" maxlength="1000" class="input" value="{{ a.note }}" placeholder="Optional"></div>
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    </form>
+    {% if a.reviewed_at %}<span class="ai-who">Updated by {{ a.reviewed_by.get_full_name|default:a.reviewed_by.email }} on {{ a.reviewed_at|date:"M d, Y H:i" }}</span>{% endif %}
+</article>

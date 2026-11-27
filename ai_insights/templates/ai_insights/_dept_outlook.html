@@ -1,0 +1,18 @@
+{% comment %} ai_insights/_dept_outlook.html  Needs: outlook (selectors.department_outlook). Department forecast bars + line chart. {% endcomment %}
+{% if outlook.line_chart %}
+<div class="ac-grid ac-grid--2">
+    <div class="ac-panel"><h4>Forecast{% if outlook.target_label %} · {{ outlook.target_label }}{% endif %}</h4>
+        {% if outlook.bars %}
+        <ul class="ac-bars">
+            {% for b in outlook.bars %}
+            <li><span>{{ b.name }}<small class="ac-hint">{{ b.forecasts }}/{{ b.teachers }} forecast</small></span>
+                <span class="ac-bar-track"><i class="ac-bar-fill ac-bar-fill--gold" style="width: {{ b.pred_w }}%"></i></span><b>{{ b.avg_pred|floatformat:2 }}</b></li>
+            {% endfor %}
+        </ul>
+        {% else %}<p class="ac-empty">Not enough history to forecast (needs {{ outlook.min_periods }} finished periods).</p>{% endif %}
+    </div>
+    <div class="ac-panel"><h4>Trend by period</h4>
+        {% include "ai_insights/_line_chart.html" with chart=outlook.line_chart title="Department averages by period; dashed line is the AI forecast" %}
+    </div>
+</div>
+{% else %}<p class="ac-empty">No finished period has enough evaluations yet.</p>{% endif %}

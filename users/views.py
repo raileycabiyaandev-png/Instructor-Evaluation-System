@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, get_user_model
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, F
@@ -18,17 +18,26 @@ from .forms import (
 )
 from .models import User
 from evaluation.models import Evaluation, EvaluationPeriod
+from evaluation import scoring                          # the one place where scores are calculated
+from evaluation.questionnaire_data import CATEGORIES, CATEGORY_KEYS
 from django.http import JsonResponse
 from django.contrib.auth import update_session_auth_hash
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from django.contrib.auth.forms import PasswordChangeForm
+from django.core.paginator import Paginator
+from urllib.parse import urlencode
 from academics.utils import get_open_period, instructor_cards_for_student
+from ai_insights import conf as ai_conf                 # AI rules (one place)
+from ai_insights import selectors as ai_selectors       # reads SAVED AI results only
+from ai_insights.models import ReportLog
+from ai_insights.services import data as ai_data        # one period of one instructor (same numbers everywhere)
+from . import dashboard_data                            # numbers for the admin dashboard
 from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
@@ -36,6 +45,12 @@ from django.db.models import Avg, Count
 from django.utils import timezone
 from evaluation.models import Evaluation, EvaluationPeriod, QRCode
 from django.db.models import Q
+from django import forms
+
+User = get_user_model()
+
+MAX_PHOTO_SIZE = 2 * 1024 * 1024
+ALLOWED_PHOTO_TYPES = ('image/jpeg', 'image/png', 'image/webp')
 
 
 def no_cache(view_func): # prevent caching 
@@ -179,36 +194,19 @@ def admin_dashboard(request):
 
     data = []
 
+    # One set of queries for ALL instructors (no query per instructor). See evaluation/scoring.py.
+    scores = scoring.grouped(Evaluation.objects.all(), 'teacher_id')
+
     for teacher in teachers:
 
-        evaluations = Evaluation.objects.filter(teacher=teacher)
-
-        avg = evaluations.aggregate(
-            teaching=Avg('teaching_effectiveness'),
-            communication=Avg('communication_skills'),
-            classroom=Avg('classroom_management'),
-            punctuality=Avg('punctuality'),
-            engagement=Avg('student_engagement')
-        )
-
-        total_teacher_evaluations = evaluations.count()
-
-        overall = round(
-            (
-                (avg['teaching'] or 0) +
-                (avg['communication'] or 0) +
-                (avg['classroom'] or 0) +
-                (avg['punctuality'] or 0) +
-                (avg['engagement'] or 0)
-            ) / 5,
-            2
-        )
+        found = scores.get((teacher.pk,))
+        categories = found['categories'] if found else {key: None for key in CATEGORY_KEYS}
 
         data.append({
             'teacher': teacher,
-            'avg': avg,
-            'overall': overall,
-            'evaluation_count': total_teacher_evaluations
+            'avg': categories,
+            'overall': round(found['overall'], 2) if found else 0,
+            'evaluation_count': found['responses'] if found else 0,
         })
 
     # SORT BEST TEACHERS
@@ -224,23 +222,23 @@ def admin_dashboard(request):
     # BEST TEACHER
     best_teacher = ranked_teachers[0] if ranked_teachers else None
 
-    # CHART DATA
+    # CHART DATA (the 5 dimensions, in the order of CATEGORIES)
     chart_data = []
 
     for i, item in enumerate(data):
 
         chart_data.append({
             "id": f"chart{i+1}",
-            "values": [
-                round(item['avg']['teaching'] or 0, 2),
-                round(item['avg']['communication'] or 0, 2),
-                round(item['avg']['classroom'] or 0, 2),
-                round(item['avg']['punctuality'] or 0, 2),
-                round(item['avg']['engagement'] or 0, 2),
-            ]
+            "values": [round(item['avg'][key] or 0, 2) for key in CATEGORY_KEYS]
         })
 
+    # NEW: the numbers for the top of the dashboard (see users/dashboard_data.py)
+    dash = dashboard_data.build()
+
     return render(request, 'users/admin_dashboard.html', {
+
+        'dash': dash,
+        'outlook': ai_selectors.department_outlook(),     # saved AI forecasts + real averages only
 
         'data': ranked_teachers,
         'chart_data': json.dumps(chart_data),
@@ -282,7 +280,7 @@ def create_instructor(request):
     if request.user.role != 'admin':
         return redirect('login')
 
-    form = InstructorCreateForm(request.POST or None)
+    form = InstructorCreateForm(request.POST or None, request.FILES or None)
 
     if request.method == 'POST':
         if form.is_valid():
@@ -298,6 +296,71 @@ def create_instructor(request):
         'form': form,
         'instructors': instructors
     })
+
+def validate_profile_photo(photo):
+    if getattr(photo, 'content_type', None) not in ALLOWED_PHOTO_TYPES:
+        raise ValidationError("Upload a JPG, PNG or WEBP image.")
+    if photo.size > MAX_PHOTO_SIZE:
+        raise ValidationError("The photo must be 2 MB or smaller.")
+    forms.ImageField().clean(photo)   # real image check (needs Pillow)
+    photo.seek(0)
+
+@login_required
+@no_cache
+def faculty_update_profile(request):
+    if request.user.role != 'instructor':
+        return redirect('login')
+
+    back = reverse('instructor_profile')
+
+    if request.method != 'POST':
+        return redirect(back)
+
+    user = request.user
+
+    first_name = request.POST.get('first_name', '').strip()
+    last_name = request.POST.get('last_name', '').strip()
+    email = request.POST.get('email', '').strip()
+
+    if not first_name or not last_name:
+        messages.error(request, "First name and last name are required.")
+        return redirect(back)
+
+    if email and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+        messages.error(request, "That email address is already in use.")
+        return redirect(back)
+
+    new_photo = request.FILES.get('profile_photo')
+    remove_photo = request.POST.get('remove_photo') == '1'
+
+    if new_photo:
+        try:
+            validate_profile_photo(new_photo)
+        except ValidationError as e:
+            messages.error(request, e.messages[0])
+            return redirect(back)
+
+    old_photo = user.profile_photo.name if user.profile_photo else None
+
+    user.first_name = first_name
+    user.last_name = last_name
+    if email:
+        user.email = email
+
+    if new_photo:
+        user.profile_photo = new_photo
+    elif remove_photo and old_photo:
+        user.profile_photo = None
+
+    user.save()
+
+    # delete the old file only after the save succeeded
+    new_name = user.profile_photo.name if user.profile_photo else None
+    if old_photo and old_photo != new_name:
+        user.profile_photo.storage.delete(old_photo)
+
+    messages.success(request, "Profile updated successfully.")
+    return redirect(back)
 
 @login_required
 @no_cache
@@ -341,6 +404,10 @@ def student_dashboard(request):
         .select_related('teacher', 'period')
         .order_by('-created_at')[:50]
     )
+    history = list(history)
+    overall_of = scoring.overall_for_evaluations([e.pk for e in history])      # one set of queries, no N+1
+    for e in history:
+        e.overall = overall_of.get(e.pk)
 
     return render(request, 'users/student_dashboard.html', {
         'state': state,
@@ -386,27 +453,13 @@ def period_sort_key(period):
 
 
 def average_rating(evaluations):
-    """Average of the 5 categories for a queryset of evaluations."""
-    data = evaluations.aggregate(
-        teaching=Avg('teaching_effectiveness'),
-        communication=Avg('communication_skills'),
-        management=Avg('classroom_management'),
-        punctuality=Avg('punctuality'),
-        engagement=Avg('student_engagement'),
-    )
-    return round(
-        (
-            (data['teaching'] or 0) +
-            (data['communication'] or 0) +
-            (data['management'] or 0) +
-            (data['punctuality'] or 0) +
-            (data['engagement'] or 0)
-        ) / 5,
-        2
-    )
+    """Overall score (weighted mean of the 5 dimensions) for a queryset of evaluations. 0 when empty."""
+    overall = scoring.summary(evaluations)['overall']
+    return round(overall, 2) if overall is not None else 0
 
 MIN_RESPONSES = 3
-FORECAST_MIN_PERIODS = 3
+# Same number the AI uses, so the progress bar and the forecast always agree.
+FORECAST_MIN_PERIODS = ai_conf.MIN_PERIODS
 
 
 def _finished_q(today):
@@ -510,426 +563,77 @@ def _build_notifications(instructor, current_period, history, today):
 
     return items
 
+def _teacher_focus(instructor, today):
+    """
+    Which period the teacher pages talk about first.
+      'open'   a period is open now and the teacher takes part in it (shown live, NOT final)
+      'latest' no open period (or the teacher is not part of it): the newest finished period with answers
+      'empty'  nothing to show yet
+    Returns (period, state, finished_periods_with_answers_oldest_first, open_period_or_None)
+    """
+    open_period = get_open_period()
+    finished = sorted(
+        EvaluationPeriod.objects.filter(_finished_q(today), evaluations__teacher=instructor).distinct(),
+        key=period_sort_key,
+    )
+    if open_period:
+        takes_part = (Evaluation.objects.filter(teacher=instructor, period=open_period).exists()
+                      or ai_data.expected_students(instructor, open_period) > 0)
+        if takes_part or not finished:
+            return open_period, 'open', finished, open_period
+    if finished:
+        return finished[-1], 'latest', finished, open_period
+    return None, 'empty', finished, open_period
+
+
+def _overview_chart(instructor, snap, live):
+    """Progress-over-time line chart: real scores of finished periods (+ the open period so far)."""
+    rows = ai_data.history_rows(instructor)[-8:]
+    live_point = (snap['label'], snap['overall']) if live and snap and snap['has_data'] else None
+    return ai_selectors.progress_chart([r['label'] for r in rows], [r['overall'] for r in rows], live=live_point)
+
+
 @login_required
 @no_cache
 def instructor_dashboard(request):
-
+    """
+    Teacher Dashboard (own data only). Order of the page:
+      current period -> responses -> average + indicator -> comparison -> strongest / weakest / needs attention
+      -> charts -> forecast, AI feedback summary, AI suggestions, updates.
+    No open evaluation: the newest finished period is shown instead.
+    """
     if request.user.role != 'instructor':
         return redirect('login')
 
     instructor = request.user
-
-    active_tab = request.GET.get('tab', 'dashboard')
-
-    selected_school_year = request.GET.get('school_year', '')
-    selected_semester = request.GET.get('semester', '')
-    selected_term = request.GET.get('term', '')
-
-    current_period = get_open_period()
     today = timezone.now().date()
-
-
-    current_period_evaluations = Evaluation.objects.none()
-
-    current_total_responses = 0
-    current_category_averages = {}
-    current_overall_average = None
-    current_chart_data = {}
-
-    if current_period:
-        current_period_evaluations = Evaluation.objects.filter(
-            teacher=instructor,
-            period=current_period
-        )
-
-        current_total_responses = current_period_evaluations.count()
-
-        if current_total_responses > 0:
-
-            current_category_data = current_period_evaluations.aggregate(
-                teaching=Avg('teaching_effectiveness'),
-                communication=Avg('communication_skills'),
-                management=Avg('classroom_management'),
-                punctuality=Avg('punctuality'),
-                engagement=Avg('student_engagement'),
-            )
-
-            current_category_averages = {
-                "Teaching Effectiveness": round(
-                    current_category_data['teaching'] or 0, 2
-                ),
-                "Communication Skills": round(
-                    current_category_data['communication'] or 0, 2
-                ),
-                "Classroom Management": round(
-                    current_category_data['management'] or 0, 2
-                ),
-                "Punctuality": round(
-                    current_category_data['punctuality'] or 0, 2
-                ),
-                "Student Engagement": round(
-                    current_category_data['engagement'] or 0, 2
-                ),
-            }
-
-            current_overall_average = round(
-                sum(current_category_averages.values()) / 5,
-                2
-            )
-
-            current_chart_data = {
-                "labels": list(current_category_averages.keys()),
-                "values": list(current_category_averages.values()),
-            }
-
-    if current_period:
-        if current_total_responses > 0:
-            dashboard_state = "current_results"
-        else:
-            dashboard_state = "no_current_ratings"
-    else:
-        dashboard_state = "recent_performance"
-
-    completed_list = sorted(
-        EvaluationPeriod.objects
-        .filter(_finished_q(today), evaluations__teacher=instructor)
-        .distinct(),
-        key=period_sort_key
-    )
-
-    trend_labels = []
-    trend_values = []
-
-    for period in completed_list:
-
-        period_average = average_rating(
-            Evaluation.objects.filter(teacher=instructor, period=period)
-        )
-
-        trend_labels.append(
-            f"{period.school_year} "
-            f"{period.get_semester_display()} "
-            f"{period.get_term_display()}"
-        )
-
-        trend_values.append(period_average)
-
-    chart_trend = {
-        "labels": trend_labels,
-        "values": trend_values,
-    }
-
-    recent_period = completed_list[-1] if completed_list else None
-
-    if trend_values:
-        recent_overall_average = trend_values[-1]
-    else:
-        recent_overall_average = None
-
-    if len(trend_values) >= 2:
-
-        latest = trend_values[-1]
-        previous = trend_values[-2]
-        diff = round(latest - previous, 2)
-
-        if latest > previous:
-            performance_status = f"Performance Improved (+{diff})"
-            performance_icon = "bi-graph-up-arrow"
-
-        elif latest < previous:
-            performance_status = f"Performance Declined ({diff})"
-            performance_icon = "bi-graph-down-arrow"
-
-        else:
-            performance_status = "Performance Stable"
-            performance_icon = "bi-dash-circle"
-
-    else:
-        performance_status = "Not Enough Data Yet"
-        performance_icon = "bi-dash-circle"
-
-    # ─────────────────────────────────────────────
-    # 8B. PERFORMANCE OVER TIME (NEW LINE GRAPH)
-    #
-    #    - Latest school year + semester only
-    #    - Active (ongoing) term included
-    #    - Always 4 terms on the bottom axis
-    #    - Terms with no ratings are left empty
-    # ─────────────────────────────────────────────
-    candidate_periods = list(
-        EvaluationPeriod.objects
-        .filter(evaluations__teacher=instructor)
-        .distinct()
-    )
-
-    if current_period and current_period not in candidate_periods:
-        candidate_periods.append(current_period)
-
-    graph_period_label = ""
-    graph_labels = []
-    graph_values = []
-    graph_statuses = []
-    graph_responses = []
-
-    if candidate_periods:
-        newest = max(candidate_periods, key=period_sort_key)
-
-        graph_period_label = (
-            f"S.Y. {newest.school_year} · {newest.get_semester_display()}"
-        )
-
-        periods_by_term = {
-            p.term: p
-            for p in EvaluationPeriod.objects.filter(
-                school_year=newest.school_year,
-                semester=newest.semester,
-            )
-        }
-    else:
-        periods_by_term = {}
-
-    for term_key in sorted(TERM_ORDER, key=TERM_ORDER.get):
-
-        graph_labels.append(TERM_LABELS[term_key])
-
-        term_period = periods_by_term.get(term_key)
-
-        if term_period is None:
-            graph_values.append(None)
-            graph_statuses.append("none")
-            graph_responses.append(0)
-            continue
-
-        term_evaluations = Evaluation.objects.filter(
-            teacher=instructor,
-            period=term_period
-        )
-        response_count = term_evaluations.count()
-
-        graph_responses.append(response_count)
-
-        if response_count > 0:
-            graph_values.append(average_rating(term_evaluations))
-        else:
-            graph_values.append(None)
-
-        if term_period.is_active:
-            graph_statuses.append("ongoing")
-        elif response_count > 0:
-            graph_statuses.append("completed")
-        else:
-            graph_statuses.append("none")
-
-    rated_points = [
-        (graph_labels[i], graph_values[i])
-        for i in range(len(graph_values))
-        if graph_values[i] is not None
-    ]
-
-    # The up / down message uses FINISHED terms only. A term that is still
-    # open has an incomplete score and must not be called "improving".
-    done_points = [
-        (graph_labels[i], graph_values[i])
-        for i in range(len(graph_values))
-        if graph_values[i] is not None and graph_statuses[i] == "completed"
-    ]
-
-    if len(done_points) >= 2:
-        prev_label, prev_value = done_points[-2]
-        last_label, last_value = done_points[-1]
-        graph_diff = round(last_value - prev_value, 2)
-
-        if graph_diff > 0:
-            graph_summary = {
-                "css": "up",
-                "icon": "bi-graph-up-arrow",
-                "title": "Improving",
-                "text": f"+{graph_diff} from {prev_label} to {last_label}",
-            }
-        elif graph_diff < 0:
-            graph_summary = {
-                "css": "down",
-                "icon": "bi-graph-down-arrow",
-                "title": "Declining",
-                "text": f"{graph_diff} from {prev_label} to {last_label}",
-            }
-        else:
-            graph_summary = {
-                "css": "same",
-                "icon": "bi-dash-circle",
-                "title": "Steady",
-                "text": f"No change from {prev_label} to {last_label}",
-            }
-    elif len(done_points) == 1:
-        graph_summary = {
-            "css": "same",
-            "icon": "bi-hourglass-split",
-            "title": "First Rating",
-            "text": "Only one finished term has ratings so far. A trend appears after the next term.",
-        }
-    elif rated_points:
-        graph_summary = {
-            "css": "same",
-            "icon": "bi-hourglass-split",
-            "title": "Term still open",
-            "text": "No term is finished yet. A trend appears after a term closes.",
-        }
-    else:
-        graph_summary = {
-            "css": "same",
-            "icon": "bi-hourglass-split",
-            "title": "No Ratings Yet",
-            "text": "Your line will appear once students submit evaluations.",
-        }
-
-    performance_graph = {
-        "labels": graph_labels,
-        "values": graph_values,        # None becomes null in the browser
-        "statuses": graph_statuses,    # completed / ongoing / none
-        "responses": graph_responses,
-        "period_label": graph_period_label,
-        "summary": graph_summary,
-        "has_data": len(rated_points) > 0,
-    }
-
-    history = _period_history(instructor, completed_list)      # oldest -> newest
-    history_rows = list(reversed(history))                     # newest first for the table
-
-    notifications = _build_notifications(instructor, current_period, history, today)
-
-    forecast = {
-        "have": len(history),
-        "need": FORECAST_MIN_PERIODS,
-        "ready": len(history) >= FORECAST_MIN_PERIODS,
-        "percent": min(100, round(len(history) / FORECAST_MIN_PERIODS * 100)),
-    }
-
-    # ─────────────────────────────────────────────
-    # 9. EVALUATION RESULTS TAB
-    # ─────────────────────────────────────────────
-    result_evaluations = Evaluation.objects.filter(
-        teacher=instructor
-    )
-
-    if selected_school_year:
-        result_evaluations = result_evaluations.filter(
-            period__school_year=selected_school_year
-        )
-
-    if selected_semester:
-        result_evaluations = result_evaluations.filter(
-            period__semester=selected_semester
-        )
-
-    if selected_term:
-        result_evaluations = result_evaluations.filter(
-            period__term=selected_term
-        )
-
-    result_category_data = result_evaluations.aggregate(
-        teaching=Avg('teaching_effectiveness'),
-        communication=Avg('communication_skills'),
-        management=Avg('classroom_management'),
-        punctuality=Avg('punctuality'),
-        engagement=Avg('student_engagement'),
-    )
-
-    result_category_averages = {
-        "Teaching Effectiveness": round(
-            result_category_data['teaching'] or 0, 2
-        ),
-        "Communication Skills": round(
-            result_category_data['communication'] or 0, 2
-        ),
-        "Classroom Management": round(
-            result_category_data['management'] or 0, 2
-        ),
-        "Punctuality": round(
-            result_category_data['punctuality'] or 0, 2
-        ),
-        "Student Engagement": round(
-            result_category_data['engagement'] or 0, 2
-        ),
-    }
-
-    result_total_responses = result_evaluations.count()
-
-    if result_total_responses > 0:
-        result_overall_average = round(
-            sum(result_category_averages.values()) / 5,
-            2
-        )
-    else:
-        result_overall_average = None
-
-    result_chart_data = {
-        "labels": list(result_category_averages.keys()),
-        "values": list(result_category_averages.values()),
-    }
-
-    # ─────────────────────────────────────────────
-    # 10. FILTER DROPDOWN OPTIONS
-    # ─────────────────────────────────────────────
-    school_years = (
-        EvaluationPeriod.objects
-        .filter(evaluations__teacher=instructor)
-        .values_list('school_year', flat=True)
-        .distinct()
-        .order_by('school_year')
-    )
-
-    # ─────────────────────────────────────────────
-    # 11. SEND DATA TO TEMPLATE
-    # ─────────────────────────────────────────────
-    return render(
-        request,
-        "users/instructor_dashboard.html",
-        {
-            # Tab
-            "active_tab": active_tab,
-
-            # Current active period
-            "current_period": current_period,
-
-            # Dashboard state
-            "dashboard_state": dashboard_state,
-
-            # Current evaluation
-            "current_total_responses": current_total_responses,
-            "current_category_averages": current_category_averages,
-            "current_overall_average": current_overall_average,
-            "current_chart_data": current_chart_data,
-
-            # Recent completed evaluation
-            "recent_period": recent_period,
-            "recent_overall_average": recent_overall_average,
-
-            # Performance history (original, used by Results tab)
-            "chart_trend": chart_trend,
-            "performance_status": performance_status,
-            "performance_icon": performance_icon,
-
-            # NEW: Performance Over Time line graph
-            "performance_graph": performance_graph,
-
-            # Evaluation Results tab
-            "category_averages": result_category_averages,
-            "overall_average": result_overall_average,
-            "total_responses": result_total_responses,
-            "chart_data": result_chart_data,
-
-            # Filters
-            "school_years": school_years,
-            "selected_school_year": selected_school_year,
-            "selected_semester": selected_semester,
-            "selected_term": selected_term,
-            "history_rows": history_rows,
-            "notifications": notifications,
-            "forecast": forecast,
-            "min_responses": MIN_RESPONSES,
-            "current_low_sample": 0 < current_total_responses < MIN_RESPONSES,
-        }
-    )
+    focus, state, finished, open_period = _teacher_focus(instructor, today)
+
+    snap = ai_data.period_snapshot(instructor, focus) if focus else None
+    live = state == 'open'
+    ai = ai_selectors.teacher_dashboard_ai(instructor)
+    history = _period_history(instructor, finished)
+
+    # ?tab=profile opens the Profile view (set by the sidebar); ?section= opens one of the AI tabs
+    active_tab = 'dashboard'
+    start_tab = request.GET.get('section', '')
+    if start_tab not in ('forecast', 'feedback', 'suggestions', 'updates'):
+        start_tab = 'feedback'
+
+    return render(request, "users/instructor_dashboard.html", {
+        "active_tab": active_tab,
+        "state": state,
+        "focus": focus,
+        "open_period": open_period,
+        "days_left": (open_period.end_date - today).days if open_period else None,
+        "snap": snap,
+        "live": live,
+        "line_chart": _overview_chart(instructor, snap, live),
+        "ai": ai,
+        "start_tab": start_tab,
+        "notifications": _build_notifications(instructor, open_period, history, today),
+        "min_responses": MIN_RESPONSES,
+    })
 
 @login_required
 @no_cache
@@ -977,27 +681,15 @@ def chart_api(request):
 
     chart_data = []
 
+    scores = scoring.grouped(Evaluation.objects.all(), 'teacher_id')
+
     for i, teacher in enumerate(teachers):
 
-        avg = Evaluation.objects.filter(
-            teacher=teacher
-        ).aggregate(
-            teaching=Avg('teaching_effectiveness'),
-            communication=Avg('communication_skills'),
-            classroom=Avg('classroom_management'),
-            punctuality=Avg('punctuality'),
-            engagement=Avg('student_engagement')
-        )
+        found = scores.get((teacher.pk,))
 
         chart_data.append({
             "id": f"chart{i+1}",
-            "values": [
-                round(avg['teaching'] or 0, 2),
-                round(avg['communication'] or 0, 2),
-                round(avg['classroom'] or 0, 2),
-                round(avg['punctuality'] or 0, 2),
-                round(avg['engagement'] or 0, 2)
-            ]
+            "values": [round((found['categories'][key] if found else 0) or 0, 2) for key in CATEGORY_KEYS]
         })
 
     return JsonResponse(chart_data, safe=False)
@@ -1201,14 +893,7 @@ from django.utils import timezone
 
 from evaluation.models import Evaluation, EvaluationPeriod
 
-# The five required categories: (database field, label shown on screen)
-CATEGORIES = [
-    ("teaching_effectiveness", "Teaching Effectiveness"),
-    ("communication_skills", "Communication Skills"),
-    ("classroom_management", "Classroom Management"),
-    ("punctuality", "Punctuality"),
-    ("student_engagement", "Student Engagement"),
-]
+# The five dimensions (key, label shown on screen) come from evaluation/questionnaire_data.py (imported at the top)
 
 
 def _score_level(value):
@@ -1242,62 +927,53 @@ def _get_scores(teacher, period):
     selected, so student identity cannot leak into the page.
     Returns None when there are no responses.
     """
-    agg = Evaluation.objects.filter(teacher=teacher, period=period).aggregate(
-        total=Count("id"),
-        **{field: Avg(field) for field, _ in CATEGORIES},
-    )
-    if not agg["total"]:
+    found = scoring.period_summary(teacher, period)
+    if not found:
         return None
-
-    # Every category has equal weight (the models have no weight setting yet).
-    overall = sum(agg[field] for field, _ in CATEGORIES) / len(CATEGORIES)
     return {
-        "total": agg["total"],
-        "overall": round(overall, 2),
-        "categories": {field: round(agg[field], 2) for field, _ in CATEGORIES},
+        "total": found["responses"],
+        "overall": round(found["overall"], 2),
+        "categories": {field: round(found["categories"][field], 2) for field, _ in CATEGORIES},
     }
+
+
+RESULT_TABS = ("overview", "history", "ai", "comments")
+
+
+def _paged(items, request, tab, active, per_page):
+    """Page of `items` (only the tab being viewed uses ?page=, the others stay on page 1)."""
+    number = request.GET.get("page") if tab == active else 1
+    return Paginator(items, per_page).get_page(number)
 
 
 @login_required
 @no_cache
 def instructor_evaluation_results(request):
+    """
+    Evaluation Results (own data only): the same numbers as the Dashboard, for any period you choose,
+    plus the complete history, the AI analysis and the anonymous comments.
+    """
     teacher = request.user
     if teacher.role != "instructor":
         raise PermissionDenied
 
-    get_open_period()          # closes periods whose end date has passed
     today = timezone.now().date()
+    focus, _focus_state, _finished, open_period = _teacher_focus(teacher, today)
 
     all_periods = EvaluationPeriod.objects.all()
-
-    # ── Filter options (real data only) ──
-    school_years = list(
-        all_periods.values_list("school_year", flat=True)
-        .distinct()
-        .order_by("-school_year")
-    )
-
-    latest_released = (
-        all_periods.filter(_finished_q(today), evaluations__teacher=teacher)
-        .distinct()
-        .order_by("-start_date")
-        .first()
-    )
-    default_period = latest_released or all_periods.order_by("-start_date").first()
+    school_years = list(all_periods.values_list("school_year", flat=True).distinct().order_by("-school_year"))
+    default_period = focus or all_periods.order_by("-start_date").first()
 
     selected = {
-        "school_year": request.GET.get("school_year")
-        or (default_period.school_year if default_period else ""),
-        "semester": request.GET.get("semester")
-        or (default_period.semester if default_period else ""),
-        "term": request.GET.get("term")
-        or (default_period.term if default_period else ""),
+        "school_year": request.GET.get("school_year") or (default_period.school_year if default_period else ""),
+        "semester": request.GET.get("semester") or (default_period.semester if default_period else ""),
+        "term": request.GET.get("term") or (default_period.term if default_period else ""),
     }
+    tab = request.GET.get("tab", "overview")
+    if tab not in RESULT_TABS:
+        tab = "overview"
 
     period = None
-    state = "released"
-    current = previous = previous_period = None
-
     if not all_periods.exists():
         state = "no_periods"
     else:
@@ -1306,86 +982,88 @@ def instructor_evaluation_results(request):
             state = "not_found"
         elif _period_state(period, today) == "upcoming":
             state = "not_open"
-        elif _period_state(period, today) == "open":
-            state = "in_progress"      # results are NOT released yet
-        else:                          # finished = finalized/released
-            current = _get_scores(teacher, period)
-            state = "released" if current else "no_responses"
+        else:
+            state = "open" if _period_state(period, today) == "open" else "finished"
 
-    rows = []
-    overall_change = None
-    chart = None
-    low_sample = False
-    feedback = None
+    snap = ai_data.period_snapshot(teacher, period) if period and state in ("open", "finished") else None
+    if snap is not None and not snap["has_data"]:
+        state = "no_responses"
 
-    # Everything below needs real, released scores, so it all stays INSIDE this "if"
-    if state == "released":
-
-        previous_period = (
-            all_periods.filter(
-                start_date__lt=period.start_date,
-                evaluations__teacher=teacher,
-            )
-            .filter(_finished_q(today))
-            .distinct()
-            .order_by("-start_date")
-            .first()
-        )
-        if previous_period:
-            previous = _get_scores(teacher, previous_period)
-
-        for field, label in CATEGORIES:
-            score = current["categories"][field]
-            row = {
-                "label": label,
-                "score": score,
-                "percent": round(score / 5 * 100),
-                "level": _score_level(score),
-            }
-            if previous:
-                prev = previous["categories"][field]
-                diff = round(score - prev, 2)
-                row.update(previous=prev, diff_text=f"{diff:+.2f}", trend=_trend(diff))
-            rows.append(row)
-
-        if previous:
-            diff = round(current["overall"] - previous["overall"], 2)
-            overall_change = {"text": f"{diff:+.2f}", "trend": _trend(diff)}
-
-        chart = {
-            "labels": [label for _, label in CATEGORIES],
-            "current": [r["score"] for r in rows],
-            "current_label": _period_label(period),
-            "previous": [r["previous"] for r in rows] if previous else None,
-            "previous_label": _period_label(previous_period) if previous else None,
-        }
-
-        low_sample = current["total"] < MIN_RESPONSES
-        feedback = _get_feedback(teacher, period, current["total"])
-
+    live = state == "open"
+    section = request.GET.get("section", "feedback")           # which AI sub-tab (drawn by the server)
+    if section not in ("feedback", "suggestions", "forecast"):
+        section = "feedback"
     context = {
-        "active_tab": "results",
-        "state": state,
-        "period": period,
-        "period_label": _period_label(period) if period else "",
-        "school_years": school_years,
-        "semester_choices": EvaluationPeriod.SEMESTER_CHOICES,
-        "term_choices": EvaluationPeriod.TERM_CHOICES,
-        "selected": selected,
-        "has_released": latest_released is not None,
-        "current": current,
-        "previous": previous,
-        "previous_period": previous_period,
-        "previous_label": _period_label(previous_period) if previous_period else "",
-        "overall_change": overall_change,
-        "rows": rows,
-        "results_chart": chart,
-        "low_sample": low_sample,
-        "min_responses": MIN_RESPONSES,
-        "feedback": feedback,
+        "active_tab": "results", "tab": tab, "section": section, "tabs": RESULT_TABS, "state": state, "live": live,
+        "period": period, "period_label": _period_label(period) if period else "",
+        "school_years": school_years, "semester_choices": EvaluationPeriod.SEMESTER_CHOICES,
+        "term_choices": EvaluationPeriod.TERM_CHOICES, "selected": selected,
+        "snap": snap, "min_responses": MIN_RESPONSES,
+        "keep": urlencode({**selected, "tab": tab}),
+        "keep_filters": urlencode(selected),
+        "days_left": (period.end_date - today).days if state == "open" else None,
     }
+
+    if snap and snap["has_data"]:
+        if tab == "overview":
+            rows = ai_data.history_rows(teacher, upto=period)[-8:]
+            live_point = (snap["label"], snap["overall"]) if live else None
+            context["line_chart"] = ai_selectors.progress_chart(
+                [r["label"] for r in rows if not live or r["period"].pk != period.pk],
+                [r["overall"] for r in rows if not live or r["period"].pk != period.pk], live=live_point)
+
+        if tab == "history":
+            rows = ai_data.history_rows(teacher)                   # complete history, oldest first
+            for r in rows:
+                r["short"] = ai_selectors._short_label(r["label"])   # short name so the table fits
+            context["pager"] = _paged(list(reversed(rows)), request, tab, "history", 8)
+            context["history_chart"] = charts_line_for_categories(rows)
+            context["history_total"] = len(rows)
+
+        if tab == "ai":
+            dash_ai = ai_selectors.teacher_dashboard_ai(teacher)
+            context["ai"] = dash_ai
+            context["period_ai"] = (ai_selectors.teacher_results_ai(teacher, period) if state == "finished" else None)
+
+        if tab == "comments":
+            feedback = _get_feedback(teacher, period, snap["responses"]) if state == "finished" else None
+            context["feedback"] = feedback
+            if feedback and not feedback["hidden"]:
+                context["pager"] = _paged(feedback["comments"], request, tab, "comments", 10)
     return render(request, "users/instructor_evaluation_results.html", context)
 
+
+def charts_line_for_categories(rows):
+    """Line chart with one line per category over the complete history."""
+    from ai_insights import charts as ai_charts
+    if not rows:
+        return None
+    return ai_charts.line_chart(
+        [ai_selectors._short_label(r["label"]) for r in rows],
+        [{"name": label, "values": [r["categories"][field] for r in rows]} for field, label in CATEGORIES])
+
+
+@login_required
+@no_cache
+def instructor_reports(request):
+    """Reports page: choose a finished period and download the PDF or Excel report (own data only)."""
+    teacher = request.user
+    if teacher.role != "instructor":
+        raise PermissionDenied
+
+    own = [p for p in ai_data.finished_periods() if Evaluation.objects.filter(teacher=teacher, period=p).exists()]
+    options = [{"id": p.pk, "label": _period_label(p)} for p in reversed(own)]
+    chosen = next((p for p in own if str(p.pk) == request.GET.get("period", "")), own[-1] if own else None)
+
+    snap = ai_data.period_snapshot(teacher, chosen) if chosen else None
+    release = ai_selectors.latest_release()
+    recent = ReportLog.objects.filter(user=teacher, kind="my_report")
+    return render(request, "users/instructor_reports.html", {
+        "active_tab": "reports", "options": options, "chosen": chosen, "snap": snap,
+        "has_ai": release is not None,
+        "pager": Paginator(recent, 5).get_page(request.GET.get("page")),
+        "keep": urlencode({"period": chosen.pk}) if chosen else "",
+    })
 
 
 def _get_feedback(teacher, period, total_responses):
@@ -1437,3 +1115,10 @@ def instructor_qr(request):
         "qr_missing_file": bool(qr) and not file_ok,
         "open_period": get_open_period(),
     })
+
+@login_required
+@no_cache
+def instructor_profile(request):
+    if request.user.role != 'instructor':
+        return redirect('login')
+    return render(request, "users/instructor_profile.html", {"active_tab": "profile"})

@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Performance Alerts | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}Performance Alerts{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+    {% include "ai_insights/_generate_panel.html" with next="ai_admin_alerts" %}
+
+    <section class="card" aria-label="Filters">
+        {% include "ai_insights/_admin_filters.html" with action=request.path extra="ai_insights/_filters_alerts.html" %}
+    </section>
+
+    <div class="ai-tiles ai-tiles--page">
+        <div class="ai-tile ai-tile--gold"><b>{{ data.counts.new }}</b><span>New</span></div>
+        <div class="ai-tile ai-tile--bad"><b>{{ data.high_new }}</b><span>New and high severity</span></div>
+        <div class="ai-tile"><b>{{ data.severity_counts.high }}</b><span>Open: High</span></div>
+        <div class="ai-tile"><b>{{ data.severity_counts.medium }}</b><span>Open: Medium</span></div>
+        <div class="ai-tile"><b>{{ data.severity_counts.low }}</b><span>Open: Low</span></div>
+        <div class="ai-tile"><b>{{ data.counts.reviewed }}</b><span>Reviewed</span></div>
+        <div class="ai-tile ai-tile--good"><b>{{ data.counts.resolved }}</b><span>Resolved</span></div>
+    </div>
+
+    <p class="ai-note"><i class="bi bi-shield-check" aria-hidden="true"></i><span>An alert is a signal to check, not a verdict. An instructor with fewer than {{ data.min_responses }} evaluations in a period gets no alert from that period{% if data.too_few %} ({{ data.too_few }} instructor{{ data.too_few|pluralize }} in {{ data.attention_period }}){% endif %}, because so few answers can be unfair. Forecast alerts are Low or Medium because a forecast is a prediction.</span></p>
+
+    <section class="card" data-ai-tabs {% if request.GET.page or request.GET.status %}data-ai-start="list"{% endif %}>
+        <div class="card-head">
+            <div class="ai-tabs" role="group" aria-label="Sections">
+                <button type="button" class="ai-tab" data-ai-tab="list"><i class="bi bi-bell" aria-hidden="true"></i> Alerts <span class="ai-tab-count">{{ data.pager.paginator.count }}</span></button>
+                <button type="button" class="ai-tab" data-ai-tab="attention"><i class="bi bi-person-exclamation" aria-hidden="true"></i> By department</button>
+                <button type="button" class="ai-tab" data-ai-tab="history"><i class="bi bi-clock-history" aria-hidden="true"></i> History</button>
+                <button type="button" class="ai-tab" data-ai-tab="kinds"><i class="bi bi-bar-chart" aria-hidden="true"></i> By type</button>
+                <button type="button" class="ai-tab" data-ai-tab="limits"><i class="bi bi-sliders" aria-hidden="true"></i> Limits</button>
+            </div>
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="list">
+            <div class="ai-chips" role="group" aria-label="Status">
+                <a class="ai-chip" href="?{% if base_qs %}{{ base_qs }}{% endif %}" aria-pressed="{% if not data.status %}true{% else %}false{% endif %}">All <span class="ai-chip-n">{{ data.total }}</span></a>
+                {% for value, label in data.statuses.items %}
+                <a class="ai-chip" href="?{% if base_qs %}{{ base_qs }}&amp;{% endif %}status={{ value }}" aria-pressed="{% if data.status == value %}true{% else %}false{% endif %}">{{ label }}
+                    <span class="ai-chip-n">{% if value == 'new' %}{{ data.counts.new }}{% elif value == 'reviewed' %}{{ data.counts.reviewed }}{% else %}{{ data.counts.resolved }}{% endif %}</span></a>
+                {% endfor %}
+            </div>
+            <div class="ai-feed">
+                {% for a in data.pager %}{% include "ai_insights/_alert_card.html" with statuses=data.statuses %}
+                {% empty %}<p class="ai-empty">No alert matches these filters.</p>{% endfor %}
+            </div>
+            {% include "ai_insights/_pager.html" with pager=data.pager keep=keep %}
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="attention" hidden>
+            {% if data.attention %}<p class="ai-who">Instructors with open alerts. Average and evaluations are from {{ data.attention_period }}.</p>{% endif %}
+            {% for d in data.attention %}
+            <div class="ai-box"><h5>{{ d.department }}</h5>
+                <div class="table-wrap"><table class="data-table">
+                    <thead><tr><th scope="col">Instructor</th><th scope="col">Average</th><th scope="col">Evaluations</th><th scope="col">Open alerts</th><th scope="col">Highest severity</th></tr></thead>
+                    <tbody>{% for r in d.rows %}<tr>
+                        <th scope="row"><a href="{% url 'ai_admin_instructor' r.teacher.pk %}">{{ r.name }}</a></th>
+                        <td>{% if r.average is not None %}{{ r.average|floatformat:2 }}{% else %}–{% endif %}</td><td>{{ r.evaluations }}</td>
+                        <td>{{ r.alerts }} <small class="ai-who">{{ r.kinds|join:", " }}</small></td>
+                        <td><span class="ai-badge ai-badge--{% if r.severity == 'high' %}bad{% elif r.severity == 'medium' %}warn{% else %}good{% endif %}">{{ r.severity|capfirst }}</span></td></tr>{% endfor %}</tbody>
+                </table></div>
+            </div>
+            {% empty %}<p class="ai-empty">No instructor needs attention with these filters.</p>{% endfor %}
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="history" hidden>
+            <p class="ai-who">All alerts, including reviewed and resolved ones, in each period.</p>
+            <ul class="ai-hbars">
+                {% for h in data.history %}<li class="ai-hbar"><span>{{ h.label }} <small>{{ h.open }} still open</small></span>
+                    <span class="ai-hbar-track"><span class="ai-hbar-fill ai-hbar-fill--problem" style="width: {{ h.width }}%"></span></span><b>{{ h.count }}</b></li>
+                {% empty %}<li class="ai-empty">No alert has been made yet.</li>{% endfor %}
+            </ul>
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="kinds" hidden>
+            <ul class="ai-hbars">
+                {% for k in data.by_kind %}
+                <li class="ai-hbar"><span>{{ k.label }}</span>
+                    <span class="ai-hbar-track"><span class="ai-hbar-fill ai-hbar-fill--problem" style="width: {{ k.width }}%"></span></span>
+                    <b>{{ k.count }}</b></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="limits" hidden>
+            <form method="post" action="{% url 'ai_admin_alert_settings' %}" class="ai-limits-form">
+                {% csrf_token %}
+                <input type="hidden" name="qs" value="{{ qs }}">
+                <div class="field"><label for="l1">Overall score below</label><input id="l1" class="input" name="low_score" type="number" step="0.05" min="1" max="5" value="{{ data.settings.low_score }}"></div>
+                <div class="field"><label for="l2">Score fell by at least</label><input id="l2" class="input" name="score_drop" type="number" step="0.05" min="0.05" max="2" value="{{ data.settings.score_drop }}"></div>
+                <div class="field"><label for="l3">Fell this many periods in a row</label><input id="l3" class="input" name="falling_periods" type="number" step="1" min="1" max="5" value="{{ data.settings.falling_periods }}"></div>
+                <div class="field"><label for="l4">Forecast below</label><input id="l4" class="input" name="forecast_low" type="number" step="0.05" min="1" max="5" value="{{ data.settings.forecast_low }}"></div>
+                <div class="field"><label for="l5">Forecast lower than last score by</label><input id="l5" class="input" name="forecast_drop" type="number" step="0.05" min="0.05" max="2" value="{{ data.settings.forecast_drop }}"></div>
+                <div class="field"><label for="l6">Negative comments (%)</label><input id="l6" class="input" name="negative_share" type="number" step="1" min="5" max="100" value="{{ data.settings.negative_share }}"></div>
+                <div class="field"><label for="l7">Any category below</label><input id="l7" class="input" name="category_low" type="number" step="0.05" min="1" max="5" value="{{ data.settings.category_low }}"></div>
+                <div class="field ai-limits-action"><button type="submit" class="btn btn-primary">Save limits</button></div>
+            </form>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>{% endblock %}

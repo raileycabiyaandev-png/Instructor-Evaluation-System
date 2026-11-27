@@ -10,14 +10,19 @@ from django.urls import reverse
 from django.utils import timezone
 
 from academics.models import Department, Section, Subject, TeachingAssignment
-from evaluation.models import Evaluation, EvaluationPeriod
+from evaluation.models import Evaluation, EvaluationPeriod, Questionnaire
+from evaluation.submission import create_evaluation
 from users.models import User
 
 PASSWORD = 'Student-pass-123'
-RATINGS = {
-    'teaching_effectiveness': 5, 'communication_skills': 4, 'classroom_management': 3,
-    'punctuality': 5, 'student_engagement': 4, 'comment': 'Great class',
-}
+
+
+def ratings_data(value=4, comment='Great class', **override):
+    """The posted form: every one of the 15 statements rated `value`. override: {'q_<id>': '9'} etc."""
+    data = {f'q_{q.pk}': str(value) for q in Questionnaire.current().questions()}
+    data['comment'] = comment
+    data.update(override)
+    return data
 
 
 def make_user(email, role, **extra):
@@ -93,18 +98,14 @@ class DashboardShowsOnlyMyInstructors(StudentBase):
         self.assertEqual(len(context['pending_cards']), 2)
 
     def test_evaluated_and_not_evaluated_are_both_shown(self):
-        Evaluation.objects.create(student=self.student, teacher=self.prof_ge, period=self.period,
-                                  teaching_effectiveness=5, communication_skills=5, classroom_management=5,
-                                  punctuality=5, student_engagement=5)
+        create_evaluation(student=self.student, teacher=self.prof_ge, period=self.period, scores=5)
         context = self.client.get(reverse('student_dashboard')).context
         self.assertEqual([c['teacher'] for c in context['evaluated_cards']], [self.prof_ge])
         self.assertEqual([c['teacher'] for c in context['pending_cards']], [self.prof_it])
         self.assertEqual(context['progress_percent'], 50)
 
     def test_other_students_evaluations_do_not_count_for_me(self):
-        Evaluation.objects.create(student=self.classmate, teacher=self.prof_ge, period=self.period,
-                                  teaching_effectiveness=5, communication_skills=5, classroom_management=5,
-                                  punctuality=5, student_engagement=5)
+        create_evaluation(student=self.classmate, teacher=self.prof_ge, period=self.period, scores=5)
         context = self.client.get(reverse('student_dashboard')).context
         self.assertEqual(context['evaluated_count'], 0)
 
@@ -172,7 +173,7 @@ class QrAndEvaluateGuards(StudentBase):
         self.assertContains(self.client.get(self.evaluate_url(self.prof_b)), 'Instructor Not In Your Section')
 
     def test_submit_for_foreign_instructor_saves_nothing(self):
-        response = self.client.post(self.submit_url(self.prof_b), RATINGS)
+        response = self.client.post(self.submit_url(self.prof_b), ratings_data())
         self.assertContains(response, 'Instructor Not In Your Section')
         self.assertEqual(Evaluation.objects.count(), 0)
 
@@ -181,14 +182,14 @@ class QrAndEvaluateGuards(StudentBase):
         self.student.save()
         self.assertContains(self.qr(self.prof_it), 'No Section Assigned Yet')
         self.assertContains(self.client.get(self.evaluate_url(self.prof_it)), 'No Section Assigned Yet')
-        self.client.post(self.submit_url(self.prof_it), RATINGS)
+        self.client.post(self.submit_url(self.prof_it), ratings_data())
         self.assertEqual(Evaluation.objects.count(), 0)
 
     def test_closed_period_blocks_form_and_submit(self):
         EvaluationPeriod.objects.update(is_active=False)
         self.assertContains(self.qr(self.prof_it), 'Evaluation Closed')
         self.assertContains(self.client.get(self.evaluate_url(self.prof_it)), 'Evaluation Closed')
-        response = self.client.post(self.submit_url(self.prof_it), RATINGS)
+        response = self.client.post(self.submit_url(self.prof_it), ratings_data())
         self.assertContains(response, 'Evaluation Closed')                 # a friendly page, not a crash
         self.assertEqual(Evaluation.objects.count(), 0)
 
@@ -196,7 +197,7 @@ class QrAndEvaluateGuards(StudentBase):
         old = EvaluationPeriod.objects.create(
             school_year='2025-2026', semester='1st', term='finals',
             start_date=datetime.date(2025, 10, 1), end_date=datetime.date(2025, 11, 1), is_active=False)
-        response = self.client.post(reverse('submit_evaluation', args=[self.prof_it.pk, old.pk]), RATINGS)
+        response = self.client.post(reverse('submit_evaluation', args=[self.prof_it.pk, old.pk]), ratings_data())
         self.assertContains(response, 'Evaluation Closed')
         self.assertEqual(Evaluation.objects.count(), 0)
 
@@ -204,31 +205,32 @@ class QrAndEvaluateGuards(StudentBase):
 class SubmitEvaluation(StudentBase):
 
     def test_submit_saves_and_returns_to_dashboard(self):
-        response = self.client.post(self.submit_url(self.prof_ge), RATINGS)
+        response = self.client.post(self.submit_url(self.prof_ge), ratings_data())
         self.assertRedirects(response, reverse('student_dashboard'), fetch_redirect_response=False)
         evaluation = Evaluation.objects.get()
         self.assertEqual((evaluation.student, evaluation.teacher, evaluation.period),
                          (self.student, self.prof_ge, self.period))
 
     def test_gened_teacher_of_it_section_can_be_evaluated_but_only_once(self):
-        self.client.post(self.submit_url(self.prof_ge), RATINGS)
-        response = self.client.post(self.submit_url(self.prof_ge), RATINGS)
+        self.client.post(self.submit_url(self.prof_ge), ratings_data())
+        response = self.client.post(self.submit_url(self.prof_ge), ratings_data())
         self.assertContains(response, 'Already Submitted')
         self.assertEqual(Evaluation.objects.count(), 1)
 
     def test_qr_for_already_evaluated_instructor_says_so(self):
-        self.client.post(self.submit_url(self.prof_ge), RATINGS)
+        self.client.post(self.submit_url(self.prof_ge), ratings_data())
         response = self.client.get(reverse('qr_redirect_handler') + f'?teacher={self.prof_ge.pk}')
         self.assertContains(response, 'Already Submitted')
 
     def test_missing_or_invalid_ratings_are_refused(self):
-        bad = dict(RATINGS, punctuality='9')
+        first = Questionnaire.current().questions()[0]
+        bad = ratings_data(**{f'q_{first.pk}': '9'})
         response = self.client.post(self.submit_url(self.prof_ge), bad)
         self.assertRedirects(response, self.evaluate_url(self.prof_ge), fetch_redirect_response=False)
         self.assertEqual(Evaluation.objects.count(), 0)
 
     def test_long_comment_is_trimmed(self):
-        self.client.post(self.submit_url(self.prof_ge), dict(RATINGS, comment='x' * 5000))
+        self.client.post(self.submit_url(self.prof_ge), ratings_data(comment='x' * 5000))
         self.assertEqual(len(Evaluation.objects.get().comment), 1000)
 
     def test_get_request_is_refused(self):
@@ -250,7 +252,7 @@ class OnlyStudentsUseStudentPages(StudentBase):
             for url in (reverse('scan_qr_page'), self.evaluate_url(self.prof_it),
                         reverse('qr_redirect_handler') + f'?teacher={self.prof_it.pk}'):
                 self.assertEqual(self.client.get(url).status_code, 302, (email, url))
-            self.client.post(self.submit_url(self.prof_it), RATINGS)
+            self.client.post(self.submit_url(self.prof_it), ratings_data())
         self.assertEqual(Evaluation.objects.count(), 0)
 
 
@@ -274,10 +276,8 @@ class ScanPage(StudentBase):
 class HistoryProfilePassword(StudentBase):
 
     def test_history_lists_only_my_evaluations(self):
-        self.client.post(self.submit_url(self.prof_ge), RATINGS)
-        Evaluation.objects.create(student=self.classmate, teacher=self.prof_it, period=self.period,
-                                  teaching_effectiveness=1, communication_skills=1, classroom_management=1,
-                                  punctuality=1, student_engagement=1)
+        self.client.post(self.submit_url(self.prof_ge), ratings_data())
+        create_evaluation(student=self.classmate, teacher=self.prof_it, period=self.period, scores=1)
         history = list(self.client.get(reverse('student_dashboard')).context['history'])
         self.assertEqual(len(history), 1)
         self.assertEqual(history[0].teacher, self.prof_ge)

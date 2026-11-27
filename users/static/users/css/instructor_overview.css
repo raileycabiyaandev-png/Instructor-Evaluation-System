@@ -1,0 +1,231 @@
+/* ============================================================
+   users/static/users/css/instructor_overview.css
+   The core numbers + graphs of ONE period (users/_instructor_overview.html)
+   and the SVG line chart (ai_insights/_line_chart.html).
+
+   Used by the Teacher Dashboard AND the Evaluation Results page.
+   Self-contained: it defines its own colours. Load it AFTER
+   ai.css, ai_clean.css and instructor_dashboard.css.
+
+   Look: neutral. White cards, grey borders, grey tiles. Navy is
+   used only for graph fills. Meaning is carried by words and icons.
+
+   1. Tokens + layout   3. Areas + bars   5. Responsive
+   2. Cards + KPI       4. Line chart
+   ============================================================ */
+
+
+/* ============================================================
+   1. TOKENS + LAYOUT
+   ============================================================ */
+.ov {
+  --ink: #0f172a;
+  --text: #334155;
+  --mut: #64748b;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --soft: #f8fafc;
+  --soft-2: #f1f5f9;
+  --navy: #1f3585;
+  --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 2px 8px rgba(15, 23, 42, .04);
+
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  color: var(--text);
+  font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.ov *, .ov *::before, .ov *::after { box-sizing: border-box; font-family: inherit; }
+.ov h3, .ov p, .ov ul, .ov li { margin: 0; padding: 0; list-style: none; }
+.ov [class*="bi-"]::before { font-family: "bootstrap-icons" !important; }
+.ov :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+.ov-kpis   { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ov-areas  { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ov-charts { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+.ov-kpis > *, .ov-areas > *, .ov-charts > * { min-width: 0; }
+
+
+/* ============================================================
+   2. CARDS + KPI PARTS
+   ============================================================ */
+.ov-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.ov-card-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.ov-card-head h3 { font-size: 15.5px; font-weight: 600; line-height: 1.35; color: var(--ink); }
+.ov-card-head p { margin-top: 1px; font-size: 13px; color: var(--mut); }
+/* every icon box is the same neutral square, whatever the card is about */
+.ov-icon,
+.ov-icon--good, .ov-icon--warn, .ov-icon--bad {
+  display: grid; place-items: center;
+  flex: 0 0 38px; width: 38px; height: 38px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--soft-2); color: var(--navy); font-size: 17px;
+}
+
+.ov-card-body { display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 14px 22px; padding: 20px; }
+.ov-card-body--col { flex-direction: column; align-items: stretch; }
+.ov-card-body--block { display: block; }
+
+/* progress / score ring */
+.ov-ring {
+  --c: var(--navy);
+  --p: 0;
+  position: relative;
+  flex: 0 0 120px;
+  width: 120px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0);
+}
+.ov-ring-in { position: absolute; inset: 12px; display: grid; place-content: center; border-radius: 50%; background: #fff; text-align: center; }
+.ov-ring-in b { font-size: 24px; font-weight: 600; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ov-ring-in span { font-size: 12.5px; color: var(--mut); }
+
+.ov-figure { display: grid; gap: 6px; flex: 1 1 120px; min-width: 0; }
+.ov-big { font-size: 30px; font-weight: 600; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ov-big small { font-size: 15px; font-weight: 500; color: var(--mut); }
+.ov-text { font-size: 14px; color: var(--mut); }
+
+.ov-change { display: inline-flex; align-items: center; gap: 8px; }
+.ov-up, .ov-down { color: var(--ink); }
+
+/* chips: neutral, always a word + icon */
+.ov-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ov-chip,
+.ov-chip--good, .ov-chip--bad, .ov-chip--warn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 12px;
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  background: var(--soft-2); color: var(--text);
+  font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+
+/* this period vs before */
+.ov-vs { display: grid; gap: 10px; }
+.ov-vs li { display: grid; grid-template-columns: 78px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-size: 14px; }
+.ov-vs li > span:first-child { color: var(--mut); }
+.ov-vs b { text-align: right; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* shared bar track */
+.ov-track { position: relative; display: block; height: 10px; border-radius: 999px; background: var(--line); }
+.ov-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--navy); }
+.ov-fill--soft { background: #94a3b8; }
+.ov-fill--low  { background: #94a3b8; }
+
+/* note under the KPI row */
+.ov-note {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--soft); color: var(--text); font-size: 14.5px;
+}
+.ov-note i { margin-top: 3px; color: var(--mut); }
+
+
+/* ============================================================
+   3. AREAS + BARS
+   ============================================================ */
+.ov-area { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; }
+.ov-area b { font-size: 17px; font-weight: 600; color: var(--ink); }
+.ov-area span { font-size: 26px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ov-empty { font-size: 14.5px; color: var(--mut); }
+.ov-list { display: grid; gap: 0; width: 100%; }
+.ov-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ov-list li:first-child { padding-top: 0; }
+.ov-list li:last-child { padding-bottom: 0; border-bottom: 0; }
+.ov-list b { font-weight: 600; color: var(--ink); }
+.ov-list span { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 500; }
+
+.ov-bars { display: grid; gap: 16px; }
+.ov-bars li { display: grid; grid-template-columns: minmax(96px, 170px) minmax(0, 1fr) 46px; gap: 12px; align-items: center; }
+.ov-bar-label { font-size: 14.5px; color: var(--ink); }
+.ov-bars b { text-align: right; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* faint gridlines at 1, 2, 3, 4 out of 5 */
+.ov-track--grid {
+  height: 12px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), rgba(15, 23, 42, .1) calc(20% - 1px) 20%),
+    var(--line);
+}
+.ov-mark { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--ink); opacity: .75; }
+.ov-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-top: 16px; font-size: 13.5px; color: var(--mut); }
+.ov-mark-key { display: inline-block; width: 3px; height: 14px; margin-right: 6px; vertical-align: -2px; border-radius: 2px; background: var(--ink); opacity: .75; }
+.ov-hint-low i { display: inline-block; width: 18px; height: 8px; margin-right: 6px; border-radius: 999px; background: #94a3b8; }
+
+
+/* ============================================================
+   4. LINE CHART (ai_insights/_line_chart.html)
+   Real score = solid navy line. AI prediction = dashed grey line.
+   Works inside the overview AND on the AI Forecast tab.
+   ============================================================ */
+.ai-chart-fig { display: grid; gap: 14px; margin: 0; }
+.ai-chart-fig .ai-chart-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ai-chart-fig .ai-chart-legend li {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 12px;
+  border: 1px solid #e2e8f0; border-radius: 999px;
+  background: #f8fafc; color: #0f172a; font-size: 13.5px;
+}
+.ai-chart-fig .ai-chart-legend i { width: 22px; height: 4px; border-radius: 4px; background: #1f3585 !important; }
+.ai-chart-fig .ai-chart-legend li:nth-child(n+2) i {
+  background: repeating-linear-gradient(90deg, #64748b 0 5px, transparent 5px 8px) !important;
+}
+.ai-chart-fig .ai-svg-wrap { overflow-x: auto; }
+.ai-chart-fig .ai-svg { display: block; width: 100%; height: auto; max-height: 340px; }
+.ai-chart-fig .ai-svg-grid { stroke: #e2e8f0; stroke-width: 1; stroke-dasharray: 3 4; }
+.ai-chart-fig .ai-svg-tick, .ai-chart-fig .ai-svg-x { fill: #64748b; font-size: 12px; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+.ai-chart-fig .ai-svg path[stroke] { stroke: #1f3585; }
+.ai-chart-fig .ai-svg path[stroke-dasharray] { stroke: #64748b; }
+.ai-chart-fig .ai-svg circle { stroke: #1f3585; fill: #fff; transition: r .15s; }
+.ai-chart-fig .ai-svg circle[r="4.6"] { stroke: #64748b; fill: #64748b; }
+.ai-chart-fig .ai-svg-dot:hover { r: 6.5; }
+.ai-chart-fig .ai-details summary {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 36px; padding: 0 14px;
+  border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
+  color: #0f172a; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.ai-chart-fig .ai-details summary:hover { background: #f1f5f9; }
+.ai-chart-fig .ai-details[open] summary { margin-bottom: 12px; }
+.ai-chart-fig .table-wrap { overflow-x: auto; }
+.ai-chart-fig .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ai-chart-fig .data-table th, .ai-chart-fig .data-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; font-variant-numeric: tabular-nums; }
+.ai-chart-fig .data-table thead th { background: #f1f5f9; color: #334155; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.ai-chart-fig .data-table tbody th { font-weight: 600; }
+.ai-chart-fig .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ai-empty { margin: 0; padding: 20px 0; text-align: center; color: #64748b; }
+
+
+/* ============================================================
+   5. RESPONSIVE
+   ============================================================ */
+@media (max-width: 1100px) {
+  .ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov-kpis > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .ov-charts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ov { gap: 20px; }
+  .ov-kpis, .ov-areas { grid-template-columns: minmax(0, 1fr); }
+  .ov-card-head { padding: 14px 16px; }
+  .ov-card-body { padding: 16px; }
+  .ov-ring { flex-basis: 104px; width: 104px; }
+  .ov-ring-in b { font-size: 21px; }
+  .ov-bars li { grid-template-columns: minmax(0, 1fr) 46px; gap: 6px 12px; }
+  .ov-bars li .ov-track { grid-column: 1 / -1; order: 3; }
+  .ov-vs li { grid-template-columns: 70px minmax(0, 1fr) 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov *, .ov *::before, .ov *::after, .ai-chart-fig * { transition: none !important; animation: none !important; }
+}

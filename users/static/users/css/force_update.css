@@ -1,0 +1,336 @@
+/* ============================================================
+   Instructor Evaluation System — Force Update (Complete Account)
+   Clean form layout: navy banner + floating light panel
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+/* ── Tokens ── */
+:root {
+    --navy-950: #06091a;
+    --navy-900: #0b1229;
+    --navy-800: #0f1d40;
+    --navy-700: #162550;
+    --navy-600: #1e3163;
+    --gold:       #c9a84c;
+    --gold-light: #e8c97a;
+    --white:      #ffffff;
+    --page:       #eef1f7;
+    --slate-50:   #f8fafc;
+    --slate-100:  #f1f5f9;
+    --slate-200:  #e2e8f0;
+    --slate-300:  #cbd5e1;
+    --slate-400:  #94a3b8;
+    --slate-500:  #64748b;
+    --slate-700:  #334155;
+    --slate-900:  #0f172a;
+    --red-600:    #b42318;
+    --red-50:     #fef3f2;
+    --green-600:  #16a34a;
+
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+    --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+    min-height: 100vh;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--slate-700);
+    background: var(--page);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* ── Entrance motion ── */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   BANNER
+   ============================================================ */
+.banner {
+    position: relative;
+    padding: 64px 24px 128px;
+    color: var(--white);
+    background:
+        linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 48px 48px,
+        linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 48px 48px,
+        linear-gradient(160deg, var(--navy-950) 0%, var(--navy-800) 60%, var(--navy-700) 100%);
+}
+
+/* thin gold line at the bottom edge of the banner */
+.banner::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light) 50%, transparent);
+}
+
+.banner__inner { max-width: 760px; margin: 0 auto; }
+.banner__inner > * { animation: fadeUp .8s var(--ease) both; }
+.banner__inner > :nth-child(1) { animation-delay: .05s; }
+.banner__inner > :nth-child(2) { animation-delay: .15s; }
+.banner__inner > :nth-child(3) { animation-delay: .25s; }
+
+.banner__eyebrow {
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--gold-light);
+}
+
+.banner__title {
+    margin-bottom: 12px;
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 38px);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.banner__sub { max-width: 520px; font-size: 17px; line-height: 1.7; color: rgba(255, 255, 255, .75); }
+
+/* ============================================================
+   PANEL (floats over the banner)
+   ============================================================ */
+.panel {
+    position: relative;
+    max-width: 760px;
+    margin: -72px auto 48px;
+    padding: 36px 40px 32px;
+    background: var(--white);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(6, 9, 26, .16), 0 2px 6px rgba(6, 9, 26, .06);
+    animation: fadeUp .8s .2s var(--ease) both;
+}
+
+.panel__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.panel__title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--navy-900); }
+.progress__text { font-size: 14px; font-weight: 600; color: var(--slate-500); white-space: nowrap; }
+
+/* Progress bar (fills as fields are completed) */
+.progress {
+    height: 6px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    background: var(--slate-100);
+    border-radius: 100px;
+}
+.progress__bar {
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, var(--navy-600), var(--gold));
+    border-radius: 100px;
+    transition: width .5s var(--ease);
+}
+
+/* ── Alerts ── */
+.alert {
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--red-600);
+    background: var(--red-50);
+    border: 1px solid #fecdca;
+    border-radius: 10px;
+    animation: shake .45s var(--ease);
+}
+@keyframes shake {
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+}
+.errorlist { list-style: none; }
+
+/* ============================================================
+   FORM — two-column grid, any Django field type
+   ============================================================ */
+.form__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 20px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    animation: fadeUp .7s var(--ease) both;
+    animation-delay: calc(.3s + var(--i, 1) * .06s);
+}
+
+/* a lone last field, or wide widgets, span the full row */
+.field:last-child:nth-child(odd),
+.field:has(textarea),
+.field:has(input[type="checkbox"]),
+.field:has(input[type="radio"]) { grid-column: 1 / -1; }
+
+.field label { font-size: 14px; font-weight: 600; color: var(--slate-700); transition: color .2s; }
+.field:focus-within label { color: var(--navy-600); }
+.req { margin-left: 3px; color: var(--red-600); }
+
+.field input,
+.field select,
+.field textarea {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: 16px;                    /* prevents iOS zoom on focus */
+    color: var(--slate-900);
+    background: var(--white);
+    border: 1.5px solid var(--slate-300);
+    border-radius: 12px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.field select {
+    padding-right: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+}
+
+.field textarea { min-height: 110px; resize: vertical; }
+
+.field input[type="checkbox"],
+.field input[type="radio"] { width: 20px; min-height: 0; height: 20px; accent-color: var(--navy-600); -webkit-appearance: auto; appearance: auto; }
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover { border-color: var(--slate-400); }
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+    border-color: var(--navy-600);
+    box-shadow: 0 0 0 4px rgba(30, 49, 99, .12);
+}
+
+.field input:read-only:not([type="checkbox"]):not([type="radio"]) {
+    color: var(--slate-500);
+    background: var(--slate-50);
+}
+
+.field.invalid input,
+.field.invalid select,
+.field.invalid textarea { border-color: var(--red-600); background-color: var(--red-50); }
+
+.help  { font-size: 13px; line-height: 1.5; color: var(--slate-500); }
+.help ul { padding-left: 18px; }
+.error { font-size: 13px; color: var(--red-600); }
+
+/* ── Actions ── */
+.form__actions {
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--slate-100);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-primary {
+    position: relative;
+    overflow: hidden;
+    min-width: 220px;
+    min-height: 50px;
+    padding: 12px 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--navy-800), var(--navy-600));
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(11, 18, 41, .30);
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s, filter .2s;
+}
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .22) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform .8s var(--ease);
+}
+.btn-primary:hover { transform: translateY(-1px); filter: brightness(1.12); box-shadow: 0 8px 24px rgba(11, 18, 41, .38); }
+.btn-primary:hover::after { transform: translateX(120%); }
+.btn-primary:active { transform: scale(.98); }
+.btn-primary svg { transition: transform .3s var(--ease); }
+.btn-primary:hover svg { transform: translateX(4px); }
+
+.panel__note { margin-top: 18px; font-size: 14px; color: var(--slate-500); text-align: center; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px) {
+    .banner { padding: calc(36px + env(safe-area-inset-top)) 20px 104px; }
+    .banner__sub { font-size: 16px; }
+
+    .panel {
+        margin: -64px 12px 24px;
+        padding: 24px 18px 20px;
+        border-radius: 18px;
+    }
+    .panel__title { font-size: 20px; }
+
+    .form__grid { grid-template-columns: 1fr; gap: 20px; }   /* single column */
+    .field { gap: 8px; }
+    .field label { font-size: 15px; }
+    .field input,
+    .field select,
+    .field textarea { min-height: 54px; padding: 15px 16px; }
+    .field textarea { min-height: 120px; }
+
+    /* Button stays reachable while scrolling a long form */
+    .form__actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin: 24px -18px 0;
+        padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+        background: linear-gradient(to top, var(--white) 75%, rgba(255, 255, 255, 0));
+        border-top: 0;
+    }
+    .btn-primary { width: 100%; min-height: 54px; font-size: 17px; }
+    .panel__note { font-size: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
+}

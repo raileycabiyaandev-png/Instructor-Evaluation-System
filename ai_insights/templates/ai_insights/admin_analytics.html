@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Overview | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}AI Overview{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+
+    {% include "ai_insights/_admin_filters.html" with action=request.path hide_people=True %}
+
+    {% if not data.period %}
+    <section class="card"><div class="empty"><i class="bi bi-graph-up" aria-hidden="true"></i>
+        <h3>No finished evaluation period yet</h3><p>Results appear here after a period is finished and students have answered.</p></div></section>
+    {% else %}
+
+    <!-- header: which period, status, the one Generate button -->
+    <section class="card ac-head">
+        <div>
+            <h2 class="ac-title">{{ data.label }}</h2>
+        </div>
+        <div class="ac-status">
+            <span class="ac-chip ac-chip--{{ data.state.key }}">{{ data.state.text }}</span>
+            {% if data.state.at %}<span class="ac-sub">{{ data.state.at|date:"M d, Y H:i" }}{% if data.state.stale %} · <b>outdated</b>{% endif %}</span>{% endif %}
+            {% include "ai_insights/_generate_panel.html" with next="ai_admin_analytics" %}
+        </div>
+    </section>
+
+    <!-- key numbers -->
+    <div class="ac-kpis">
+        <div class="ac-kpi"><span class="ac-kpi-label">School average</span>
+            <span class="ac-kpi-value">{% if data.school.average is not None %}{{ data.school.average|floatformat:2 }}{% else %}–{% endif %}</span>
+            <span class="ac-kpi-note">out of 5 · {{ data.responses }} evaluations</span></div>
+        <div class="ac-kpi {% if data.school.trend == 'improving' %}ac-kpi--good{% elif data.school.trend == 'declining' %}ac-kpi--bad{% endif %}"><span class="ac-kpi-label">Previous period</span>
+            <span class="ac-kpi-value">{% if data.school.previous %}{{ data.school.previous.average|floatformat:2 }}{% else %}–{% endif %}</span>
+            <span class="ac-kpi-note">{% if data.school.change is not None %}<span class="{% if data.school.change > 0 %}ac-up{% elif data.school.change < 0 %}ac-down{% endif %}">{{ data.school.change|stringformat:"+.2f" }}</span> · {{ data.school.trend|capfirst }}{% else %}No earlier period{% endif %}</span></div>
+        <div class="ac-kpi ac-kpi--gold"><span class="ac-kpi-label">Next-period forecast</span>
+            <span class="ac-kpi-value">{% if data.forecast.available %}{{ data.forecast.average|floatformat:2 }}{% else %}–{% endif %}</span>
+            <span class="ac-kpi-note">{% if data.forecast.available %}{{ data.forecast.target_label }}{% else %}Needs {{ data.min_periods }} periods · have {{ data.periods_used }}{% endif %}</span></div>
+        <div class="ac-kpi"><span class="ac-kpi-label">Open alerts</span>
+            <span class="ac-kpi-value">{{ data.alerts.open }}</span>
+            <span class="ac-kpi-note">{{ data.alerts.high }} high</span></div>
+    </div>
+
+    <section class="card" data-ai-tabs data-ai-start="summary">
+        <div class="card-head">
+            <div class="ai-tabs" role="group" aria-label="Sections">
+                <button type="button" class="ai-tab" data-ai-tab="summary">AI summary</button>
+                <button type="button" class="ai-tab" data-ai-tab="feedback">Student feedback</button>
+                <button type="button" class="ai-tab" data-ai-tab="scores">Scores &amp; trend</button>
+                <button type="button" class="ai-tab" data-ai-tab="departments">Departments</button>
+                <button type="button" class="ai-tab" data-ai-tab="alerts">Alerts <span class="ai-tab-count">{{ data.alerts.open }}</span></button>
+            </div>
+        </div>
+
+        <!-- AI summary, strengths, weaknesses, suggestions -->
+        <div class="ac-body" data-ai-panel="summary">
+            {% if data.insight %}{% with insight=data.insight %}{% include "ai_insights/_school_text.html" %}{% endwith %}
+            {% else %}<p class="ac-empty">The AI summary appears after you press “Generate analysis”.</p>{% endif %}
+        </div>
+
+        <!-- student feedback: counts, themes, AI summary per instructor -->
+        <div class="ac-body" data-ai-panel="feedback" hidden>
+            {% if data.feedback.comments %}
+            <div class="ac-grid ac-grid--3">
+                <div class="ac-panel"><h4>Comments</h4>
+                    <div class="ai-split">
+                        <div class="ai-donut" style="background: {{ data.feedback.donut }};" role="img" aria-label="Positive {{ data.feedback.positive }}, neutral {{ data.feedback.neutral }}, negative {{ data.feedback.negative }}">
+                            <div class="ai-donut-center"><b>{{ data.feedback.comments }}</b><span>analysed</span></div></div>
+                        <ul class="ai-legend-list">
+                            <li><i class="key key--good"></i> Positive {{ data.feedback.positive }}</li>
+                            <li><i class="key key--mid"></i> Neutral {{ data.feedback.neutral }}</li>
+                            <li><i class="key key--bad"></i> Negative {{ data.feedback.negative }}</li>
+                        </ul>
+                    </div></div>
+                <div class="ac-panel ac-panel--good"><h4>Students like</h4>
+                    <ul class="ac-list">{% for t in data.insight.facts.praise %}<li>{{ t.label }} <small class="ac-hint">{{ t.mentions }}</small></li>{% empty %}<li class="ac-empty">No repeated praise yet.</li>{% endfor %}</ul></div>
+                <div class="ac-panel ac-panel--bad"><h4>Recurring concerns</h4>
+                    <ul class="ac-list">{% for t in data.insight.facts.problems %}<li>{{ t.label }} <small class="ac-hint">{{ t.mentions }}</small></li>{% empty %}<li class="ac-empty">No repeated concern yet.</li>{% endfor %}</ul></div>
+            </div>
+            <h3 class="ac-sec">AI feedback summary by instructor</h3>
+            <div class="ac-fb">
+                {% for v in feedback_items|slice:":8" %}
+                <article class="ac-fb-item">
+                    <div class="ac-fb-top"><div><b>{{ v.name }}</b> <small class="ac-hint">{{ v.department }}</small></div>
+                        <span class="ac-chip {% if v.ai %}ac-chip--ai{% endif %}">{% if v.ai %}Written by Ollama{% else %}Rule-based{% endif %}</span></div>
+                    <div class="ac-meter" title="Positive {{ v.pos_pct }}% · Neutral {{ v.neu_pct }}% · Negative {{ v.neg_pct }}%"><i class="p" style="width: {{ v.pos_pct }}%"></i><i class="n" style="width: {{ v.neu_pct }}%"></i><i class="x" style="width: {{ v.neg_pct }}%"></i></div>
+                    <p>{{ v.row.summary_text }}</p>
+                </article>
+                {% empty %}<p class="ac-empty">No instructor has enough comments yet.</p>{% endfor %}
+            </div>
+            {% if feedback_items|length > 8 %}<p><a class="btn btn-ghost btn-sm" href="{% url 'ai_admin_feedback' %}?{{ filters.querystring }}">See all {{ feedback_items|length }} instructors</a></p>{% endif %}
+            {% else %}
+            <p class="ac-empty">Not enough comments to analyse in this period.</p>
+            {% endif %}
+        </div>
+
+        <!-- scores -->
+        <div class="ac-body" data-ai-panel="scores" hidden>
+            <div class="ac-grid ac-grid--2">
+                <div class="ac-panel"><h4>School average by period</h4>
+                    {% if data.school_chart %}{% include "ai_insights/_line_chart.html" with chart=data.school_chart title="School average by period; dashed line is the AI forecast" %}
+                    {% else %}<p class="ac-empty">Not enough finished periods.</p>{% endif %}</div>
+                <div class="ac-panel"><h4>By category</h4>
+                    <ul class="ac-bars">
+                        {% for c in data.category_bars %}
+                        <li><span>{{ c.label }}{% if c.change is not None %}<small class="ac-hint {% if c.change > 0 %}ac-up{% elif c.change < 0 %}ac-down{% endif %}">{{ c.change|stringformat:"+.2f" }}</small>{% endif %}</span>
+                            <span class="ac-bar-track"><i class="ac-bar-fill" style="width: {{ c.now_w }}%"></i></span><b>{{ c.now|floatformat:2 }}</b></li>
+                        {% empty %}<li class="ac-empty">No scores yet.</li>{% endfor %}
+                    </ul></div>
+            </div>
+        </div>
+
+        <!-- departments -->
+        <div class="ac-body" data-ai-panel="departments" hidden>
+            <div class="ac-panel"><h4>Department average (real)</h4>
+                <ul class="ac-bars">
+                    {% for d in data.dept_bars %}
+                    <li><span>{{ d.label }}<small class="ac-hint">{{ d.instructors }} instructor{{ d.instructors|pluralize }}</small></span>
+                        <span class="ac-bar-track"><i class="ac-bar-fill" style="width: {{ d.width }}%"></i></span><b>{{ d.value|floatformat:2 }}</b></li>
+                    {% empty %}<li class="ac-empty">No department has enough evaluations.</li>{% endfor %}
+                </ul></div>
+            {% with outlook=data.outlook %}{% include "ai_insights/_dept_outlook.html" %}{% endwith %}
+        </div>
+
+        <!-- alerts -->
+        <div class="ac-body" data-ai-panel="alerts" hidden>
+            {% if data.alerts.top %}
+            <table class="ac-table">
+                <thead><tr><th>Instructor</th><th>Alert</th><th>Severity</th></tr></thead>
+                <tbody>{% for item in data.alerts.top %}
+                    <tr><td><a href="{% url 'ai_admin_instructor' item.alert.instructor_id %}">{{ item.name }}</a><small>{{ item.department }}</small></td>
+                        <td>{{ item.alert.title }}</td>
+                        <td><span class="ac-pill {% if item.alert.severity == 'high' %}ac-pill--bad{% elif item.alert.severity == 'medium' %}ac-pill--warn{% else %}ac-pill--good{% endif %}">{{ item.alert.get_severity_display }}</span></td></tr>
+                {% endfor %}</tbody>
+            </table>
+            <p><a class="btn btn-ghost btn-sm" href="{% url 'ai_admin_alerts' %}?{{ filters.querystring }}">All performance alerts</a></p>
+            {% else %}<p class="ac-empty">No open alerts.</p>{% endif %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Recommendations | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}Recommendations{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+
+    {% include "ai_insights/_generate_panel.html" with next="ai_admin_recommendations" %}
+
+    <section class="card" aria-label="Filters">
+        {% include "ai_insights/_admin_filters.html" with action=request.path extra="ai_insights/_filters_recs.html" %}
+    </section>
+
+    <div class="ai-tiles ai-tiles--page">
+        <div class="ai-tile"><b>{{ data.stats.instructors }}</b><span>Instructors</span></div>
+        <div class="ai-tile ai-tile--bad"><b>{{ data.stats.high }}</b><span>Needs attention</span></div>
+        <div class="ai-tile ai-tile--gold"><b>{{ data.stats.medium }}</b><span>Can improve</span></div>
+        <div class="ai-tile"><b>{{ data.stats.low }}</b><span>Small idea</span></div>
+        <div class="ai-tile ai-tile--good"><b>{{ data.stats.strength }}</b><span>Strength</span></div>
+        <div class="ai-tile"><b>{{ data.stats.ai_written }}</b><span>AI-written texts</span></div>
+    </div>
+
+    <section class="card" data-ai-tabs {% if request.GET.page %}data-ai-start="list"{% endif %}>
+        <div class="card-head">
+            <div class="ai-tabs" role="group" aria-label="Sections">
+                <button type="button" class="ai-tab" data-ai-tab="chart"><i class="bi bi-bar-chart" aria-hidden="true"></i> By category</button>
+                <button type="button" class="ai-tab" data-ai-tab="list"><i class="bi bi-lightbulb" aria-hidden="true"></i> Recommendations <span class="ai-tab-count">{{ data.pager.paginator.count }}</span></button>
+            </div>
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="chart">
+            {% if data.stats.total %}
+            <ul class="ai-hbars">
+                {% for c in data.by_category %}
+                <li class="ai-stack-row">
+                    <span>{{ c.label }}</span>
+                    <span class="ai-stack ai-stack--tall" role="img" aria-label="{{ c.high }} need attention, {{ c.medium }} can improve, {{ c.low }} small idea, {{ c.strength }} strength">
+                        <span class="ai-fill--high" style="width: {{ c.high_w }}%"></span><span class="ai-fill--medium" style="width: {{ c.medium_w }}%"></span><span class="ai-fill--low" style="width: {{ c.low_w }}%"></span><span class="ai-fill--strength" style="width: {{ c.strength_w }}%"></span>
+                    </span>
+                    <b title="{{ c.high }} need attention, {{ c.medium }} can improve, {{ c.low }} small idea, {{ c.strength }} strength">{{ c.total }} instructor{{ c.total|pluralize }}</b>
+                </li>
+                {% endfor %}
+            </ul>
+            <ul class="ai-legend2 ai-legend2--row">
+                <li><i class="ai-fill--high"></i>Needs attention</li><li><i class="ai-fill--medium"></i>Can improve</li>
+                <li><i class="ai-fill--low"></i>Small idea</li><li><i class="ai-fill--strength"></i>Strength</li>
+            </ul>
+            {% else %}
+            <p class="ai-empty">No recommendation has been generated yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="card-body ai-panel-stack" data-ai-panel="list" hidden>
+            <div class="ai-recs">
+                {% for c in data.pager %}
+                <article class="ai-rec ai-rec--{{ c.priority }}">
+                    <div class="ai-rec-head">
+                        <div><strong>{{ c.label }}</strong><br><span class="ai-who">{{ c.name }} · {{ c.department }}</span></div>
+                        <span>
+                            <span class="ai-badge ai-badge--{% if c.priority == 'high' %}bad{% elif c.priority == 'strength' %}good{% elif c.priority == 'medium' %}warn{% endif %}">{{ c.priority_text }}</span>
+                            {% if c.ai %}<span class="ai-badge ai-badge--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI</span>{% else %}<span class="ai-badge"><i class="bi bi-list-check" aria-hidden="true"></i> Rules</span>{% endif %}
+                        </span>
+                    </div>
+                    <div class="ai-meter">
+                        <span class="ai-meter-track"><span class="ai-meter-fill" style="width: {{ c.score_width }}%"></span></span>
+                        <span><b>{{ c.score }}</b> / 5</span>
+                    </div>
+                    <p>{{ c.text }}</p>
+                    {% if c.actions %}<ul class="ai-steps">{% for a in c.actions %}<li><b>{{ a.topic }}</b>{% if a.mentions %} <small>· {{ a.mentions }} comments</small>{% endif %}<br>{{ a.text }}</li>{% endfor %}</ul>{% endif %}
+                    <span class="ai-who">{{ c.period_label }}</span>
+                </article>
+                {% empty %}
+                <p class="ai-empty">No recommendation matches these filters.</p>
+                {% endfor %}
+            </div>
+            {% include "ai_insights/_pager.html" with pager=data.pager keep=keep %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>
+{% endblock %}

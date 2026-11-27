@@ -2,68 +2,164 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}?v=20261121-directory-1">
+<link rel="stylesheet" href="{% static 'users/css/directory.css' %}?v=20261121-directory-2">
+<link rel="stylesheet" href="{% static 'users/css/directory_ui.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'academics/css/academic_lists.css' %}?v=20261125-lists-3">
+<link rel="stylesheet" href="{% static 'academics/css/academic_dialogs.css' %}?v=20261125-dialogs-1">
 {% endblock %}
 
 {% block page_title %}Sections{% endblock %}
 
 {% block content %}
-<div class="page-container">
+<div class="page-container user-page" data-directory data-noun="section">
 
-    {% include 'academics/_messages.html' %}
-
-
+    <!-- PAGE HEADER -->
     <div class="page-header">
-        <p class="page-subtitle">Class sections. Open "Students" to put students into a section.</p>
-        <button type="button" class="btn-primary" data-open-modal="addModal">+ Add Section</button>
-    </div>
 
-    <div class="card">
-        <div class="card-header-area">
-            <div><span class="table-badge">Records</span></div>
-            <input type="text" class="search-input" placeholder="Search section..." data-table-search="sectionTable">
+        <div class="page-heading">
+            <p class="page-intro">Add sections, see who is enrolled in each one, and manage their status.</p>
         </div>
 
-        <div class="table-wrapper">
-            <table class="custom-table" id="sectionTable">
+        <button type="button" class="btn-primary add-button" data-open-modal="addModal">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            Add Section
+        </button>
+
+    </div>
+
+    <!-- MESSAGES -->
+    {% include 'academics/_messages.html' %}
+
+    <!-- DIRECTORY PANEL -->
+    <div class="dir-list">
+
+        <!-- SEARCH + COUNT -->
+        <div class="card-header-area">
+
+            <label class="list-search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+
+                <span class="visually-hidden">Search sections</span>
+
+                <input
+                    type="search"
+                    class="search-input"
+                    placeholder="Search section, program, department..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    data-table-search="sectionTable"
+                >
+            </label>
+
+            <div class="records-heading">
+                <p class="result-count" aria-live="polite">
+                    <strong>{{ sections|length }}</strong>
+                    section{{ sections|length|pluralize }} in total
+                </p>
+            </div>
+
+        </div>
+
+
+        <!-- TABLE -->
+        <div class="table-wrapper" data-table>
+            <table class="custom-table table-wide" id="sectionTable">
+
                 <thead>
                     <tr>
-                        <th>Section</th>
-                        <th>Program</th>
-                        <th>Department</th>
-                        <th>Students</th>
-                        <th>Status</th>
-                        <th class="actions-column wide">Actions</th>
+                        <th scope="col">Section</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Students</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-right actions-head">Actions</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                {% for s in sections %}
-                    <tr>
-                        <td><strong>{{ s.name }}</strong></td>
-                        <td>{{ s.get_program_display }}</td>
-                        <td><span class="department-badge">{{ s.department.code }}</span></td>
-                        <td><span class="count-pill">{{ s.student_total }}</span></td>
-                        <td>{% if s.is_active %}<span class="status-badge active">Active</span>{% else %}<span class="status-badge inactive">Inactive</span>{% endif %}</td>
-                        <td class="actions-column wide">
+                    {% for s in sections %}
+                    <tr
+                        data-row
+                        data-name="{{ s.name }}"
+                        data-search="{{ s.name }} {{ s.get_program_display }} {{ s.department.code }} {{ s.department.name }}"
+                    >
+
+                        <td class="cell-main" data-label="Section">
+                            <div class="user-details">
+                                <strong class="user-name hl">{{ s.name }}</strong>
+                            </div>
+                        </td>
+
+                        <td data-label="Program">
+                            <span class="hl">{{ s.get_program_display }}</span>
+                        </td>
+
+                        <td data-label="Department">
+                            <span class="department-badge">{{ s.department.code }}</span>
+                        </td>
+
+                        <td data-label="Students">
+                            <span class="count-pill">{{ s.student_total }}</span>
+                        </td>
+
+                        <td data-label="Status">
+                            {% if s.is_active %}
+                                <span class="status-badge active">Active</span>
+                            {% else %}
+                                <span class="status-badge inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="actions-column" data-label="Actions">
                             {% url 'section_students' s.pk as students_url %}
                             {% url 'section_update' s.pk as edit_url %}
                             {% url 'section_toggle' s.pk as toggle_url %}
                             {% url 'section_delete' s.pk as delete_url %}
+
                             {% include 'academics/_row_actions.html' with extra_url=students_url extra_label='Students' edit_url=edit_url toggle_url=toggle_url delete_url=delete_url is_active=s.is_active label='section' %}
                         </td>
+
                     </tr>
-                {% empty %}
-                    <tr><td colspan="6" class="empty">No sections yet. Click "Add Section".</td></tr>
-                {% endfor %}
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="bi bi-collection" aria-hidden="true"></i>
+                                <h3>No sections yet</h3>
+                                <p>There are no sections available. Add your first section to get started.</p>
+
+                                <button type="button" class="btn-primary" data-open-modal="addModal">
+                                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                    Add Section
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
+
             </table>
         </div>
+
     </div>
 
 </div>
 
+
+<!-- ADD SECTION MODAL -->
 {% include 'academics/_modal_form.html' with modal_id='addModal' title='Add Section' subtitle='Example: BSIT 2A, BSIT 2B' submit_label='Save Section' %}
+
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'academics/js/academics.js' %}"></script>
+<script src="{% static 'users/js/directory.js' %}?v=20261121-directory-3"></script>
+<script src="{% static 'academics/js/academic_dialogs.js' %}?v=20261125-dialogs-1"></script>
+{% endblock %}

@@ -11,9 +11,8 @@ urlpatterns = [
     path('evaluation/update/<int:pk>/', views.update_evaluation, name='update_evaluation'),
     path('evaluation/delete/<int:pk>/', views.delete_evaluation, name='delete_evaluation'),
     path('evaluate/<int:teacher_id>/<int:pk>/', views.evaluate_teacher_page, name='evaluate_teacher_page'),
-    path('evaluate/evaluation_archive/', views.evaluation_archive, name='evaluation_archive'),
+    path('evaluation/monitoring/', views.evaluation_monitoring, name='evaluation_monitoring'),
     path('submit/<int:teacher_id>/<int:pk>/', views.submit_evaluation, name='submit_evaluation'),
-    path('evaluation/archive/<int:pk>/', views.evaluation_term_detail, name='evaluation_term_detail'),
     path('qr/delete/<int:qr_id>/', views.delete_qr, name='delete_qr'),
     path('evaluation-closed/', views.evaluation_closed_page, name='evaluation_closed'),
     path('scan/', views.scan_qr_page, name='scan_qr_page'),
@@ -21,4 +20,7 @@ urlpatterns = [
     path('evaluation/results/',   views.faculty_results,   name='faculty_results'),
     path('evaluation/history/',   views.faculty_history,   name='faculty_history'),
     path('qr_list/', views.qr_list, name='qr_list'),
+
+    path('evaluation/monitoring/', views.evaluation_monitoring, name='evaluation_monitoring'),
+    path('evaluation/monitoring/export/', views.evaluation_monitoring_export, name='evaluation_monitoring_export'),
 ]

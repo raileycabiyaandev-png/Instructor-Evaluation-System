@@ -1,0 +1,14 @@
+<div class="field">
+    <label for="f-tone">Sentiment</label>
+    <select id="f-tone" name="tone" class="select">
+        <option value="">Any</option>
+        {% for value, label in data.tones.items %}<option value="{{ value }}" {% if value == data.tone %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>
+<div class="field">
+    <label for="f-source">Summary type</label>
+    <select id="f-source" name="source" class="select">
+        <option value="">Any</option>
+        {% for value, label in data.sources.items %}<option value="{{ value }}" {% if value == data.source %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>

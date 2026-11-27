@@ -23,6 +23,8 @@ from django.utils.decorators import method_decorator
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from academics.utils import get_open_period, subjects_taught_to_student
+from . import scoring, submission
+from .questionnaire_data import CATEGORIES, LIKERT
 
 def no_cache(view_func): # prevent caching 
     def wrapper(request, *args, **kwargs):
@@ -101,15 +103,6 @@ def student_notice(request, kind, **extra):
     context = dict(notices[kind])
     context.update(extra)
     return render(request, 'evaluation/student_notice.html', context)
-
-
-RATING_FIELDS = [
-    ('teaching_effectiveness', 'Teaching Effectiveness'),
-    ('communication_skills',   'Communication Skills'),
-    ('classroom_management',   'Classroom Management'),
-    ('punctuality',            'Punctuality'),
-    ('student_engagement',     'Student Engagement'),
-]
 
 
 @login_required
@@ -277,36 +270,22 @@ def submit_evaluation(request, teacher_id, pk):
     if blocked:
         return blocked
 
-    # prevent duplicate evaluation
-    if Evaluation.objects.filter(
-        student=request.user,
-        teacher=teacher,
-        period=period
-    ).exists():
-        return student_notice(request, 'already')
-
-    ratings = {
-        field: safe_rating(request.POST.get(field))
-        for field, _ in RATING_FIELDS
-    }
-
-    if None in ratings.values():
-        messages.error(request, "Complete all ratings.")
+    # Read the 15 ratings of the period's questionnaire (every statement must have a rating of 1-5)
+    try:
+        ratings = submission.read_ratings(request.POST, period)
+    except submission.SubmissionError as exc:
+        messages.error(request, str(exc))
         return redirect('evaluate_teacher_page', teacher_id=teacher.id, pk=period.id)
 
+    # Saves the evaluation and its answers in one transaction. Duplicates are blocked here AND by the database
+    # (two clicks at the same moment cannot create two copies).
     try:
-        Evaluation.objects.create(
-            student=request.user,
-            teacher=teacher,
-            period=period,
-            comment=request.POST.get('comment', '').strip()[:1000],
-            **ratings
-        )
-    except IntegrityError:
-        # two clicks at the same time: the database blocked the 2nd copy
+        submission.save_evaluation(
+            request.user, teacher, period, ratings, request.POST.get('comment', ''))
+    except submission.AlreadySubmitted:
         return student_notice(request, 'already')
-    except ValidationError:
-        messages.error(request, "Your evaluation could not be saved. Please try again.")
+    except submission.SubmissionError as exc:
+        messages.error(request, str(exc))
         return redirect('evaluate_teacher_page', teacher_id=teacher.id, pk=period.id)
 
     messages.success(
@@ -334,11 +313,15 @@ def evaluate_teacher_page(request, teacher_id, pk):
         period=period,
     ).exists()
 
+    groups = submission.build_form(period)
+
     return render(request, 'evaluation/evaluate_teacher.html', {
         'teacher':           teacher,
         'period':            period,
         'subjects':          subjects,
-        'ratings':           RATING_FIELDS,
+        'groups':            groups,
+        'total_statements':  sum(len(g['questions']) for g in groups),
+        'scale':             LIKERT,
         'already_evaluated': already_evaluated,
     })
 
@@ -547,35 +530,22 @@ def evaluation_term_detail(request, pk):
 
     instructors = User.objects.filter(role='instructor')
 
+    # one set of queries for every instructor (no query inside the loop); see evaluation/scoring.py
+    scores = scoring.grouped(evaluations, 'teacher_id')
+
     instructor_data = []
 
     for instructor in instructors:
 
-        qs = evaluations.filter(teacher=instructor)
+        found = scores.get((instructor.pk,))
 
-        if qs.exists():
-
-            avg = qs.aggregate(
-                teaching=Avg('teaching_effectiveness'),
-                communication=Avg('communication_skills'),
-                management=Avg('classroom_management'),
-                punctuality=Avg('punctuality'),
-                engagement=Avg('student_engagement'),
-            )
-
-            overall = (
-                (avg['teaching'] or 0) +
-                (avg['communication'] or 0) +
-                (avg['management'] or 0) +
-                (avg['punctuality'] or 0) +
-                (avg['engagement'] or 0)
-            ) / 5
+        if found:
 
             instructor_data.append({
                 "instructor": instructor,
-                "avg": avg,
-                "count": qs.count(),
-                "overall": round(overall, 2),
+                "avg": found['categories'],
+                "count": found['responses'],
+                "overall": round(found['overall'], 2),
             })
 
     # =========================
@@ -596,14 +566,17 @@ def evaluation_term_detail(request, pk):
     # =========================
     # CATEGORY AVERAGES (SYSTEM-WIDE)
     # =========================
-    category_avg = evaluations.aggregate(
-        teaching=Avg('teaching_effectiveness'),
-        communication=Avg('communication_skills'),
-        management=Avg('classroom_management'),
-        punctuality=Avg('punctuality'),
-        engagement=Avg('student_engagement'),
-    )
-
+    overall_scores = scoring.summary(evaluations)
+    bar_colors = ['cat-bar--navy', 'cat-bar--gold', 'cat-bar--green', 'cat-bar--slate', 'cat-bar--mid']
+    category_rows = [
+        {
+            'label': label,
+            'score': overall_scores['categories'][key] or 0,
+            'width': round((overall_scores['categories'][key] or 0) / 5 * 100),
+            'bar': bar_colors[i % len(bar_colors)],
+        }
+        for i, (key, label) in enumerate(CATEGORIES)
+    ]
 
     comments = evaluations.exclude(comment="").values_list("comment", flat=True)
 
@@ -613,7 +586,7 @@ def evaluation_term_detail(request, pk):
         "total_submissions": total_submissions,
         "best_teacher": best_teacher,
         "worst_teacher": worst_teacher,
-        "category_avg": category_avg,
+        "category_rows": category_rows,
         "comments": comments,
     })
 
@@ -634,29 +607,14 @@ def compute_averages(qs):
         'total_responses': 12,
       }
     """
-    agg = qs.aggregate(
-        teaching=Avg('teaching_effectiveness'),
-        communication=Avg('communication_skills'),
-        management=Avg('classroom_management'),
-        punctuality=Avg('punctuality'),
-        engagement=Avg('student_engagement'),
-        total=Count('id'),
-    )
- 
-    raw = {
-        'Teaching Effectiveness': agg['teaching']  or 0,
-        'Communication Skills':   agg['communication'] or 0,
-        'Classroom Management':   agg['management'] or 0,
-        'Punctuality':            agg['punctuality'] or 0,
-        'Student Engagement':     agg['engagement'] or 0,
-    }
- 
-    # Round each to 2 dp
-    category_averages = {k: round(v, 2) for k, v in raw.items()}
- 
-    total = agg['total'] or 0
-    overall = round(sum(raw.values()) / 5, 2) if total else 0
- 
+    found = scoring.summary(qs)
+
+    # Each dimension rounded to 2 decimals (0 when nobody has answered yet)
+    category_averages = {label: round(found['categories'][key] or 0, 2) for key, label in CATEGORIES}
+
+    total = found['responses']
+    overall = round(found['overall'], 2) if total else 0
+
     return {
         'category_averages': category_averages,
         'overall_average':   overall,
@@ -783,3 +741,125 @@ def faculty_results(request):
         'category_averages': stats['category_averages'],
         'comments':          comments,
     })
+
+# ═════════════════════════════════════════════
+# EVALUATION MONITORING (Admin only)
+# All the counting lives in evaluation/monitoring.py. This view only reads the filters,
+# asks that file for the numbers, cuts the long tables into pages and shows the template.
+# ═════════════════════════════════════════════
+from urllib.parse import urlencode
+
+from django.core.paginator import Paginator
+
+from academics.models import Department, Section
+from . import monitoring
+
+MONITOR_INSTRUCTORS_PER_PAGE = 10
+MONITOR_SECTIONS_PER_PAGE = 10
+MONITOR_STUDENTS_PER_PAGE = 15
+
+# every filter the page understands (page numbers are NOT in this list on purpose: a new filter starts at page 1)
+MONITOR_KEYS = ('school_year', 'semester', 'term', 'department', 'section', 'instructor',
+                'status', 'ssection', 'q', 'ssort')
+
+
+def _monitor_query(request, drop=()):
+    """The current filters as a query string (so the page links and the export keep them)."""
+    return urlencode([(k, request.GET[k]) for k in MONITOR_KEYS if request.GET.get(k) and k not in drop])
+
+
+def _monitor_hidden(request, drop=()):
+    """The same filters as (name, value) pairs, for the hidden fields of the search form."""
+    return [(k, request.GET[k]) for k in MONITOR_KEYS if request.GET.get(k) and k not in drop]
+
+
+@login_required
+@no_cache
+@admin_required
+def evaluation_monitoring(request):
+    filters = monitoring.parse_filters(request.GET)
+    try:
+        data = monitoring.build(filters)
+    except Exception:                                   # never show a crash page to the admin
+        import logging
+        logging.getLogger(__name__).exception("Evaluation monitoring could not be built")
+        messages.error(request, "The monitoring numbers could not be loaded. Please try again, or tell the developer.")
+        data = {'filters': filters, 'options': monitoring.period_options(), 'period': None,
+                'stats': None, 'has_periods': True, 'is_default': False, 'uncounted': None, 'failed': True}
+
+    stats = data.get('stats')
+    instructors_page = sections_page = students_page = None
+    student_rows, student_counts, student_scope_total = [], None, 0
+    if stats:
+        instructors_page = Paginator(stats['instructors'], MONITOR_INSTRUCTORS_PER_PAGE).get_page(request.GET.get('ipage'))
+        sections_page = Paginator(monitoring.sort_sections(stats['sections'], filters.section_sort),
+                                  MONITOR_SECTIONS_PER_PAGE).get_page(request.GET.get('secpage'))
+        # Students: first the section + name search, then count each status, then the status tab
+        in_scope = monitoring.students_in_scope(
+            stats['students'], filters.student_section.pk if filters.student_section else None, filters.q)
+        student_counts = monitoring.count_statuses(in_scope)
+        student_scope_total = len(in_scope)
+        student_rows = monitoring.apply_student_filter(in_scope, filters.status)
+        students_page = Paginator(student_rows, MONITOR_STUDENTS_PER_PAGE).get_page(request.GET.get('spage'))
+
+    period = data.get('period')
+    # The drop-downs show the period that was really found (so the page never says one thing and shows another)
+    chosen = {
+        'school_year': period['school_year'] if period else filters.school_year,
+        'semester': period['semester_key'] if period else filters.semester,
+        'term': period['term_key'] if period else filters.term,
+    }
+
+    return render(request, 'evaluation/evaluation_monitoring.html', {
+        'data': data,
+        'stats': stats,
+        'period': period,
+        'chosen': chosen,
+        'instructors_page': instructors_page,
+        'sections_page': sections_page,
+        'students_page': students_page,
+        'student_counts': student_counts,
+        'student_scope_total': student_scope_total,
+        'student_filtered_count': len(student_rows),
+        'status_labels': monitoring.STUDENT_STATUS_LABELS,
+        'section_sorts': monitoring.SECTION_SORTS,
+        'departments': Department.objects.order_by('name'),
+        'sections': Section.objects.order_by('name'),
+        'section_choices': ([{'pk': x['pk'], 'name': x['name']} for x in monitoring.sort_sections(stats['sections'], 'name')]
+                            if stats else []),
+        'instructor_choices': User.objects.filter(role='instructor', is_active=True)
+                                  .order_by('last_name', 'first_name').only('id', 'first_name', 'last_name'),
+        'query_keep': _monitor_query(request),
+        'query_no_status': _monitor_query(request, drop=('status',)),
+        'query_no_ssort': _monitor_query(request, drop=('ssort',)),
+        'query_no_ssection': _monitor_query(request, drop=('ssection',)),
+        'query_students_only_reset': _monitor_query(request, drop=('ssection', 'q', 'status')),
+        'hidden_for_search': _monitor_hidden(request, drop=('q',)),
+    })
+
+
+@login_required
+@no_cache
+@admin_required
+def evaluation_monitoring_export(request):
+    """Download the numbers of the page as PDF or Excel (follows the same filters)."""
+    from ai_insights.services import reports
+
+    fmt = request.GET.get('fmt', '')
+    if fmt not in ('pdf', 'xlsx'):
+        messages.error(request, "Please choose PDF or Excel.")
+        return redirect('evaluation_monitoring')
+
+    data = monitoring.build(monitoring.parse_filters(request.GET))
+    report = monitoring.report_dict(data)
+    try:
+        content = reports.to_pdf(report) if fmt == 'pdf' else reports.to_xlsx(report)
+    except reports.ReportLibraryMissing as exc:
+        messages.error(request, str(exc))
+        return redirect('evaluation_monitoring')
+
+    mime = 'application/pdf' if fmt == 'pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response = HttpResponse(content, content_type=mime)
+    response['Content-Disposition'] = f'attachment; filename="{reports.file_name(report, fmt)}"'
+    response['Cache-Control'] = 'no-store'
+    return response

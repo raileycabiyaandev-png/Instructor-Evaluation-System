@@ -1,0 +1,809 @@
+/* ============================================================
+   academics/css/academic_lists.css
+
+   Departments / Subjects / Sections / Teaching Assignments
+   list pages and their windows.
+
+   Loaded AFTER create_user.css, directory.css and
+   users/css/directory_ui.css. directory_ui.css gives these pages
+   the shared panel look (toolbar, tabs, table, buttons). This file
+   only adds what is specific to the academics pages:
+     1. Page header + semester filter
+     2. Toolbar additions
+     3. Table extras
+     4. Windows: add AND edit (every .modal on these pages)
+     5. Toggle switch
+     6. Standalone update page (.update-card)
+     7. Small screens
+
+   Every list template that uses this file must also load
+   directory_ui.css before it.
+   ============================================================ */
+
+/* ============================================================
+   1. PAGE HEADER + SEMESTER FILTER
+   ============================================================ */
+
+/* Teaching Assignments: semester picker + action button on the right */
+body .user-page .header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-left: auto;
+}
+body .user-page .header-actions .filter-bar {
+  margin: 0;
+}
+body .user-page .page-header .add-button {
+  flex-shrink: 0;
+}
+
+body .user-page .semester-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+body .user-page .semester-field span {
+  color: var(--u-muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+body .user-page .filter-bar select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  height: 40px;
+  min-width: 190px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--u-line-strong);
+  border-radius: 8px;
+  background: #fff var(--u-chevron) no-repeat right 11px center / 12px;
+  color: var(--u-ink);
+  font: inherit;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+body .user-page .filter-bar select:hover {
+  border-color: var(--u-blue);
+}
+body .user-page .filter-bar select:focus {
+  outline: none;
+  border-color: var(--u-royal);
+  box-shadow: 0 0 0 3px var(--u-focus);
+}
+
+/* ============================================================
+   2. TOOLBAR ADDITIONS
+   ============================================================ */
+
+/* the count always sits on the right of whatever row it is in */
+body .user-page .records-heading {
+  margin-left: auto;
+}
+
+/* a toolbar row without tabs (Teaching Assignments) is just a filter bar */
+body .user-page .toolbar-row:not(:has(.segmented)) {
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--u-line);
+  background: var(--u-bar);
+}
+body .user-page .toolbar-row:not(:has(.segmented)) .toolbar-filters {
+  justify-content: flex-start;
+}
+body .user-page .toolbar-row:not(:has(.segmented)) .records-heading {
+  padding: 0;
+}
+
+/* ============================================================
+   3. TABLE EXTRAS
+   ============================================================ */
+
+body .user-page .custom-table.table-wide {
+  min-width: 760px;
+}
+
+body .user-page .cell-title {
+  color: var(--u-ink);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+body .user-page .cell-code {
+  color: var(--u-ink);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* counts are plain numbers, not boxed pills */
+body .user-page .count-pill {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--u-ink);
+  font-size: 14.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   4. WINDOWS: ADD AND EDIT
+   Styles every .modal on these pages (not one id), so the Add
+   window and the Edit window look exactly the same.
+   ============================================================ */
+
+body .modal:not(.user-modal) {
+  --u-navy: #13224f;
+  --u-royal: #1f3585;
+  --u-royal-dark: #172a6b;
+  --u-blue: #6f86c9;
+  --u-blue-100: #e6ecf9;
+  --u-blue-300: #a9b9e2;
+  --u-ink: #111827;
+  --u-muted: #667085;
+  --u-line: #e4e8f0;
+  --u-line-strong: #cfd6e4;
+  --u-soft: #f1f4fa;
+  --u-soft-2: #f7f9fc;
+  --u-bad: #b42318;
+  --u-bad-bg: #fef3f2;
+  --u-focus: rgba(31, 53, 133, 0.18);
+  font-family:
+    "IBM Plex Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+body .modal:not(.user-modal) * {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+body .modal:not(.user-modal) [class^="bi-"],
+body .modal:not(.user-modal) [class*=" bi-"] {
+  font-family: "bootstrap-icons" !important;
+}
+body .modal:not(.user-modal) [hidden] {
+  display: none !important;
+}
+
+/* the overlay: fixed over the page, hidden until opened */
+body .modal:not(.user-modal) {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(17, 24, 39, 0.5);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body .modal:not(.user-modal).show,
+body .modal:not(.user-modal).is-open,
+body .modal:not(.user-modal).open,
+body .modal:not(.user-modal).active,
+body .modal:not(.user-modal).is-active,
+body .modal:not(.user-modal).is-visible,
+body .modal:not(.user-modal).visible,
+body .modal:not(.user-modal)[aria-hidden="false"] {
+  display: flex;
+  animation: acad-fade 0.16s ease-out;
+}
+body:has(.modal:not(.user-modal).show),
+body:has(.modal:not(.user-modal)[aria-hidden="false"]) {
+  overflow: hidden;
+}
+
+@keyframes acad-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+body .modal:not(.user-modal) .modal-content {
+  position: relative;
+  margin: auto;
+  border: 0;
+  background: #fff;
+}
+body .modal:not(.user-modal) .modern-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 640px);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(17, 24, 39, 0.28);
+  overscroll-behavior: contain;
+}
+/* header and footer stay put, only the fields scroll */
+body .modal:not(.user-modal) .modern-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+}
+
+/* header */
+body .modal:not(.user-modal) .modal-header-modern {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--u-line);
+  background: #fff;
+}
+body .modal:not(.user-modal) .modal-heading,
+body .modal:not(.user-modal) .modal-title {
+  min-width: 0;
+}
+body .modal:not(.user-modal) .modal-eyebrow,
+body .modal:not(.user-modal) .page-eyebrow {
+  display: none;
+}
+body .modal:not(.user-modal) .modal-header-modern h2,
+body .modal:not(.user-modal) .modal-header-modern h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--u-ink);
+}
+body .modal:not(.user-modal) .modal-header-modern p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--u-muted);
+}
+
+body .modal:not(.user-modal) .close-btn {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--u-muted);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+body .modal:not(.user-modal) .close-btn:hover {
+  background: var(--u-soft);
+  color: var(--u-ink);
+}
+
+/* fields */
+body .modal:not(.user-modal) .modal-body-modern {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 22px 24px;
+  overflow-y: auto;
+  background: #fff;
+}
+body .modal:not(.user-modal) .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+body .modal:not(.user-modal) .form-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+}
+body .modal:not(.user-modal) .form-group.full-width {
+  grid-column: 1 / -1;
+}
+body .modal:not(.user-modal) .form-section {
+  grid-column: 1 / -1;
+  margin: 6px 0 -4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--u-line);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--u-navy);
+}
+
+body .modal:not(.user-modal) .form-label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--u-ink);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body .modal:not(.user-modal) .form-label span {
+  color: var(--u-muted);
+  font-weight: 400;
+}
+body .modal:not(.user-modal) .required-mark {
+  color: var(--u-bad);
+  font-weight: 600;
+}
+
+body
+  .modal:not(.user-modal)
+  .modal-body-modern
+  input:not([type="checkbox"]):not([type="radio"]),
+body .modal:not(.user-modal) .modal-body-modern select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--u-line-strong);
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--u-ink);
+  font-size: 15px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+body .modal:not(.user-modal) .modal-body-modern textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--u-line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--u-ink);
+  font-size: 15px;
+}
+body .modal:not(.user-modal) .modal-body-modern input:hover,
+body .modal:not(.user-modal) .modal-body-modern select:hover,
+body .modal:not(.user-modal) .modal-body-modern textarea:hover {
+  border-color: var(--u-blue);
+}
+body .modal:not(.user-modal) .modal-body-modern input:focus,
+body .modal:not(.user-modal) .modal-body-modern select:focus,
+body .modal:not(.user-modal) .modal-body-modern textarea:focus {
+  outline: none;
+  border-color: var(--u-royal);
+  box-shadow: 0 0 0 3px var(--u-focus);
+}
+
+/* an empty required field is normal, not an error: red only after the
+   person has typed in it and the value is wrong */
+body .modal:not(.user-modal) .modal-body-modern input:invalid,
+body .modal:not(.user-modal) .modal-body-modern select:invalid,
+body .modal:not(.user-modal) .modal-body-modern textarea:invalid {
+  border-color: var(--u-line-strong) !important;
+  background-color: #fff !important;
+  box-shadow: none;
+}
+body .modal:not(.user-modal) .modal-body-modern input:user-invalid,
+body .modal:not(.user-modal) .modal-body-modern select:user-invalid,
+body .modal:not(.user-modal) .modal-body-modern textarea:user-invalid {
+  border-color: var(--u-bad) !important;
+  background-color: var(--u-bad-bg) !important;
+}
+body .modal:not(.user-modal) .modal-body-modern input:focus:invalid,
+body .modal:not(.user-modal) .modal-body-modern select:focus:invalid,
+body .modal:not(.user-modal) .modal-body-modern textarea:focus:invalid {
+  border-color: var(--u-royal) !important;
+  box-shadow: 0 0 0 3px var(--u-focus);
+}
+
+/* read-only value (for fields that cannot be changed while editing) */
+body .modal:not(.user-modal) .readonly-display {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--u-line);
+  border-radius: 8px;
+  background: var(--u-soft-2);
+  color: var(--u-ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+body .modal:not(.user-modal) .help-text,
+body .modal:not(.user-modal) .field-hint {
+  margin-top: 6px;
+  color: var(--u-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+body .modal:not(.user-modal) .error,
+body .modal:not(.user-modal) .errorlist,
+body .modal:not(.user-modal) .text-danger {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--u-bad);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+body .modal:not(.user-modal) .error:empty {
+  display: none;
+}
+body .modal:not(.user-modal) .error ul {
+  margin: 0;
+  padding-left: 18px;
+}
+body .modal:not(.user-modal) .modal-required-note {
+  margin: 18px 0 0;
+  color: var(--u-muted);
+  font-size: 13px;
+}
+
+body .modal:not(.user-modal) .checkbox-content input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--u-royal);
+  cursor: pointer;
+}
+body .modal:not(.user-modal) .checkbox-content .form-label {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* footer */
+body .modal:not(.user-modal) .modal-footer-modern {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--u-line);
+  background: var(--u-soft-2);
+}
+body .modal:not(.user-modal) .modal-footer-modern button,
+body .modal:not(.user-modal) .modal-footer-modern a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+body .modal:not(.user-modal) .btn-secondary {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--u-line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--u-ink);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+body .modal:not(.user-modal) .btn-secondary:hover {
+  background: var(--u-blue-100);
+  border-color: var(--u-blue-300);
+  color: var(--u-royal);
+}
+
+body .modal:not(.user-modal) .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 130px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--u-royal);
+  border-radius: 8px;
+  background: var(--u-royal);
+  box-shadow: none;
+  color: #fff;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+body .modal:not(.user-modal) .btn-primary:hover:not(:disabled) {
+  background: var(--u-royal-dark);
+  border-color: var(--u-royal-dark);
+  transform: none;
+}
+body .modal:not(.user-modal) .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+body .modal:not(.user-modal) :focus-visible {
+  outline: 2px solid var(--u-royal);
+  outline-offset: 2px;
+}
+
+/* empty-state button on the page */
+body .user-page .empty-state .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--u-royal);
+  border-radius: 8px;
+  background: var(--u-royal);
+  box-shadow: none;
+  color: #fff;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+body .user-page .empty-state .btn-primary:hover {
+  background: var(--u-royal-dark);
+  border-color: var(--u-royal-dark);
+}
+
+/* ============================================================
+   5. TOGGLE SWITCH  (Active / Inactive inside a window)
+   ============================================================ */
+
+body .modal:not(.user-modal) .toggle-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--u-line);
+  border-radius: 8px;
+  background: var(--u-soft-2);
+}
+body .modal:not(.user-modal) .toggle-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* the real checkbox stays in the page for keyboards and forms */
+body .modal:not(.user-modal) .toggle-main input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+body .modal:not(.user-modal) .toggle-control {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+body .modal:not(.user-modal) .toggle-track {
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #cbd3e1;
+  transition: background-color 0.2s ease;
+}
+body .modal:not(.user-modal) .toggle-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease;
+}
+body
+  .modal:not(.user-modal)
+  .toggle-main
+  input[type="checkbox"]:checked
+  + .toggle-control
+  .toggle-track {
+  background: var(--u-royal);
+}
+body
+  .modal:not(.user-modal)
+  .toggle-main
+  input[type="checkbox"]:checked
+  + .toggle-control
+  .toggle-thumb {
+  transform: translateX(20px);
+}
+body
+  .modal:not(.user-modal)
+  .toggle-main
+  input[type="checkbox"]:focus-visible
+  + .toggle-control
+  .toggle-track {
+  outline: 2px solid var(--u-royal);
+  outline-offset: 3px;
+}
+body .modal:not(.user-modal) .toggle-label {
+  margin: 0;
+  color: var(--u-ink);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+body .modal:not(.user-modal) .toggle-row .help-text {
+  margin: 0 0 0 56px;
+}
+
+/* ============================================================
+   6. STANDALONE UPDATE PAGE  (.update-card)
+   Only used if an edit form is shown as a normal page.
+   ============================================================ */
+
+.update-card {
+  max-width: 640px;
+  margin: 24px auto;
+  overflow: hidden;
+  border: 1px solid #e4e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 1px 3px rgba(16, 24, 40, 0.04);
+  font-family:
+    "IBM Plex Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+.update-card .modal-header-modern {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e4e8f0;
+}
+.update-card .modal-body-modern {
+  padding: 22px 24px;
+}
+.update-card .modal-footer-modern {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #e4e8f0;
+  background: #f7f9fc;
+}
+
+/* ============================================================
+   7. SMALL SCREENS
+   ============================================================ */
+
+@media (max-width: 900px) {
+  body .user-page .semester-field,
+  body .user-page .filter-bar select {
+    width: 100%;
+  }
+  body .user-page .semester-field {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 700px) {
+  /* the main cell goes first on each stacked row */
+  body .user-page .custom-table td.cell-main {
+    order: -1;
+  }
+  body .user-page .custom-table.table-wide {
+    min-width: 0;
+  }
+
+  body .user-page .toolbar-row:not(:has(.segmented)) {
+    padding: 12px 16px;
+  }
+  body .user-page .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  body .user-page .header-actions .filter-bar {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 520px) {
+  body .user-page .header-actions {
+    gap: 10px;
+  }
+  body .user-page .header-actions .filter-bar {
+    flex: 1 1 100%;
+  }
+  body .user-page .header-actions .add-button {
+    width: 100%;
+  }
+
+  /* windows slide up from the bottom on phones */
+  body .modal:not(.user-modal) {
+    align-items: flex-end;
+    padding: 0;
+  }
+  body .modal:not(.user-modal) .modern-modal {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 12px 12px 0 0;
+  }
+  body .modal:not(.user-modal) .form-grid {
+    grid-template-columns: 1fr;
+  }
+  body .modal:not(.user-modal) .modal-header-modern {
+    padding: 16px 18px;
+    gap: 12px;
+  }
+  body .modal:not(.user-modal) .modal-body-modern {
+    padding: 18px;
+  }
+  body .modal:not(.user-modal) .modal-footer-modern {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 14px 18px;
+  }
+  body .modal:not(.user-modal) .modal-footer-modern button {
+    width: 100%;
+  }
+  /* 16px stops iPhone zoom when a field is tapped */
+  body
+    .modal:not(.user-modal)
+    .modal-body-modern
+    input:not([type="checkbox"]):not([type="radio"]),
+  body .modal:not(.user-modal) .modal-body-modern select,
+  body .modal:not(.user-modal) .modal-body-modern textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .modal:not(.user-modal),
+  body .modal:not(.user-modal) *,
+  body .modal:not(.user-modal) *::before {
+    transition: none !important;
+    animation: none !important;
+  }
+}

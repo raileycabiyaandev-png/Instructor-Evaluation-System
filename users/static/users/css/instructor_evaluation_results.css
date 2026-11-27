@@ -1,78 +1,175 @@
 /* ============================================================
    users/static/users/css/instructor_evaluation_results.css
-   Evaluation Results page only.
-   Shared styles (cards, tabs, hero, controls, panel head) are in instructor_common.css.
 
-   1. Filter bar     3. Messages
-   2. Footer note    4. Print / Save as PDF
+   Evaluation Results page. Built on the dashboard design system:
+   it loads AFTER instructor_dashboard.css and only adds what the
+   results page needs (filter form, tab bar, history table,
+   comments, pager, print).
+
+   1. Period picker
+   2. Tab bar
+   3. History table
+   4. Comments
+   5. Server-side pager (_pager.html)
+   6. Responsive
+   7. Print / save as PDF
    ============================================================ */
 
 
 /* ============================================================
-   1. FILTER BAR
+   1. PERIOD PICKER
    ============================================================ */
-.filters {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-    gap: 14px;
-    align-items: end;
-    padding: 16px 20px;
+.rs-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 16px 20px;
+  align-items: end;
+  padding: var(--pad);
 }
-.field label { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 600; color: var(--navy-800); }
-.field .select { width: 100%; }
-.filter-actions { display: flex; gap: 10px; }
+.rs-filters .form-group { min-width: 0; }
+.rs-filters .form-label { margin-bottom: 6px; }
+.rs-filters select.form-input {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 40px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.rs-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 
 /* ============================================================
-   2. FOOTER NOTE  (privacy line, inside the results card)
+   2. TAB BAR (outside a card)
    ============================================================ */
-.privacy { display: flex; align-items: flex-start; gap: 8px; }
-.privacy i { margin-top: 3px; color: var(--navy-700); }
+.dash .rs-nav {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px 16px;
+  padding: 0; border: 0; background: none;
+}
+.dash .rs-nav .ai-tabs { background: var(--paper); }
 
 
 /* ============================================================
-   3. MESSAGES  (not released, no data, ...)
+   3. HISTORY TABLE
    ============================================================ */
-.state-text { max-width: 520px; margin: 0 auto 18px; }
-.print-only { display: none; }
+.dash .ac-table--wide { min-width: 820px; }
+.dash .ac-table--wide thead th { white-space: nowrap; }
+.dash .ac-table--wide th[scope="row"] { min-width: 150px; }
+.dash .ac-table--wide td { font-variant-numeric: tabular-nums; }
+
+/* the Period column stays in view while the table scrolls sideways */
+.dash .ac-table--wide thead th:first-child,
+.dash .ac-table--wide tbody th[scope="row"] {
+  position: sticky; left: 0; z-index: 1;
+  box-shadow: 1px 0 0 var(--line);
+}
+.dash .ac-table--wide tbody th[scope="row"] { background: var(--paper); }
+.dash .ac-table--wide thead th:first-child { background: var(--soft-2); }
+.dash .ac-table--wide tbody tr:hover th[scope="row"] { background: var(--soft); }
+
+.dash .rs-diff { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
 
 /* ============================================================
-   RESPONSIVE
+   4. COMMENTS
    ============================================================ */
-@media (max-width: 860px) {
-    .filters { grid-template-columns: 1fr 1fr; }
-    .filter-actions { grid-column: 1 / -1; }
+.dash .ac-comments { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.dash .ac-comment {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin: 0; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--soft);
+  line-height: 1.65; color: var(--text);
+}
+.dash .ac-comment > i { flex: 0 0 auto; margin-top: 2px; font-size: 20px; line-height: 1; color: var(--navy); }
+.dash .ac-comment > span { min-width: 0; overflow-wrap: anywhere; }
+
+
+/* ============================================================
+   5. SERVER-SIDE PAGER  (ai_insights/_pager.html, ai.css classes)
+   ============================================================ */
+.dash .ai-pager {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px 16px; margin-top: 12px; padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+}
+.dash .ai-pager-info { font-size: 14px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.dash .ai-pager-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash .ai-pager-links a,
+.dash .ai-pager-links span {
+  display: inline-grid; place-items: center;
+  min-width: 42px; min-height: 42px; padding: 0 12px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  background: #fff; color: var(--ink);
+  font-size: 14.5px; font-weight: 500; text-decoration: none;
+  font-variant-numeric: tabular-nums;
+  transition: background-color .15s, border-color .15s;
+}
+.dash .ai-pager-links a:hover { background: var(--soft-2); border-color: #94a3b8; }
+.dash .ai-pager-links .current { background: var(--navy); border-color: var(--navy); color: #fff; }
+.dash .ai-pager-links .off { opacity: .4; cursor: not-allowed; }
+
+
+/* ============================================================
+   6. RESPONSIVE (container queries on .page)
+   ============================================================ */
+@container pg (max-width: 900px) {
+  .rs-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rs-actions { grid-column: 1 / -1; }
 }
 
-@media (max-width: 575.98px) {
-    .page-top .btn { width: 100%; }
-    .filters { grid-template-columns: 1fr; padding: 14px 16px; }
-    .filter-actions .btn { flex: 1; }
-    .col-prev { display: none; }          /* the Change column already tells the story */
+@container pg (max-width: 760px) {
+  .dash .rs-nav .btn { width: 100%; }
+  .dash .rs-nav .ai-tabs { background: var(--soft-2); }
+}
+
+@container pg (max-width: 520px) {
+  .rs-filters { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .rs-actions .btn { flex: 1 1 0; }
+  .dash .ac-comment { padding: 12px 14px; }
+  .dash .ai-pager { flex-direction: column; align-items: stretch; text-align: center; }
+  .dash .ai-pager-links { justify-content: center; }
 }
 
 
 /* ============================================================
-   4. PRINT / SAVE AS PDF  (everything prints, even hidden tabs and pages)
+   7. PRINT / SAVE AS PDF
    ============================================================ */
 @media print {
-    .sidebar, .sb-overlay, .topbar, .skip-link, .no-print, .tabs, .crumbs, .pager { display: none !important; }
+  .sidebar, .sb-overlay, .topbar, .skip-link, .no-print, .rs-nav, .pager, .ai-pager { display: none !important; }
 
-    .app  { display: block; }
-    body  { background: #fff; }
-    .page { max-width: none; padding: 0; }
+  .app  { display: block; }
+  body  { background: #fff; }
+  .page { max-width: none; padding: 0; }
 
-    .tab-panel[hidden] { display: block !important; }
-    .data-table tr[hidden] { display: table-row !important; }
-    .feedback-list li[hidden] { display: block !important; }
+  .dash .card, .ov .ov-card, .period-card { box-shadow: none; break-inside: avoid; }
+  .dash .table-wrap, .dash .ac-panel:has(.ac-table) { overflow: visible; }
+  .dash .ac-table, .dash .ac-table--wide { min-width: 0; font-size: 11px; }
+  .dash .ac-table--wide thead th:first-child,
+  .dash .ac-table--wide tbody th[scope="row"] { position: static; box-shadow: none; }
+  .dash .ac-comment { break-inside: avoid; }
 
-    .card, .stat, .hero { break-inside: avoid; box-shadow: none; }
-    .overview { grid-template-columns: 1fr; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 
-    .print-only { display: block; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--navy-900); }
-    .print-only h2 { margin-bottom: 8px; }
-    .print-only p  { margin: 2px 0; font-size: 14px; }
 
-    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+/* ============================================================
+   8. PAGER: "…" gaps + compact phone layout
+   ============================================================ */
+.dash .ai-pager-links .gap {
+  min-width: 24px; min-height: 42px; padding: 0;
+  border: 0; background: none; color: var(--mut);
+}
+.dash .ai-pager-links .current { cursor: default; }
+
+/* phones: previous | current page | next, spread across the row */
+@container pg (max-width: 520px) {
+  .dash .ai-pager-links { flex-wrap: nowrap; justify-content: space-between; }
+  .dash .ai-pager-links a:not([aria-label="Previous page"]):not([aria-label="Next page"]),
+  .dash .ai-pager-links .gap { display: none; }
+  .dash .ai-pager-links .current { flex: 1 1 auto; border-color: var(--line-strong); background: #fff; color: var(--ink); font-weight: 600; }
 }

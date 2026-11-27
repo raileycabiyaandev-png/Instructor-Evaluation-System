@@ -1,0 +1,6 @@
+<div class="field">
+    <label for="f-metric">Show by department</label>
+    <select id="f-metric" name="metric" class="select">
+        {% for value, label in data.metrics %}<option value="{{ value }}" {% if value == data.metric %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>

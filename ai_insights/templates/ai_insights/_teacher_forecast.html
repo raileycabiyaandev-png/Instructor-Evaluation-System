@@ -1,0 +1,142 @@
+{% comment %} ai_insights/_teacher_forecast.html
+   AI forecast for the teacher. Needs: ai (from selectors.teacher_dashboard_ai) and forecast (readiness bar). {% endcomment %}
+<div class="panel-head">
+    <p class="panel-desc">
+        A forecast is a <strong>prediction</strong>. It is always labelled and kept apart from your <strong>real</strong> scores.
+    </p>
+    <span class="badge badge-mid">AI prediction</span>
+</div>
+
+<div class="card-body ai-body">
+    {% include "ai_insights/_teacher_notices.html" %}
+{% if ai.error %}
+    <p class="ai-note ai-note--warn"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>The AI results could not be loaded right now. Your real scores above are not affected.</span></p>
+
+{% elif not ai.released %}
+    <p class="ai-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <span>{{ ai.forecast.message }}</span></p>
+    <div class="progress" role="progressbar" aria-label="Finished periods collected"
+         aria-valuemin="0" aria-valuemax="{{ forecast.need }}" aria-valuenow="{{ forecast.have }}">
+        <span style="width: {{ forecast.percent }}%;"></span>
+    </div>
+    <p class="forecast-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <span>You have {{ forecast.have }} of {{ forecast.need }} finished periods with enough responses.</span></p>
+
+{% elif ai.forecast.state == "ok" %}
+    {% with f=ai.forecast row=ai.forecast.row %}
+    <div class="ai-hero">
+        <div class="ai-hero-main">
+            <span class="ai-label">Predicted overall score</span>
+            <span class="ai-number">{{ row.predicted_overall|floatformat:2 }}<small> / 5</small></span>
+            <span class="ai-sub">for {{ row.target_label }}</span>
+            <span class="ai-range">Typical range: {{ row.range_low|floatformat:2 }} to {{ row.range_high|floatformat:2 }}</span>
+        </div>
+        <div class="ai-hero-side">
+            <span class="ai-label">Your last real score</span>
+            <span class="ai-number ai-number--real">{{ f.last_actual|floatformat:2 }}<small> / 5</small></span>
+            {% if f.change is not None %}
+            <span class="ai-sub">
+                Predicted change:
+                <strong class="trend {% if f.change > 0 %}up{% elif f.change < 0 %}down{% else %}same{% endif %}">{{ f.change|stringformat:"+.2f" }}</strong>
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="chart-wrap ai-chart">
+        <canvas id="aiForecastChart" role="img"
+                aria-label="Line chart. The solid line is your real score in each finished period. The dashed line is the AI prediction for the next period."></canvas>
+    </div>
+    {{ f.chart|json_script:"ai-forecast-data" }}
+    <ul class="legend">
+        <li><i class="key key--high" aria-hidden="true"></i> Real score (actual)</li>
+        <li><i class="key key--low" aria-hidden="true"></i> AI prediction (not a real score)</li>
+    </ul>
+
+    <h4 class="sub-heading">Predicted score in each category</h4>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead><tr><th scope="col">Category</th><th scope="col">Last real score</th><th scope="col">Predicted</th><th scope="col">Typical range</th></tr></thead>
+            <tbody>
+            {% for c in f.categories %}
+                <tr>
+                    <th scope="row">{{ c.label }}</th>
+                    <td>{{ c.last_actual|floatformat:2 }}</td>
+                    <td><strong>{{ c.value|floatformat:2 }}</strong> <span class="ai-tag">prediction</span></td>
+                    <td>{{ c.low|floatformat:2 }} to {{ c.high|floatformat:2 }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <details class="ai-details">
+    <summary>How reliable is this forecast?</summary>
+    <ul class="ai-facts">
+        <li><strong>Method:</strong> {{ f.model_text }}. It was chosen because it had the smallest error when tested on your past periods.</li>
+        <li><strong>Test:</strong> each past period was predicted using only the periods before it ({{ row.validation_steps }} test{{ row.validation_steps|pluralize }}).
+            Average error: <strong>{{ row.validation_mae|floatformat:2 }}</strong> points.
+            Simple guess "same as last period": {{ row.baseline_mae|floatformat:2 }}.
+            {% if f.beats_baseline %}The chosen method did better than that simple guess.{% else %}The chosen method was not better than that simple guess, so treat the forecast with extra care.{% endif %}</li>
+        <li><strong>Data used:</strong> {{ row.periods_used }} finished periods (each with at least {{ ai.min_responses }} responses).
+            {% if row.reliability == "low" %}<span class="ai-tag ai-tag--warn">Low reliability: little history</span>{% endif %}</li>
+        <li class="ai-muted">Made on {{ f.generated_at|date:"M d, Y H:i" }} · {{ row.library_version }} · method {{ row.model_version|default:"older version" }}
+            {% if ai.release %}· official analysis version {{ ai.release.version }} ({{ ai.release.period_label }}){% endif %}</li>
+    </ul>
+    </details>
+    {% endwith %}
+
+{% else %}
+    <p class="ai-note"><i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>
+        {% if ai.forecast.state == "insufficient" or ai.forecast.state == "baseline" or ai.forecast.state == "unreliable" %}
+            {{ ai.forecast.message }}
+        {% elif ai.forecast.state == "error" or ai.forecast.state == "not_included" %}
+            {{ ai.forecast.message }}
+        {% else %}
+            The AI forecast has not been generated yet by your administrator. It needs at least {{ ai.min_periods }} finished periods.
+        {% endif %}
+        </span></p>
+    <div class="progress" role="progressbar" aria-label="Finished periods collected"
+         aria-valuemin="0" aria-valuemax="{{ forecast.need }}" aria-valuenow="{{ forecast.have }}">
+        <span style="width: {{ forecast.percent }}%;"></span>
+    </div>
+    <p class="forecast-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <span>You have {{ forecast.have }} of {{ forecast.need }} finished periods with enough responses.</span></p>
+    {% for s in ai.forecast.quality.skipped %}
+    <p class="ai-muted">Left out: {{ s.label }} ({{ s.responses }} response{{ s.responses|pluralize }}, {{ s.reason }}).</p>
+    {% endfor %}
+{% endif %}
+</div>
+
+{% if ai.forecast.state == "ok" %}
+<script>
+(function () {
+    var el = document.getElementById('ai-forecast-data');
+    var canvas = document.getElementById('aiForecastChart');
+    if (!el || !canvas || typeof Chart === 'undefined') return;
+    var d = JSON.parse(el.textContent);
+    var chart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: d.labels,
+            datasets: [
+                { label: 'Real score', data: d.actual, borderColor: '#1b2f6b', backgroundColor: '#1b2f6b',
+                  tension: 0.25, spanGaps: false, pointRadius: 4 },
+                { label: 'AI prediction', data: d.predicted, borderColor: '#c9a227', backgroundColor: '#c9a227',
+                  borderDash: [6, 5], tension: 0, spanGaps: true, pointRadius: 5, pointStyle: 'triangle' }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { min: 1, max: 5, ticks: { stepSize: 1 }, title: { display: true, text: 'Score (1-5)' } },
+                      x: { ticks: { maxRotation: 40, autoSkip: true } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+    var tab = document.getElementById('tab-forecast');
+    if (tab) tab.addEventListener('click', function () { setTimeout(function () { chart.resize(); }, 60); });
+})();
+</script>
+{% endif %}

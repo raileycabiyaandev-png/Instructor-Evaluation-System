@@ -1,0 +1,21 @@
+<!-- evaluation/_monitoring_nav.html : page numbers under a monitoring table (new design) -->
+{% if page.paginator.count %}
+<nav class="mm-pager" aria-label="{{ noun|capfirst }} pages">
+    <span class="mm-pager-info" aria-live="polite">Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }} {{ noun }}</span>
+    {% if page.paginator.num_pages > 1 %}
+    <div class="mm-pager-btns">
+        {% if page.has_previous %}
+        <a class="mm-btn mm-btn--ghost mm-btn--sm" href="?{% if query %}{{ query }}&amp;{% endif %}{{ param }}={{ page.previous_page_number }}#{{ anchor }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</a>
+        {% else %}
+        <span class="mm-btn mm-btn--ghost mm-btn--sm is-off" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</span>
+        {% endif %}
+        <span class="mm-pager-now">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}
+        <a class="mm-btn mm-btn--ghost mm-btn--sm" href="?{% if query %}{{ query }}&amp;{% endif %}{{ param }}={{ page.next_page_number }}#{{ anchor }}">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+        {% else %}
+        <span class="mm-btn mm-btn--ghost mm-btn--sm is-off" aria-disabled="true">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+        {% endif %}
+    </div>
+    {% endif %}
+</nav>
+{% endif %}

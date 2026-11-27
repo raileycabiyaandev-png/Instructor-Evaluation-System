@@ -1,0 +1,13 @@
+{% comment %} ai_insights/_school_text.html  Needs: insight (SchoolInsight). The AI-written school summary, strengths, weaknesses, suggestions. {% endcomment %}
+<div class="ac-panel">
+    <h4>AI summary <span class="ac-chip {% if insight.summary_source == 'ollama' %}ac-chip--ai{% endif %}">{% if insight.summary_source == 'ollama' %}Written by Ollama{% else %}Rule-based{% endif %}</span></h4>
+    <p class="ac-lead">{{ insight.summary_text }}</p>
+</div>
+<div class="ac-grid ac-grid--3">
+    <div class="ac-panel ac-panel--good"><h4>Strengths</h4>
+        <ul class="ac-list">{% for x in insight.strengths %}<li>{{ x.text }}</li>{% empty %}<li class="ac-empty">None found.</li>{% endfor %}</ul></div>
+    <div class="ac-panel ac-panel--bad"><h4>Weaknesses</h4>
+        <ul class="ac-list">{% for x in insight.weaknesses %}<li>{{ x.text }}</li>{% empty %}<li class="ac-empty">None found.</li>{% endfor %}</ul></div>
+    <div class="ac-panel ac-panel--gold"><h4>Suggestions</h4>
+        <ul class="ac-list">{% for x in insight.suggestions %}<li>{% if x.label %}<b>{{ x.label }}:</b> {% endif %}{{ x.text }}</li>{% empty %}<li class="ac-empty">None needed.</li>{% endfor %}</ul></div>
+</div>

@@ -1,26 +1,5 @@
 /* ============================================================
-   users/static/users/css/instructor_common.css
-
-   Shared look of the MAIN CONTENT of every instructor page.
-   The sidebar CSS is NOT here (it is inline in templates/instructor_base.html).
-   Every instructor page loads this file in its own {% block extra_css %}.
-
-   Colors: ONE family only = ACLC navy + gold.
-     Navy deep  = Excellent / good news      Gold = needs attention
-     Blue       = Good                       Light navy = last period
-
-    1. Tokens and base         8. Controls (select, switch, segmented)
-    2. Page shell              9. Tables, badges, pager
-    3. Top bar                10. Info elements (notes, legend, trend)
-    4. Page header            11. Stat cards and overview layout
-    5. Cards (anatomy)        12. Rating hero
-    6. Tabs                   13. Panel head, page top, flags
-    7. Buttons                14. Charts       15. Responsive
-   ============================================================ */
-
-
-/* ============================================================
-   1. TOKENS AND BASE
+   admin_common.css
    ============================================================ */
 :root {
     --navy-950: #0b1229;

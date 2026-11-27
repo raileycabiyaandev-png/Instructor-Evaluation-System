@@ -1,0 +1,324 @@
+{% if messages %}
+{% for message in messages %}
+<div class="ipf-msg {% if 'success' in message.tags %}ipf-msg--ok{% else %}ipf-msg--bad{% endif %}" role="{% if 'success' in message.tags %}status{% else %}alert{% endif %}">
+    <i class="bi {% if 'success' in message.tags %}bi-check-circle-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
+    <span>{{ message }}</span>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ===== PROFILE CARD ===== -->
+<section class="ipf-card" aria-label="Profile">
+    <div class="ipf-cover" aria-hidden="true"></div>
+
+    <div class="ipf-head">
+        <div class="ipf-avatar ipf-avatar--lg">
+            {% if request.user.profile_photo %}
+            <img src="{{ request.user.profile_photo.url }}" alt="Profile photo">
+            {% else %}
+            <span aria-hidden="true">{% firstof request.user.first_name|first request.user.username|first %}{{ request.user.last_name|first }}</span>
+            {% endif %}
+        </div>
+
+        <div class="ipf-who">
+            <h3>{{ request.user.first_name }} {{ request.user.last_name }}</h3>
+            <p>Faculty / Instructor</p>
+        </div>
+
+        <button type="button" class="ipf-btn ipf-btn--primary" id="ipfEdit" aria-haspopup="dialog" aria-controls="ipfModal">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i> Edit
+        </button>
+    </div>
+
+    <dl class="ipf-grid">
+        <div class="ipf-item">
+            <span class="ipf-item__icon" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
+            <div><dt>Username</dt><dd>{{ request.user.username }}</dd></div>
+        </div>
+        <div class="ipf-item">
+            <span class="ipf-item__icon" aria-hidden="true"><i class="bi bi-envelope"></i></span>
+            <div><dt>Email</dt><dd>{{ request.user.email|default:"—" }}</dd></div>
+        </div>
+        <div class="ipf-item">
+            <span class="ipf-item__icon" aria-hidden="true"><i class="bi bi-building"></i></span>
+            <div><dt>Department</dt><dd>{{ request.user.department.name|default:"—" }}</dd></div>
+        </div>
+    </dl>
+</section>
+
+<!-- ===== EDIT WINDOW (moved to <body> by the script below) ===== -->
+<div class="ipf-modal" id="ipfModal" hidden>
+    <div class="ipf-backdrop" id="ipfBackdrop"></div>
+
+    <div class="ipf-dialog" role="dialog" aria-modal="true" aria-labelledby="ipfTitle">
+        <div class="ipf-dialog__head">
+            <div>
+                <h3 id="ipfTitle">Edit profile</h3>
+                <p>Your name, email address and profile photo.</p>
+            </div>
+            <button type="button" class="ipf-close" id="ipfClose" aria-label="Close">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'faculty_update_profile' %}" id="ipfForm" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="ipf-dialog__body">
+
+                <div class="ipf-photo">
+                    <div class="ipf-avatar ipf-avatar--sm" id="ipfEditAvatar">
+                        <img id="ipfEditPhoto" alt=""{% if request.user.profile_photo %} src="{{ request.user.profile_photo.url }}"{% else %} hidden{% endif %}>
+                        <span id="ipfEditInitials" aria-hidden="true"{% if request.user.profile_photo %} hidden{% endif %}>{% firstof request.user.first_name|first request.user.username|first %}{{ request.user.last_name|first }}</span>
+                    </div>
+
+                    <div class="ipf-photo__body">
+                        <p class="ipf-photo__title">Profile photo</p>
+                        <p class="ipf-hint">JPG, PNG or WEBP, up to 2 MB.</p>
+                        <div class="ipf-photo__actions">
+                            <button type="button" class="ipf-btn ipf-btn--ghost ipf-btn--sm" id="ipfChoose">
+                                <i class="bi bi-upload" aria-hidden="true"></i> Upload photo
+                            </button>
+                            <button type="button" class="ipf-btn ipf-btn--danger ipf-btn--sm" id="ipfRemove" hidden>
+                                <i class="bi bi-trash3" aria-hidden="true"></i> Remove
+                            </button>
+                        </div>
+                        <input type="file" id="ipfFile" name="profile_photo" accept="image/jpeg,image/png,image/webp" hidden>
+                        <input type="hidden" name="remove_photo" id="ipfRemoveField" value="0">
+                        <p class="ipf-error" id="ipfPhotoError" role="alert" hidden></p>
+                    </div>
+                </div>
+
+                <div class="ipf-fields">
+                    <div class="ipf-field">
+                        <label for="ipfFirst">First name</label>
+                        <input type="text" id="ipfFirst" name="first_name" required value="{{ request.user.first_name }}" data-original="{{ request.user.first_name }}" autocomplete="given-name">
+                    </div>
+                    <div class="ipf-field">
+                        <label for="ipfLast">Last name</label>
+                        <input type="text" id="ipfLast" name="last_name" required value="{{ request.user.last_name }}" data-original="{{ request.user.last_name }}" autocomplete="family-name">
+                    </div>
+                    <div class="ipf-field ipf-field--full">
+                        <label for="ipfEmail">Email address</label>
+                        <input type="email" id="ipfEmail" name="email" value="{{ request.user.email }}" data-original="{{ request.user.email }}" autocomplete="email">
+                        <span class="ipf-hint">Used for notifications and account recovery.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ipf-dialog__foot">
+                <button type="button" class="ipf-btn ipf-btn--ghost" id="ipfCancel">Cancel</button>
+                <button type="submit" class="ipf-btn ipf-btn--primary" id="ipfSave" disabled>
+                    <i class="bi bi-check2-circle" aria-hidden="true"></i> Save changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Profile screen. Every class starts with "ipf-" so no other stylesheet can touch it. */
+.ipf-card, .ipf-modal, .ipf-modal * { font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.ipf-modal[hidden], .ipf-card [hidden], .ipf-modal [hidden] { display: none !important; }
+
+.ipf-msg { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; padding: 12px 16px; border: 1px solid #e2e8f0; border-left: 3px solid #1f3585; border-radius: 8px; background: #fff; font-weight: 500; color: #0f172a; }
+.ipf-msg--ok { border-left-color: #15803d; }
+.ipf-msg--ok i { color: #15803d; }
+.ipf-msg--bad { border-left-color: #b42318; background: #fef3f2; color: #7a1d14; }
+.ipf-msg--bad i { color: #b42318; }
+
+.ipf-card { position: relative; overflow: hidden; margin-bottom: 20px; border: 1px solid #e3e8f1; border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(19,34,79,.05), 0 4px 14px rgba(19,34,79,.05); }
+.ipf-cover { height: 96px; background: radial-gradient(420px 200px at 96% -30%, rgba(159,176,220,.38), transparent 70%), linear-gradient(120deg, #0f1c44 0%, #1f3585 100%); }
+.ipf-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; padding: 0 24px 20px; margin-top: -44px; }
+.ipf-who { flex: 1 1 200px; min-width: 0; padding-top: 48px; }
+.ipf-who h3 { margin: 0; font-size: 20px; font-weight: 600; color: #111827; }
+.ipf-who p { margin: 2px 0 0; font-size: 14px; color: #6b7280; }
+
+.ipf-avatar { position: relative; display: grid; place-items: center; flex: none; overflow: hidden; border-radius: 50%; background: linear-gradient(135deg, #e6ecf9, #d3ddf4); color: #1f3585; font-weight: 600; text-transform: uppercase; }
+.ipf-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ipf-avatar--lg { width: 96px; height: 96px; border: 4px solid #fff; font-size: 30px; box-shadow: 0 2px 8px rgba(19,34,79,.18); }
+.ipf-avatar--sm { width: 72px; height: 72px; font-size: 22px; border: 1px solid #cfd6e4; }
+
+.ipf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 0; padding: 18px 24px 24px; border-top: 1px solid #e3e8f1; background: #f6f8fc; }
+.ipf-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #e3e8f1; border-radius: 10px; background: #fff; min-width: 0; }
+.ipf-item__icon { display: grid; place-items: center; flex: 0 0 38px; height: 38px; border-radius: 10px; background: #e6ecf9; color: #1f3585; font-size: 17px; }
+.ipf-item dt { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+.ipf-item dd { margin: 2px 0 0; font-weight: 500; color: #111827; overflow-wrap: anywhere; }
+
+.ipf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid transparent; border-radius: 8px; font: inherit; font-size: 14.5px; font-weight: 500; cursor: pointer; transition: background-color .18s, border-color .18s, color .18s; }
+.ipf-btn--sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.ipf-btn--primary { background: #1f3585; border-color: #1f3585; color: #fff; }
+.ipf-btn--primary:hover:not(:disabled) { background: #172a6b; border-color: #172a6b; }
+.ipf-btn--primary:disabled { background: #cbd5e1; border-color: #cbd5e1; color: #64748b; cursor: not-allowed; }
+.ipf-btn--ghost { background: #fff; border-color: #cfd6e4; color: #111827; }
+.ipf-btn--ghost:hover { background: #e6ecf9; border-color: #a9b9e2; color: #1f3585; }
+.ipf-btn--danger { background: #fff; border-color: #f0c4be; color: #b42318; }
+.ipf-btn--danger:hover { background: #fef3f2; border-color: #e6a39b; }
+.ipf-btn:focus-visible, .ipf-close:focus-visible { outline: 2px solid #1f3585; outline-offset: 2px; }
+
+/* Edit window */
+.ipf-modal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.ipf-backdrop { position: fixed; inset: 0; background: rgba(11,18,41,.55); }
+.ipf-dialog { position: relative; width: 100%; max-width: 560px; margin: auto; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: 0 24px 60px rgba(6,9,26,.28); }
+.ipf-dialog__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; background: linear-gradient(120deg, #0f1c44 0%, #1f3585 100%); color: #fff; }
+.ipf-dialog__head h3 { margin: 0; font-size: 19px; font-weight: 600; color: #fff; }
+.ipf-dialog__head p { margin: 4px 0 0; font-size: 14px; color: #cfdaf5; }
+.ipf-close { display: grid; place-items: center; flex: 0 0 38px; height: 38px; border: 0; border-radius: 10px; background: rgba(255,255,255,.14); color: #fff; font-size: 16px; cursor: pointer; }
+.ipf-close:hover { background: rgba(255,255,255,.26); }
+.ipf-dialog__body { padding: 22px 24px; }
+.ipf-dialog__foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e3e8f1; background: #f6f8fc; }
+
+.ipf-photo { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e3e8f1; }
+.ipf-photo__title { margin: 0; font-weight: 600; color: #111827; }
+.ipf-photo__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ipf-hint { margin: 2px 0 0; font-size: 13px; color: #6b7280; }
+.ipf-error { margin: 8px 0 0; font-size: 13.5px; font-weight: 500; color: #b42318; }
+
+.ipf-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ipf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ipf-field--full { grid-column: 1 / -1; }
+.ipf-field label { font-size: 14px; font-weight: 500; color: #111827; }
+.ipf-field input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #cfd6e4; border-radius: 8px; background: #fff; font: inherit; font-size: 16px; color: #111827; }
+.ipf-field input:hover { border-color: #6f86c9; }
+.ipf-field input:focus { outline: none; border-color: #1f3585; box-shadow: 0 0 0 3px rgba(31,53,133,.18); }
+.ipf-field input.is-changed { border-color: #1f3585; background: #f3f6fc; }
+
+@media (max-width: 575.98px) {
+    .ipf-head { padding: 0 16px 18px; }
+    .ipf-grid { padding: 16px; }
+    .ipf-fields { grid-template-columns: 1fr; }
+    .ipf-photo { flex-direction: column; align-items: flex-start; }
+    .ipf-dialog__foot { flex-direction: column-reverse; }
+    .ipf-dialog__foot .ipf-btn { width: 100%; }
+}
+</style>
+
+<script>
+(function () {
+    "use strict";
+    var modal = document.getElementById('ipfModal');
+    var form  = document.getElementById('ipfForm');
+    if (!modal || !form) return;
+
+    /* Move the window to <body> so "position: fixed" covers the whole screen */
+    document.body.appendChild(modal);
+
+    var editBtn   = document.getElementById('ipfEdit');
+    var closeBtn  = document.getElementById('ipfClose');
+    var cancelBtn = document.getElementById('ipfCancel');
+    var backdrop  = document.getElementById('ipfBackdrop');
+    var saveBtn   = document.getElementById('ipfSave');
+
+    var photoEl    = document.getElementById('ipfEditPhoto');
+    var initialsEl = document.getElementById('ipfEditInitials');
+    var fileInput  = document.getElementById('ipfFile');
+    var removeFld  = document.getElementById('ipfRemoveField');
+    var chooseBtn  = document.getElementById('ipfChoose');
+    var removeBtn  = document.getElementById('ipfRemove');
+    var errorEl    = document.getElementById('ipfPhotoError');
+    var first      = document.getElementById('ipfFirst');
+    var last       = document.getElementById('ipfLast');
+    var inputs     = form.querySelectorAll('input[data-original]');
+
+    var originalSrc = photoEl.getAttribute('src') || '';
+    var MAX_SIZE = 2 * 1024 * 1024;
+    var TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    var previewUrl = null;
+    var removed = false;
+    var lastFocus = null;
+
+    function clearPreview() {
+        if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    }
+    function setError(text) {
+        errorEl.textContent = text || '';
+        errorEl.hidden = !text;
+    }
+    function renderPhoto() {
+        var src = previewUrl || (removed ? '' : originalSrc);
+        if (src) { photoEl.src = src; photoEl.hidden = false; }
+        else     { photoEl.removeAttribute('src'); photoEl.hidden = true; }
+        initialsEl.hidden = !!src;
+        removeBtn.hidden = !src;
+        removeFld.value = (removed && !previewUrl) ? '1' : '0';
+    }
+    function evaluate() {
+        var any = false;
+        inputs.forEach(function (inp) {
+            var changed = inp.value.trim() !== inp.dataset.original.trim();
+            inp.classList.toggle('is-changed', changed);
+            if (changed) any = true;
+        });
+        if (previewUrl || removed) any = true;
+        saveBtn.disabled = !any;
+        initialsEl.textContent = ((first.value.trim().charAt(0) + last.value.trim().charAt(0)) || '?').toUpperCase();
+    }
+
+    function openModal() {
+        lastFocus = document.activeElement;
+        modal.hidden = false;
+        document.documentElement.style.overflow = 'hidden';
+        first.focus();
+    }
+    function closeModal() {
+        inputs.forEach(function (inp) { inp.value = inp.dataset.original; });
+        fileInput.value = '';
+        clearPreview();
+        removed = false;
+        setError('');
+        renderPhoto();
+        evaluate();
+        modal.hidden = true;
+        document.documentElement.style.overflow = '';
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    editBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', function () { if (saveBtn.disabled) closeModal(); });
+    document.addEventListener('keydown', function (e) {
+        if (!modal.hidden && e.key === 'Escape') closeModal();
+    });
+
+    chooseBtn.addEventListener('click', function () { fileInput.click(); });
+
+    fileInput.addEventListener('change', function () {
+        setError('');
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (TYPES.indexOf(file.type) === -1) {
+            fileInput.value = '';
+            setError('Upload a JPG, PNG or WEBP image.');
+            return;
+        }
+        if (file.size > MAX_SIZE) {
+            fileInput.value = '';
+            setError('The photo must be 2 MB or smaller.');
+            return;
+        }
+        clearPreview();
+        previewUrl = URL.createObjectURL(file);
+        removed = false;
+        renderPhoto();
+        evaluate();
+    });
+
+    removeBtn.addEventListener('click', function () {
+        setError('');
+        fileInput.value = '';
+        clearPreview();
+        removed = !!originalSrc;
+        renderPhoto();
+        evaluate();
+    });
+
+    inputs.forEach(function (inp) { inp.addEventListener('input', evaluate); });
+
+    /* Stop double submits */
+    form.addEventListener('submit', function () { saveBtn.disabled = true; });
+
+    renderPhoto();
+    evaluate();
+})();
+</script>

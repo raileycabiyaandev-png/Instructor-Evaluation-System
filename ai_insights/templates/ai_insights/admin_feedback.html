@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Feedbacks | AI Teacher Evaluation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_admin.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block page_title %}AI Feedbacks{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    {% include "academics/_messages.html" %}
+
+    {% include "ai_insights/_generate_panel.html" with next="ai_admin_feedback" %}
+
+    <section class="card" aria-label="Filters">
+        {% include "ai_insights/_admin_filters.html" with action=request.path extra="ai_insights/_filters_feedback.html" %}
+    </section>
+
+    <div class="ai-tiles ai-tiles--page">
+        <div class="ai-tile"><b>{{ data.stats.instructors }}</b><span>Instructors with a summary</span></div>
+        <div class="ai-tile"><b>{{ data.stats.written }}</b><span>Student comments written</span></div>
+        <div class="ai-tile"><b>{{ data.stats.comments }}</b><span>Comments analysed by AI</span></div>
+        <div class="ai-tile ai-tile--good"><b>{{ data.stats.positive_pct }}%</b><span>Positive</span></div>
+        <div class="ai-tile ai-tile--bad"><b>{{ data.stats.negative_pct }}%</b><span>Negative</span></div>
+        <div class="ai-tile ai-tile--gold"><b>{{ data.stats.ai_written }}</b><span>AI-written summaries</span></div>
+        <div class="ai-tile"><b>{{ data.stats.hidden }}</b><span>Hidden (too few students or comments)</span></div>
+    </div>
+
+    <section class="card" data-ai-tabs {% if request.GET.page %}data-ai-start="instructors"{% endif %}>
+        <div class="card-head">
+            <div class="ai-tabs" role="group" aria-label="Sections">
+                <button type="button" class="ai-tab" data-ai-tab="overview"><i class="bi bi-pie-chart" aria-hidden="true"></i> Overview</button>
+                <button type="button" class="ai-tab" data-ai-tab="instructors"><i class="bi bi-people" aria-hidden="true"></i> Instructors <span class="ai-tab-count">{{ data.pager.paginator.count }}</span></button>
+                <button type="button" class="ai-tab" data-ai-tab="topics"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> Themes</button>
+                <button type="button" class="ai-tab" data-ai-tab="suggestions"><i class="bi bi-lightbulb" aria-hidden="true"></i> AI suggestions</button>
+                {% if filters.instructor %}<button type="button" class="ai-tab" data-ai-tab="comments"><i class="bi bi-chat-quote" aria-hidden="true"></i> Student comments</button>{% endif %}
+            </div>
+        </div>
+
+        <!-- Overview -->
+        <div class="card-body ai-panel-stack" data-ai-panel="overview">
+            {% if data.stats.comments %}
+            <div class="ai-split">
+                <div class="ai-donut" style="background: {{ data.stats.donut }};" role="img" aria-label="Positive {{ data.stats.positive }}, neutral {{ data.stats.neutral }}, negative {{ data.stats.negative }} comments">
+                    <div class="ai-donut-center"><b>{{ data.stats.comments }}</b><span>comments</span></div>
+                </div>
+                <ul class="ai-legend2">
+                    <li><i class="ai-dot--positive"></i>Positive<b>{{ data.stats.positive }}</b></li>
+                    <li><i class="ai-dot--neutral"></i>Neutral<b>{{ data.stats.neutral }}</b></li>
+                    <li><i class="ai-dot--negative"></i>Negative<b>{{ data.stats.negative }}</b></li>
+                </ul>
+            </div>
+            <div class="ai-box">
+                <h5>Sentiment by department</h5>
+                <ul class="ai-hbars">
+                    {% for d in data.dept_bars %}
+                    <li class="ai-stack-row">
+                        <span>{{ d.name }}<small class="ai-muted"> · {{ d.total }} comments</small></span>
+                        <span class="ai-stack" role="img" aria-label="{{ d.pos }}% positive, {{ d.neu }}% neutral, {{ d.neg }}% negative">
+                            <span class="ai-dot--positive" style="width: {{ d.pos }}%"></span><span class="ai-dot--neutral" style="width: {{ d.neu }}%"></span><span class="ai-dot--negative" style="width: {{ d.neg }}%"></span>
+                        </span>
+                        <b>{{ d.neg }}% negative</b>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <p class="ai-empty">There are not enough comments to analyse with these filters.
+                {% if data.hidden_reasons %}{% for r in data.hidden_reasons %}{{ r }} {% endfor %}{% else %}Press "Generate AI analysis", or change the filters.{% endif %}</p>
+            {% endif %}
+        </div>
+
+        <!-- Instructors -->
+        <div class="card-body ai-panel-stack" data-ai-panel="instructors" hidden>
+            <div class="ai-feed">
+                {% for v in data.pager %}
+                <article class="ai-feed-item">
+                    <div class="ai-rec-head">
+                        <div><strong>{{ v.name }}</strong> <span class="ai-who">{{ v.department }} · {{ v.period_label }}</span></div>
+                        <span>
+                            {% if v.neg_pct >= 40 %}<span class="ai-badge ai-badge--bad">Mostly negative</span>{% elif v.pos_pct >= 60 %}<span class="ai-badge ai-badge--good">Mostly positive</span>{% endif %}
+                            {% if v.ai %}<span class="ai-badge ai-badge--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI summary</span>{% else %}<span class="ai-badge"><i class="bi bi-list-check" aria-hidden="true"></i> Rules</span>{% endif %}
+                        </span>
+                    </div>
+                    <span class="ai-stack" role="img" aria-label="{{ v.pos_pct }}% positive, {{ v.neu_pct }}% neutral, {{ v.neg_pct }}% negative">
+                        <span class="ai-dot--positive" style="width: {{ v.pos_pct }}%"></span><span class="ai-dot--neutral" style="width: {{ v.neu_pct }}%"></span><span class="ai-dot--negative" style="width: {{ v.neg_pct }}%"></span>
+                    </span>
+                    <p class="ai-who"><b>AI summary</b> of {{ v.row.n_analyzed }} of {{ v.row.n_comments }} written comments · {{ v.pos_pct }}% positive · {{ v.neu_pct }}% neutral · {{ v.neg_pct }}% negative</p>
+                    <p>{{ v.row.summary_text }}</p>
+                    {% if v.problems or v.praise %}
+                    <div class="ai-chips">
+                        {% for t in v.problems %}<span class="ai-badge ai-badge--bad">{{ t.label }} · {{ t.mentions }}</span>{% endfor %}
+                        {% for t in v.praise %}<span class="ai-badge ai-badge--good">{{ t.label }} · {{ t.mentions }}</span>{% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if v.row.positive_points or v.row.negative_points %}
+                    <details class="ai-details">
+                        <summary>Liked and to improve</summary>
+                        <div class="ai-points">
+                            <section class="good"><h5>Liked</h5>{% if v.row.positive_points %}<ul>{% for p in v.row.positive_points %}<li>{{ p }}</li>{% endfor %}</ul>{% else %}<p>—</p>{% endif %}</section>
+                            <section class="bad"><h5>To improve</h5>{% if v.row.negative_points %}<ul>{% for p in v.row.negative_points %}<li>{{ p }}</li>{% endfor %}</ul>{% else %}<p>—</p>{% endif %}</section>
+                        </div>
+                    </details>
+                    {% endif %}
+                </article>
+                {% empty %}
+                <p class="ai-empty">No instructor matches these filters.</p>
+                {% endfor %}
+            </div>
+            {% include "ai_insights/_pager.html" with pager=data.pager keep=keep %}
+        </div>
+
+        <!-- Topics -->
+        <div class="card-body ai-panel-stack" data-ai-panel="topics" hidden>
+            <div class="ai-cols">
+                <div class="ai-box">
+                    <h5><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Most mentioned problems</h5>
+                    {% if data.problems %}
+                    <ul class="ai-hbars">{% for t in data.problems %}
+                        <li class="ai-hbar"><span>{{ t.label }}<small>{{ t.category_label }} · {{ t.instructors }} instructor{{ t.instructors|pluralize }}</small></span>
+                            <span class="ai-hbar-track"><span class="ai-hbar-fill ai-hbar-fill--problem" style="width: {{ t.width }}%"></span></span><b>{{ t.mentions }}</b></li>
+                    {% endfor %}</ul>
+                    {% else %}<p class="ai-empty">No problem topic found.</p>{% endif %}
+                </div>
+                <div class="ai-box">
+                    <h5><i class="bi bi-check-circle" aria-hidden="true"></i> Most praised</h5>
+                    {% if data.praise %}
+                    <ul class="ai-hbars">{% for t in data.praise %}
+                        <li class="ai-hbar"><span>{{ t.label }}<small>{{ t.category_label }} · {{ t.instructors }} instructor{{ t.instructors|pluralize }}</small></span>
+                            <span class="ai-hbar-track"><span class="ai-hbar-fill ai-hbar-fill--praise" style="width: {{ t.width }}%"></span></span><b>{{ t.mentions }}</b></li>
+                    {% endfor %}</ul>
+                    {% else %}<p class="ai-empty">No praised topic found.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- AI suggestions (kept apart from the real comments and from the summaries) -->
+        <div class="card-body ai-panel-stack" data-ai-panel="suggestions" hidden>
+            <p class="ai-who">These suggestions are written from real scores and comment themes. They are advice, not facts.</p>
+            <div class="ai-feed">
+                {% for c in data.suggestions %}
+                <article class="ai-feed-item">
+                    <div class="ai-rec-head"><div><strong>{{ c.name }}</strong> <span class="ai-who">{{ c.department }} · {{ c.period_label }}</span></div>
+                        <span>{% if c.ai %}<span class="ai-badge ai-badge--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI</span>{% else %}<span class="ai-badge">Rules</span>{% endif %}</span></div>
+                    <p>{{ c.text }}</p>
+                </article>
+                {% empty %}<p class="ai-empty">No suggestion for these filters yet. Generate the AI analysis first.</p>{% endfor %}
+            </div>
+            <p><a class="btn btn-ghost btn-sm" href="{% url 'ai_admin_recommendations' %}?{{ filters.querystring }}">See all {{ data.suggestion_total }} suggestion{{ data.suggestion_total|pluralize }}</a></p>
+        </div>
+
+        <!-- real student comments, anonymous, one instructor only -->
+        {% if filters.instructor %}
+        <div class="card-body ai-panel-stack" data-ai-panel="comments" hidden>
+            {% if data.raw.state == 'ok' %}
+                <p class="ai-who">Real comments from students, {{ data.raw.period_label }}. Names, dates and contact details are removed and the order is mixed. This is what students wrote, not AI text.</p>
+                <ul class="ai-quotes">{% for text in data.raw.comments %}<li>{{ text }}</li>{% empty %}<li class="ai-muted">No usable comment.</li>{% endfor %}</ul>
+            {% elif data.raw.state == 'hidden' %}
+                <p class="ai-note"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>Comments are hidden to protect students. {{ data.raw.reason }}</span></p>
+            {% else %}
+                <p class="ai-empty">No comment summary exists for this instructor with these filters yet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>
+{% endblock %}

@@ -1,82 +1,263 @@
+<!-- academics/assignment_list.html -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'academics/css/academics.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/create_user.css' %}?v=20261121-directory-1">
+<link rel="stylesheet" href="{% static 'users/css/directory.css' %}?v=20261121-directory-2">
+<link rel="stylesheet" href="{% static 'users/css/directory_ui.css' %}?v=4">
+<link rel="stylesheet" href="{% static 'academics/css/academic_lists.css' %}?v=20261125-lists-3">
+<link rel="stylesheet" href="{% static 'academics/css/academic_dialogs.css' %}?v=20261125-dialogs-1">
 {% endblock %}
 
 {% block page_title %}Teaching Assignments{% endblock %}
 
 {% block content %}
-<div class="page-container">
+<div class="page-container user-page" data-directory data-noun="assignment">
 
-    {% include 'academics/_messages.html' %}
-
-
+    <!-- PAGE HEADER -->
     <div class="page-header">
-        <form method="GET" class="filter-bar">
-            <select name="semester" data-auto-submit aria-label="Semester">
-                <option value="all" {% if selected_semester == 'all' %}selected{% endif %}>All semesters</option>
-                {% for value, label in semester_filter %}
-                    <option value="{{ value }}" {% if value == selected_semester %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </form>
 
-        {% if has_periods %}
-            <button type="button" class="btn-primary" data-open-modal="addModal">+ Assign Teacher</button>
-        {% endif %}
+        <div class="page-heading">
+            <p class="page-intro">Assign teachers to subjects and sections for each semester.</p>
+        </div>
+
+        <div class="header-actions">
+
+            <form method="GET" class="filter-bar">
+                <label class="semester-field">
+                    <span>Semester</span>
+                    <select name="semester" data-auto-submit aria-label="Semester">
+                        <option value="all" {% if selected_semester == 'all' %}selected{% endif %}>All semesters</option>
+                        {% for value, label in semester_filter %}
+                            <option value="{{ value }}" {% if value == selected_semester %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </form>
+
+            {% if has_periods %}
+                <button type="button" class="btn-primary add-button" data-open-modal="addModal">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    Assign teacher
+                </button>
+            {% endif %}
+
+        </div>
+
     </div>
+
+    <!-- MESSAGES -->
+    {% include 'academics/_messages.html' %}
 
     {% if not has_periods %}
         <div class="alert warning">
-            No Evaluation Period exists yet. Create one first (Evaluation Period &gt; Evaluations),
-            because teaching assignments follow the school year and semester of the Evaluation Period.
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <span>
+                No Evaluation Period exists yet. Create one first (Evaluation Period &gt; Evaluations),
+                because teaching assignments follow the school year and semester of the Evaluation Period.
+            </span>
         </div>
     {% endif %}
 
-    <div class="card">
-        <div class="card-header-area">
-            <div><span class="table-badge">Records</span></div>
-            <input type="text" class="search-input" placeholder="Search teacher, subject, section..." data-table-search="assignmentTable">
+    <!-- DIRECTORY PANEL -->
+    <div class="dir-list">
+
+        <div class="list-toolbar">
+
+            <!-- ROW 1: search + count -->
+            <div class="card-header-area">
+
+                <label class="list-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Search assignments</span>
+                    <input type="search"
+                           class="search-input"
+                           placeholder="Search teacher, subject, section…  ( / )"
+                           autocomplete="off"
+                           spellcheck="false"
+                           data-search-input>
+                    <button type="button" class="search-clear" data-search-clear aria-label="Clear search" hidden>
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    </button>
+                </label>
+
+                <div class="records-heading">
+                    <p class="result-count" data-heading-count aria-live="polite"><strong>{{ assignments|length }}</strong> assignment{{ assignments|length|pluralize }} in total</p>
+                </div>
+
+            </div>
+
+            {% if assignments %}
+            <!-- ROW 2: filters -->
+            <div class="toolbar-row">
+
+                <div class="toolbar-filters">
+
+                    <label class="filter-field">
+                        <span>Teacher</span>
+                        <select data-filter-field="teacher" data-all-label="All teachers">
+                            <option value="">All teachers</option>
+                        </select>
+                    </label>
+
+                    <label class="filter-field">
+                        <span>Subject</span>
+                        <select data-filter-field="subject" data-all-label="All subjects">
+                            <option value="">All subjects</option>
+                        </select>
+                    </label>
+
+                    <label class="filter-field">
+                        <span>Section</span>
+                        <select data-filter-field="section" data-all-label="All sections">
+                            <option value="">All sections</option>
+                        </select>
+                    </label>
+
+                    <label class="filter-field">
+                        <span>Sort by</span>
+                        <select data-sort-select>
+                            <option value="">Default order</option>
+                        </select>
+                    </label>
+
+                </div>
+
+            </div>
+
+            <!-- ROW 3: active filter chips (only when a filter is on) -->
+            <div class="active-filters" data-chips hidden>
+                <span class="chips-label">Filtered by</span>
+                <span class="chip-list" data-chip-list></span>
+                <button type="button" class="clear-filters" data-clear>
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    Clear all
+                </button>
+            </div>
+            {% endif %}
+
         </div>
 
-        <div class="table-wrapper">
+        <!-- TABLE -->
+        <div class="table-wrapper" data-table>
             <table class="custom-table" id="assignmentTable">
                 <thead>
                     <tr>
-                        <th>Teacher</th>
-                        <th>Subject</th>
-                        <th>Section</th>
-                        <th>Semester</th>
-                        <th class="actions-column wide">Actions</th>
+                        <th scope="col" aria-sort="none">
+                            <button type="button" class="sort-btn" data-sort="teacher">Teacher <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button>
+                        </th>
+                        <th scope="col" aria-sort="none">
+                            <button type="button" class="sort-btn" data-sort="subject">Subject <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button>
+                        </th>
+                        <th scope="col" aria-sort="none">
+                            <button type="button" class="sort-btn" data-sort="section">Section <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button>
+                        </th>
+                        <th scope="col" aria-sort="none">
+                            <button type="button" class="sort-btn" data-sort="semester">Semester <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button>
+                        </th>
+                        <th scope="col" class="text-right actions-head">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for a in assignments %}
-                    <tr>
-                        <td>
+                    <tr data-row
+                        data-active="true"
+                        data-name="{{ a.teacher.get_full_name }} · {{ a.subject.code }} · {{ a.section.name }}"
+                        data-search="{{ a.teacher.get_full_name }} {{ a.teacher.department.name|default:'' }} {{ a.subject.code }} {{ a.subject.name }} {{ a.section.name }}"
+                        data-teacher="{{ a.teacher.get_full_name }}"
+                        data-subject="{{ a.subject.code }}"
+                        data-section="{{ a.section.name }}"
+                        data-semester="{{ a.school_year }} {{ a.get_semester_display }}">
+
+                        <td class="cell-main" data-label="Teacher">
                             <div class="user-details">
-                                <div class="user-name">{{ a.teacher.get_full_name }}</div>
+                                <div class="user-name hl">{{ a.teacher.get_full_name }}</div>
                                 <div class="user-subtext">{% if a.teacher.department %}{{ a.teacher.department.name }}{% else %}No department{% endif %}</div>
                             </div>
                         </td>
-                        <td><strong>{{ a.subject.code }}</strong><div class="user-subtext">{{ a.subject.name }}</div></td>
-                        <td>{{ a.section.name }}</td>
-                        <td>S.Y. {{ a.school_year }}<div class="user-subtext">{{ a.get_semester_display }}</div></td>
-                        <td class="actions-column wide">
+
+                        <td data-label="Subject">
+                            <div class="user-details">
+                                <strong class="user-name hl">{{ a.subject.code }}</strong>
+                                <div class="user-subtext hl">{{ a.subject.name }}</div>
+                            </div>
+                        </td>
+
+                        <td data-label="Section"><span class="hl">{{ a.section.name }}</span></td>
+
+                        <td data-label="Semester">
+                            <div class="user-details">
+                                <span class="user-name">S.Y. {{ a.school_year }}</span>
+                                <div class="user-subtext">{{ a.get_semester_display }}</div>
+                            </div>
+                        </td>
+
+                        <td class="actions-column" data-label="Actions">
                             {% url 'assignment_update' a.pk as edit_url %}
                             {% url 'assignment_delete' a.pk as delete_url %}
                             {% include 'academics/_row_actions.html' with edit_url=edit_url delete_url=delete_url label='teaching assignment' %}
                         </td>
                     </tr>
-                {% empty %}
-                    <tr><td colspan="5" class="empty">No teaching assignments for this semester.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- EMPTY: no records at all -->
+        {% if not assignments %}
+        <div class="empty-state">
+            <i class="bi bi-person-workspace" aria-hidden="true"></i>
+            <h3>No teaching assignments</h3>
+            <p>There are no teaching assignments for this semester yet.</p>
+            {% if has_periods %}
+            <button type="button" class="btn-primary" data-open-modal="addModal">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Assign teacher
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- EMPTY: nothing matches the search / filters -->
+        <div class="empty-state" data-empty-match hidden>
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <h3>No assignments match</h3>
+            <p>Try fewer words, check the spelling, or remove a filter.</p>
+            <button type="button" class="btn-secondary" data-clear>Clear search &amp; filters</button>
+        </div>
+
+        <!-- PAGINATION -->
+        <div class="list-footer" data-footer hidden>
+
+            <div class="footer-left">
+                <p class="result-summary" data-summary aria-live="polite"></p>
+                <label class="page-size">
+                    <span>Rows</span>
+                    <select data-page-size>
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+            </div>
+
+            <nav class="pager" aria-label="Assignment list pages" data-pager>
+                <button type="button" class="page-btn" data-prev aria-label="Previous page">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+                <span class="page-numbers" data-pages></span>
+                <button type="button" class="page-btn" data-next aria-label="Next page">
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+            </nav>
+
+        </div>
+
     </div>
 
 </div>
@@ -84,4 +265,8 @@
 {% include 'academics/_modal_form.html' with modal_id='addModal' title='Assign Teacher' subtitle='Choose the teacher, subject, section and semester' submit_label='Save Assignment' %}
 {% endblock %}
 
-{% block extra_js %}<script src="{% static 'academics/js/academics.js' %}"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'academics/js/academics.js' %}"></script>
+<script src="{% static 'users/js/directory.js' %}?v=20261121-directory-3"></script>
+<script src="{% static 'academics/js/academic_dialogs.js' %}?v=20261125-dialogs-1"></script>
+{% endblock %}

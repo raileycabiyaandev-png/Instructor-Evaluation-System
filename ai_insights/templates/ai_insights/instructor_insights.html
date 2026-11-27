@@ -1,0 +1,217 @@
+{% extends "instructor_base.html" %}
+{% load static %}
+{# ai_insights/instructor_insights.html  -  the teacher's own AI page. Shows only SAVED, RELEASED results of the logged-in teacher. #}
+
+{% block title %}AI Insights{% endblock %}
+{% block page_title %}AI Insights{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/css/instructor_common.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/instructor_extras.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}">
+<link rel="stylesheet" href="{% static 'ai_insights/ai_clean.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+    {% include "academics/_messages.html" %}
+
+    {% if ai.error %}
+    <section class="card"><div class="empty"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <h3>AI results could not be loaded</h3><p>Your real scores are not affected. Please try again later.</p></div></section>
+
+    {% elif not ai.released %}
+    <section class="card"><div class="empty"><i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <h3>AI results are not ready yet</h3><p>{{ ai.forecast.message }}</p></div></section>
+    {% include "ai_insights/_progress.html" %}
+
+    {% else %}
+    <section class="card ac-head">
+        <div>
+            <h2 class="ac-title">My AI Insights</h2>
+            <p class="ac-sub">{% if ai.latest_label %}Latest finished period: {{ ai.latest_label }}{% else %}No finished evaluation yet{% endif %}</p>
+        </div>
+        <div class="ac-status">
+            <span class="ac-chip ac-chip--ai"><i class="bi bi-stars" aria-hidden="true"></i> Official analysis: {{ ai.release.period_label }}</span>
+            <form method="post" action="{% url 'ai_my_report' %}" class="ac-actions">{% csrf_token %}
+                <button type="submit" name="fmt" value="pdf" class="btn btn-ghost btn-sm"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF</button>
+                <button type="submit" name="fmt" value="xlsx" class="btn btn-ghost btn-sm"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Excel</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="card" data-ai-tabs data-ai-start="forecast">
+        <div class="ac-tabbar">
+            <div class="ai-tabs" role="group" aria-label="AI insights">
+                <button type="button" class="ai-tab" data-ai-tab="forecast"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Forecast</button>
+                <button type="button" class="ai-tab" data-ai-tab="feedback"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback</button>
+                <button type="button" class="ai-tab" data-ai-tab="suggestions"><i class="bi bi-lightbulb" aria-hidden="true"></i> Suggestions
+                    {% if ai.suggestions.state == "ok" %}<span class="ai-tab-count">{{ ai.suggestions.items|length }}</span>{% endif %}</button>
+                <button type="button" class="ai-tab" data-ai-tab="updates"><i class="bi bi-bell" aria-hidden="true"></i> Updates
+                    {% if ai.notices.unread %}<span class="ai-tab-count">{{ ai.notices.unread }}</span>{% endif %}</button>
+            </div>
+        </div>
+
+        <!-- ───── FORECAST ───── -->
+        <div data-ai-panel="forecast" class="ac-body">
+        {% with f=ai.forecast %}
+        {% if f.state == "ok" %}
+            <div class="ac-kpis ac-kpis--3">
+                <div class="ac-kpi ac-kpi--gold"><span class="ac-kpi-label">AI prediction</span>
+                    <span class="ac-kpi-value">{{ f.row.predicted_overall|floatformat:2 }}<small> / 5</small></span>
+                    <span class="ac-kpi-note">{{ f.row.target_label }}</span></div>
+                <div class="ac-kpi"><span class="ac-kpi-label">Last real score</span>
+                    <span class="ac-kpi-value">{{ f.last_actual|floatformat:2 }}<small> / 5</small></span>
+                    <span class="ac-kpi-note">{{ f.based_on_label }}</span></div>
+                <div class="ac-kpi"><span class="ac-kpi-label">Predicted change</span>
+                    <span class="ac-kpi-value {% if f.change > 0 %}ac-up{% elif f.change < 0 %}ac-down{% endif %}">{{ f.change|stringformat:"+.2f" }}</span>
+                    <span class="ac-kpi-note">Typical range {{ f.row.range_low|floatformat:2 }} to {{ f.row.range_high|floatformat:2 }}</span></div>
+            </div>
+
+            <div class="ac-panel">
+                <h3 class="ac-sec">Real scores and the AI prediction</h3>
+                {% include "ai_insights/_line_chart.html" with chart=ai.forecast_chart title="Line chart. The solid line is your real score in each finished period. The dashed line is the AI prediction for the next period." %}
+            </div>
+
+            <div class="ac-panel">
+                <h3 class="ac-sec">Predicted score per category</h3>
+                <div class="table-wrap"><table class="ac-table">
+                    <thead><tr><th scope="col">Category</th><th scope="col">Last real</th><th scope="col">Predicted</th><th scope="col" class="ac-hide-sm">Range</th></tr></thead>
+                    <tbody>
+                    {% for c in f.categories %}
+                    <tr><th scope="row">{{ c.label }}</th><td>{{ c.last_actual|floatformat:2 }}</td>
+                        <td><span class="ac-forecast">{{ c.value|floatformat:2 }}</span></td>
+                        <td class="ac-hide-sm">{{ c.low|floatformat:2 }}–{{ c.high|floatformat:2 }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table></div>
+            </div>
+
+            <details class="ai-details">
+                <summary>How reliable is this?</summary>
+                <ul class="ac-list">
+                    <li>{{ f.row.periods_used }} finished periods were used. Each had at least {{ ai.min_responses }} responses.</li>
+                    <li>Average error in past tests: {{ f.row.validation_mae|floatformat:2 }} points{% if f.beats_baseline %} (better than guessing "same as last period"){% else %} (not better than guessing "same as last period", so use with care){% endif %}.</li>
+                    {% if f.row.reliability == "low" %}<li>Low reliability: there is little history.</li>{% endif %}
+                    <li>Made on {{ f.generated_at|date:"M d, Y" }}. This is a prediction, not a real score.</li>
+                </ul>
+            </details>
+
+        {% else %}
+            <div class="ac-panel ac-panel--gold">
+                <h3 class="ac-sec">No forecast yet</h3>
+                <p class="ac-lead">{% if f.message %}{{ f.message }}{% else %}The forecast has not been generated for you yet. It needs at least {{ ai.min_periods }} finished periods.{% endif %}</p>
+                {% include "ai_insights/_progress.html" %}
+                {% for s in f.quality.skipped %}<p class="ac-hint">Left out: {{ s.label }} ({{ s.responses }} response{{ s.responses|pluralize }}).</p>{% endfor %}
+            </div>
+        {% endif %}
+        {% endwith %}
+        </div>
+
+        <!-- ───── FEEDBACK ───── -->
+        <div data-ai-panel="feedback" class="ac-body" hidden>
+        {% with fb=ai.feedback %}
+        {% if fb.state == "ok" %}
+            <div class="ac-kpis ac-kpis--4">
+                <div class="ac-kpi"><span class="ac-kpi-label">Comments read</span><span class="ac-kpi-value">{{ fb.row.n_analyzed }}</span></div>
+                <div class="ac-kpi ac-kpi--good"><span class="ac-kpi-label">Positive</span><span class="ac-kpi-value">{{ fb.bars.0.percent }}%</span></div>
+                <div class="ac-kpi"><span class="ac-kpi-label">Neutral</span><span class="ac-kpi-value">{{ fb.bars.1.percent }}%</span></div>
+                <div class="ac-kpi ac-kpi--bad"><span class="ac-kpi-label">Negative</span><span class="ac-kpi-value">{{ fb.bars.2.percent }}%</span></div>
+            </div>
+
+            <div class="ac-panel ac-panel--gold">
+                <span class="ac-chip {% if fb.ai %}ac-chip--ai{% endif %}">{% if fb.ai %}<i class="bi bi-stars" aria-hidden="true"></i> AI summary{% else %}<i class="bi bi-list-check" aria-hidden="true"></i> Rule-based summary{% endif %}</span>
+                <p class="ac-lead">{{ fb.row.summary_text }}</p>
+            </div>
+
+            <div class="ac-grid ac-grid--2">
+                <div class="ac-panel ac-panel--good"><h3 class="ac-sec">What students liked</h3>
+                    {% if fb.positive_points %}<ul class="ac-list">{% for p in fb.positive_points %}<li>{{ p }}</li>{% endfor %}</ul>
+                    {% else %}<p class="ac-empty">Nothing was mentioned often enough.</p>{% endif %}</div>
+                <div class="ac-panel ac-panel--bad"><h3 class="ac-sec">What students want improved</h3>
+                    {% if fb.negative_points %}<ul class="ac-list">{% for p in fb.negative_points %}<li>{{ p }}</li>{% endfor %}</ul>
+                    {% else %}<p class="ac-empty">Nothing was mentioned often enough.</p>{% endif %}</div>
+            </div>
+
+            {% if fb.problems or fb.praise %}
+            <div class="ac-grid ac-grid--2">
+                <div class="ac-panel"><h3 class="ac-sec">Topics to improve <small class="ac-hint">(comments)</small></h3>
+                    {% if fb.problems %}<ul class="ac-bars">{% for t in fb.problems %}
+                    <li><span>{{ t.label }}</span><span class="ac-bar-track"><span class="ac-bar-fill ac-bar-fill--gold" style="width: {{ t.width }}%;"></span></span><b>{{ t.mentions }}</b></li>
+                    {% endfor %}</ul>{% else %}<p class="ac-empty">None mentioned in 2 or more comments.</p>{% endif %}</div>
+                <div class="ac-panel"><h3 class="ac-sec">Topics students liked <small class="ac-hint">(comments)</small></h3>
+                    {% if fb.praise %}<ul class="ac-bars">{% for t in fb.praise %}
+                    <li><span>{{ t.label }}</span><span class="ac-bar-track"><span class="ac-bar-fill" style="width: {{ t.width }}%;"></span></span><b>{{ t.mentions }}</b></li>
+                    {% endfor %}</ul>{% else %}<p class="ac-empty">None mentioned in 2 or more comments.</p>{% endif %}</div>
+            </div>
+            {% endif %}
+            <p class="ac-hint">Based on {{ fb.row.n_responses }} anonymous student{{ fb.row.n_responses|pluralize }}.</p>
+        {% elif fb.state == "hidden" %}
+            <div class="ac-panel"><p class="ac-lead">{{ fb.reason }}</p></div>
+        {% elif fb.state == "not_included" %}
+            <div class="ac-panel"><p class="ac-lead">{{ fb.message }}</p></div>
+        {% elif fb.state == "no_period" %}
+            <div class="ac-panel"><p class="ac-lead">There is no finished evaluation with responses yet.</p></div>
+        {% else %}
+            <div class="ac-panel"><p class="ac-lead">The feedback summary has not been generated yet.</p></div>
+        {% endif %}
+        {% endwith %}
+        </div>
+
+        <!-- ───── SUGGESTIONS ───── -->
+        <div data-ai-panel="suggestions" class="ac-body" hidden>
+        {% with sg=ai.suggestions %}
+        {% if sg.state == "ok" %}
+            {% if sg.note %}<div class="ac-panel ac-panel--gold"><span class="ac-chip ac-chip--ai"><i class="bi bi-stars" aria-hidden="true"></i> AI overview</span>
+                <p class="ac-lead">{{ sg.note.text }}</p></div>{% endif %}
+            <div class="ac-fb">
+            {% for s in sg.items %}
+                <article class="ac-fb-item">
+                    <div class="ac-fb-top"><strong>{{ s.label }}</strong>
+                        <span><span class="ac-pill {% if s.priority == 'high' %}ac-pill--bad{% elif s.priority == 'strength' %}ac-pill--good{% elif s.priority == 'medium' %}ac-pill--warn{% endif %}">{{ s.priority_text }}</span>
+                        <span class="ac-pill">{{ s.score }} / 5</span>
+                        <span class="ac-pill ac-pill--ai">{% if s.ai %}AI{% else %}Rules{% endif %}</span></span></div>
+                    <p class="ac-lead">{{ s.text }}</p>
+                    {% if s.actions %}<ul class="ac-list">{% for a in s.actions %}<li><b>{{ a.topic }}:</b> {{ a.text }}</li>{% endfor %}</ul>{% endif %}
+                </article>
+            {% endfor %}
+            </div>
+        {% elif sg.state == "not_included" %}
+            <div class="ac-panel"><p class="ac-lead">{{ sg.message }}</p></div>
+        {% elif sg.state == "no_period" %}
+            <div class="ac-panel"><p class="ac-lead">Suggestions appear after your first finished evaluation.</p></div>
+        {% else %}
+            <div class="ac-panel"><p class="ac-lead">Suggestions have not been generated yet.</p></div>
+        {% endif %}
+        {% endwith %}
+        </div>
+
+        <!-- ───── UPDATES ───── -->
+        <div data-ai-panel="updates" class="ac-body" hidden>
+        {% if ai.notices.items %}
+            {% if ai.notices.unread %}
+            <form method="post" action="{% url 'ai_notices_read' %}" class="ac-actions">{% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm">Mark all as read</button></form>
+            {% endif %}
+            <ul class="ai-notice-list">
+            {% for n in ai.notices.items %}
+                <li class="ai-notice ai-notice--{{ n.kind }}{% if not n.read_at %} is-new{% endif %}">
+                    <i class="bi {% if n.kind == 'up' %}bi-arrow-up-circle{% elif n.kind == 'down' %}bi-arrow-down-circle{% else %}bi-stars{% endif %}" aria-hidden="true"></i>
+                    <div><strong>{{ n.title }}</strong><span>{{ n.message }}</span><small>{{ n.created_at|date:"M d, Y" }}</small></div>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <div class="ac-panel"><p class="ac-lead">No updates yet. You will be told here when a new AI analysis includes you.</p></div>
+        {% endif %}
+        </div>
+    </section>
+
+    <p class="ac-hint">Your real scores and history are in <a href="{% url 'instructor_evaluation_results' %}">Evaluation Results</a>. Everything on this page is made by AI from those scores and is kept separate on purpose.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'ai_insights/ai_tabs.js' %}"></script>
+{% endblock %}

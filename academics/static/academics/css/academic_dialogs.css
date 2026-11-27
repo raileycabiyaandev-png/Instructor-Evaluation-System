@@ -1,0 +1,302 @@
+/* ============================================================
+   academics/css/academic_dialogs.css
+
+   1. Confirm window  (Delete / Deactivate / Activate)
+   2. Edit window     (extra rules; the main look is shared with
+                       the Add window in academic_lists.css)
+   3. Small screens
+
+   Load it AFTER academic_lists.css.
+   ============================================================ */
+
+body.ad-lock {
+  overflow: hidden;
+}
+
+/* ============================================================
+   1. CONFIRM WINDOW
+   ============================================================ */
+.ad-overlay {
+  --ad-ink: #111827;
+  --ad-text: #475467;
+  --ad-line: #e4e8f0;
+  --ad-line-strong: #cfd6e4;
+  --ad-soft: #f7f9fc;
+  --ad-royal: #1f3585;
+  --ad-royal-dark: #172a6b;
+
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.55);
+  font-family:
+    "IBM Plex Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  animation: ad-fade 0.16s ease-out;
+}
+.ad-overlay *,
+.ad-overlay *::before,
+.ad-overlay *::after {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.ad-overlay [class^="bi-"],
+.ad-overlay [class*=" bi-"],
+.ad-overlay .bi::before {
+  font-family: "bootstrap-icons" !important;
+}
+
+.ad-dialog {
+  width: min(100%, 440px);
+  margin: auto;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.32);
+  animation: ad-pop 0.2s ease-out;
+}
+
+.ad-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 24px 22px;
+}
+.ad-icon {
+  display: grid;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 21px;
+}
+.ad-dialog--delete .ad-icon {
+  background: #fef3f2;
+  color: #b42318;
+  box-shadow: 0 0 0 6px #fffbfa;
+}
+.ad-dialog--deactivate .ad-icon {
+  background: #fffaeb;
+  color: #b54708;
+  box-shadow: 0 0 0 6px #fffdf6;
+}
+.ad-dialog--activate .ad-icon {
+  background: #ecfdf3;
+  color: #027a48;
+  box-shadow: 0 0 0 6px #f6fef9;
+}
+
+.ad-text {
+  min-width: 0;
+}
+.ad-text h3 {
+  margin: 2px 0 0;
+  color: var(--ad-ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+.ad-text p {
+  margin: 8px 0 0;
+  color: var(--ad-text);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.ad-name {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 14px;
+  padding: 7px 12px;
+  border: 1px solid var(--ad-line);
+  border-radius: 8px;
+  background: var(--ad-soft);
+  color: var(--ad-ink);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ad-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--ad-line);
+  background: var(--ad-soft);
+}
+.ad-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.ad-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.ad-btn:focus-visible {
+  outline: 2px solid var(--ad-royal);
+  outline-offset: 2px;
+}
+.ad-btn--ghost {
+  border-color: var(--ad-line-strong);
+  background: #fff;
+  color: var(--ad-ink);
+}
+.ad-btn--ghost:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f1f4fa;
+}
+.ad-btn--delete {
+  border-color: #b42318;
+  background: #b42318;
+  color: #fff;
+}
+.ad-btn--delete:hover:not(:disabled) {
+  border-color: #912018;
+  background: #912018;
+}
+.ad-btn--deactivate {
+  border-color: #b54708;
+  background: #b54708;
+  color: #fff;
+}
+.ad-btn--deactivate:hover:not(:disabled) {
+  border-color: #93370d;
+  background: #93370d;
+}
+.ad-btn--activate {
+  border-color: var(--ad-royal);
+  background: var(--ad-royal);
+  color: #fff;
+}
+.ad-btn--activate:hover:not(:disabled) {
+  border-color: var(--ad-royal-dark);
+  background: var(--ad-royal-dark);
+}
+
+@keyframes ad-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ad-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+/* ============================================================
+   2. EDIT WINDOW
+   Uses the same .modal / .modern-modal classes as the Add window,
+   so it looks identical. These rules only cover plain Django
+   output (as_p, as_table, helptext, error lists) if the form is
+   not built with the same field wrappers.
+   ============================================================ */
+body .modal.ad-edit .modal-body-modern > p,
+body .modal.ad-edit .modal-body-modern > div:not(.form-grid):not(.alert) {
+  margin: 0 0 18px;
+}
+body .modal.ad-edit .modal-body-modern label:not(.toggle-control):not(.toggle-label) {
+  display: block;
+  margin: 0 0 6px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 500;
+}
+body .modal.ad-edit .helptext {
+  display: block;
+  margin-top: 6px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.45;
+}
+body .modal.ad-edit ul.errorlist {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #b42318;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+body .modal.ad-edit .alert.error {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 14px;
+}
+
+/* the Edit link while the window is loading */
+a.btn-edit.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ============================================================
+   3. SMALL SCREENS
+   ============================================================ */
+@media (max-width: 520px) {
+  .ad-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .ad-dialog {
+    width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    animation: ad-sheet 0.22s ease-out;
+  }
+  .ad-body {
+    padding: 22px 18px 18px;
+  }
+  .ad-foot {
+    flex-direction: column-reverse;
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .ad-btn {
+    width: 100%;
+  }
+}
+@keyframes ad-sheet {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-overlay,
+  .ad-dialog {
+    animation: none !important;
+  }
+  .ad-btn {
+    transition: none !important;
+  }
+}

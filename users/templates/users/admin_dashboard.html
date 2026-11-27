@@ -1,458 +1,918 @@
 <!-- Admin dashboard -->
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Dashboard | AI Teacher Evaluation System{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}">
-<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'users/css/admin_common.css' %}" />
+<link rel="stylesheet" href="{% static 'users/css/admin_dashboard.css' %}?v=3" />
+<link rel="stylesheet" href="{% static 'ai_insights/ai.css' %}" />
 {% endblock %}
-
 {% block page_title %}Dashboard{% endblock %}
-
-
 {% block content %}
-<div class="admin-page">
+<div class="admin-page dash">
+  <div class="page-intro">
+    <p><b>{% now "l, F j, Y" %}</b></p>
+  </div>
 
-    <!-- ═══════════ 1. OVERVIEW: best instructor + quick numbers ═══════════ -->
-    <div class="overview {% if not best_teacher %}overview--single{% endif %}">
-
-        {% if best_teacher %}
-        {% widthratio best_teacher.overall 5 100 as best_pct %}
-        <section class="hero" aria-label="Best performing instructor">
-            <span class="hero-eyebrow"><i class="bi bi-trophy-fill" aria-hidden="true"></i> Best performing instructor</span>
-
-            <div class="hero-person">
-                <div class="hero-avatar" aria-hidden="true">{{ best_teacher.teacher.first_name|first }}{{ best_teacher.teacher.last_name|first }}</div>
-                <div>
-                    <h3 class="hero-name">{{ best_teacher.teacher.first_name }} {{ best_teacher.teacher.last_name }}</h3>
-                    <p class="hero-role">Instructor</p>
-                </div>
-            </div>
-
-            <div class="hero-score">
-                <span class="hero-number">{{ best_teacher.overall }}</span>
-                <span class="hero-outof">out of 5</span>
-            </div>
-
-            <div class="stars" role="img" aria-label="{{ best_teacher.overall }} out of 5 stars">
-                <div class="stars-back" aria-hidden="true">★★★★★</div>
-                <div class="stars-front" aria-hidden="true" style="width:{{ best_pct }}%;">★★★★★</div>
-            </div>
-
-            <p class="hero-foot">Based on {{ best_teacher.evaluation_count }} evaluation{{ best_teacher.evaluation_count|pluralize }}.</p>
-        </section>
-        {% endif %}
-
-        <div class="side {% if not best_teacher %}side--grid{% endif %}">
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Total users</div>
-                    <div class="stat-value">{{ total_users }}</div>
-                </div>
-            </div>
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Teachers</div>
-                    <div class="stat-value">{{ total_instructors }}</div>
-                </div>
-            </div>
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Students</div>
-                    <div class="stat-value">{{ total_students }}</div>
-                </div>
-            </div>
-            <div class="stat">
-                <span class="stat-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></span>
-                <div>
-                    <div class="stat-label">Active evaluations</div>
-                    <div class="stat-value">{{ total_evaluations }}</div>
-                </div>
-            </div>
+  <!-- PERIOD: status, dates, totals -->
+  <section class="card dash-hero" aria-labelledby="heroTitle">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="card-icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
+        {% if dash.period %}
+        <div>
+          <h3 id="heroTitle">Evaluation period</h3>
+          <p class="card-sub">{% if dash.is_current %}Current period{% else %}Latest period{% endif %} · {{ dash.period.semester }} · {{ dash.period.term }}</p>
         </div>
+        {% else %}
+        <div>
+          <h3 id="heroTitle">Evaluation period</h3>
+          <p class="card-sub">No evaluation period yet</p>
+        </div>
+        {% endif %}
+      </div>
+      {% if dash.period %}<span class="dash-status dash-status--{{ dash.period.status }}">{{ dash.period.status_label }}</span>{% endif %}
     </div>
 
+    <div class="card-body">
+      {% if dash.period %}
+      <dl class="facts">
+        <div class="fact">
+          <dt>Academic year</dt>
+          <dd>{{ dash.period.school_year }}</dd>
+        </div>
+        <div class="fact">
+          <dt>Semester</dt>
+          <dd>{{ dash.period.semester }}</dd>
+        </div>
+        <div class="fact">
+          <dt>Term</dt>
+          <dd>{{ dash.period.term }}</dd>
+        </div>
+        <div class="fact">
+          <dt>Period dates</dt>
+          <dd>{{ dash.period.start|date:"M d, Y"|default:dash.period.start }} to {{ dash.period.end|date:"M d, Y"|default:dash.period.end }}</dd>
+        </div>
+      </dl>
+      {% if not dash.is_current %}
+      <p class="dash-note" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>No period is open. Showing the results of the <strong>{{ dash.period.words }}</strong>. {% if dash.upcoming %}Next: <strong>{{ dash.upcoming.words }}</strong>, starts {{ dash.upcoming.start|date:"M d, Y"|default:dash.upcoming.start }}.{% endif %}</span>
+      </p>
+      {% elif dash.period.status == 'not_started' %}
+      <p class="dash-note" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>This period starts on {{ dash.period.start|date:"M d, Y"|default:dash.period.start }}. Students cannot evaluate yet.</span>
+      </p>
+      {% endif %}
+      {% else %}
+      <p class="ai-empty">Create one in Evaluation Period. Results will show here.</p>
+      {% endif %}
 
-    <!-- ═══════════ 2. TABS: one section at a time ═══════════ -->
-    <section class="card" aria-label="Instructor performance">
+      <ul class="dash-kpis" aria-label="Totals">
+        <li>
+          <span class="kpi-icon" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
+          <span class="kpi-text"><span>Students</span><b data-countup="{{ dash.stats.students }}">{{ dash.stats.students }}</b></span>
+        </li>
+        <li>
+          <span class="kpi-icon" aria-hidden="true"><i class="bi bi-mortarboard"></i></span>
+          <span class="kpi-text"><span>Instructors</span><b data-countup="{{ dash.stats.instructors }}">{{ dash.stats.instructors }}</b></span>
+        </li>
+        <li>
+          <span class="kpi-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
+          <span class="kpi-text"><span>Departments</span><b data-countup="{{ dash.stats.departments }}">{{ dash.stats.departments }}</b></span>
+        </li>
+      </ul>
+    </div>
+  </section>
 
-        <div class="tabs" role="tablist" aria-label="Choose what to see">
-            <button type="button" class="tab" role="tab" id="tab-instructors" data-tab="instructors" aria-controls="panel-instructors" aria-selected="true">
-                <i class="bi bi-person-lines-fill" aria-hidden="true"></i> Instructors
+  <!-- PAGE TABS -->
+  <nav class="dash-nav" id="dashNav" role="tablist" aria-label="Dashboard sections">
+    <button type="button" class="dash-tab" role="tab" id="nav-overview" data-tab="overview" aria-controls="view-overview" aria-selected="true">
+      <i class="bi bi-grid-1x2" aria-hidden="true"></i> Overview
+    </button>
+    <button type="button" class="dash-tab" role="tab" id="nav-departments" data-tab="departments" aria-controls="view-departments" aria-selected="false">
+      <i class="bi bi-diagram-3" aria-hidden="true"></i> Departments
+    </button>
+    <button type="button" class="dash-tab" role="tab" id="nav-instructors" data-tab="instructors" aria-controls="view-instructors" aria-selected="false">
+      <i class="bi bi-people" aria-hidden="true"></i> Instructors
+    </button>
+  </nav>
+
+  <!-- ===== VIEW 1: OVERVIEW ===== -->
+  <div class="dash-view" role="tabpanel" id="view-overview" aria-labelledby="nav-overview">
+    <div class="dash-two">
+      <section class="card" aria-labelledby="progTitle">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="card-icon" aria-hidden="true"><i class="bi bi-clipboard-check"></i></span>
+            <div>
+              <h3 id="progTitle">Evaluation progress</h3>
+              <p class="card-sub">Each student evaluates every instructor of their section.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if dash.progress and dash.progress.required %}
+          <div class="dash-progress">
+            <div class="dash-ring" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ dash.progress.percent_text }}" aria-label="{{ dash.progress.percent_text }} percent of required evaluations are done">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#6f86c9" />
+                    <stop offset="1" stop-color="#1f3585" />
+                  </linearGradient>
+                </defs>
+                <circle class="ring-bg" cx="60" cy="60" r="50" pathLength="100" />
+                <circle class="ring-fg" cx="60" cy="60" r="50" pathLength="100" stroke-dasharray="{{ dash.progress.width }} 100" transform="rotate(-90 60 60)" />
+              </svg>
+              <div class="dash-ring-center"><b data-countup="{{ dash.progress.percent_text }}" data-suffix="%">{{ dash.progress.percent_text }}%</b><span>done</span></div>
+            </div>
+            <ul class="dash-counts">
+              <li class="is-done"><i aria-hidden="true"></i><span>Completed</span><b data-countup="{{ dash.progress.completed }}">{{ dash.progress.completed }}</b></li>
+              <li class="is-left"><i aria-hidden="true"></i><span>Remaining</span><b data-countup="{{ dash.progress.remaining }}">{{ dash.progress.remaining }}</b></li>
+              <li class="is-total"><i aria-hidden="true"></i><span>Required</span><b data-countup="{{ dash.progress.required }}">{{ dash.progress.required }}</b></li>
+            </ul>
+          </div>
+          {% else %}
+          <p class="ai-empty">No evaluation is required yet. Add teaching assignments in Academics and make sure students are in a section.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="schoolTitle">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="card-icon" aria-hidden="true"><i class="bi bi-bullseye"></i></span>
+            <div>
+              <h3 id="schoolTitle">School average</h3>
+              <p class="card-sub">All instructors, out of 5</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if dash.school.average is not None %}
+          <div class="dash-school">
+            <div class="dash-gauge" role="img" aria-label="School average {{ dash.school.average|floatformat:2 }} out of 5">
+              <svg viewBox="0 0 200 112" aria-hidden="true">
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0" stop-color="#6f86c9" />
+                    <stop offset="1" stop-color="#1f3585" />
+                  </linearGradient>
+                </defs>
+                <path class="g-zone g-zone--low" d="M 15 100 A 85 85 0 0 1 185 100" pathLength="100" stroke-dasharray="70 100" />
+                <path class="g-zone g-zone--mid" d="M 15 100 A 85 85 0 0 1 185 100" pathLength="100" stroke-dasharray="0 70 20 100" />
+                <path class="g-zone g-zone--high" d="M 15 100 A 85 85 0 0 1 185 100" pathLength="100" stroke-dasharray="0 90 10 100" />
+                <path class="g-value" d="M 15 100 A 85 85 0 0 1 185 100" pathLength="100" stroke-dasharray="{{ dash.school.width }} 100" />
+              </svg>
+              <div class="dash-gauge-center">
+                <b data-countup="{{ dash.school.average|stringformat:'.2f' }}">{{ dash.school.average|floatformat:2 }}</b><span>out of 5</span>
+              </div>
+            </div>
+            <div class="dash-school-foot">
+              {% if dash.school.trend == 'improving' %}
+              <span class="dash-trend dash-trend--up"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> Improving {{ dash.school.change|stringformat:"+.2f" }}</span>
+              {% elif dash.school.trend == 'declining' %}
+              <span class="dash-trend dash-trend--down"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> Declining {{ dash.school.change|stringformat:"+.2f" }}</span>
+              {% elif dash.school.trend == 'stable' %}
+              <span class="dash-trend dash-trend--flat"><i class="bi bi-arrow-right" aria-hidden="true"></i> Stable {{ dash.school.change|stringformat:"+.2f" }}</span>
+              {% else %}
+              <span class="dash-trend dash-trend--none">No earlier period to compare</span>
+              {% endif %}
+              <p class="card-sub">
+                {{ dash.school.count }} evaluation{{ dash.school.count|pluralize }}{% if dash.school.partial %}, period still open{% endif %}.
+                {% if dash.school.previous %}Before: {{ dash.school.previous.average|floatformat:2 }} ({{ dash.school.previous.words }}). Changes under 0.05 count as stable.{% endif %}
+              </p>
+            </div>
+          </div>
+          {% else %}
+          <p class="ai-empty">No evaluations received in this period yet, so there is no average.</p>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+
+    <!-- Forecast + trend -->
+    <section class="card" aria-label="Department forecast">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="card-icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span>
+          <div>
+            <h3>Department outlook</h3>
+            <p class="card-sub">Solid = real scores. Hatched or dashed = AI forecast.</p>
+          </div>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="{% url 'ai_admin_forecasting' %}"><i class="bi bi-stars" aria-hidden="true"></i> AI forecasting</a>
+      </div>
+      {% if outlook.line_chart %}
+      <div class="tabs" role="tablist" aria-label="Choose a view">
+        <button type="button" class="tab" role="tab" id="tab-fc-next" data-tab="next" aria-controls="panel-fc-next" aria-selected="true">
+          <i class="bi bi-stars" aria-hidden="true"></i> Next period
+        </button>
+        <button type="button" class="tab" role="tab" id="tab-fc-trend" data-tab="trend" aria-controls="panel-fc-trend" aria-selected="false">
+          <i class="bi bi-graph-up" aria-hidden="true"></i> Trend
+        </button>
+      </div>
+
+      <div class="tab-panel card-body" role="tabpanel" id="panel-fc-next" aria-labelledby="tab-fc-next">
+        {% if outlook.bars %}
+        <p class="fc-title">{% if outlook.target_label %}Forecast for {{ outlook.target_label }}{% else %}Forecast for the next period{% endif %}</p>
+        <ul class="dash-bars" id="fcList" aria-label="Last real score and forecast of each department">
+          {% for b in outlook.bars %}
+          <li>
+            <div class="fc-head">
+              <b>{{ b.name }}</b>
+              {% if b.change is not None %}<span class="fc-change {% if b.change > 0 %}fc-change--up{% elif b.change < 0 %}fc-change--down{% else %}fc-change--flat{% endif %}">{% if b.change > 0 %}<i class="bi bi-arrow-up-right" aria-hidden="true"></i>{% elif b.change < 0 %}<i class="bi bi-arrow-down-right" aria-hidden="true"></i>{% else %}<i class="bi bi-arrow-right" aria-hidden="true"></i>{% endif %} {{ b.change|stringformat:"+.2f" }}</span>{% endif %}
+            </div>
+            <p class="fc-sub">{{ b.forecasts }} of {{ b.teachers }} instructor{{ b.teachers|pluralize }} forecast</p>
+            <div class="dash-bars-pair">
+              <div class="dash-bars-row">
+                <span>Last real</span><span class="dash-bars-track"><i class="dash-bars-fill dash-bars-fill--real" style="width: {{ b.last_w }}%"></i></span><b>{% if b.avg_last is not None %}{{ b.avg_last|floatformat:2 }}{% else %}—{% endif %}</b>
+              </div>
+              <div class="dash-bars-row">
+                <span>Forecast</span><span class="dash-bars-track"><i class="dash-bars-fill dash-bars-fill--pred" style="width: {{ b.pred_w }}%"></i></span><b>{{ b.avg_pred|floatformat:2 }}</b>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="pager pager--flush" id="fcPager" hidden>
+          <span class="pager-info" data-pager-info aria-live="polite"></span>
+          <div class="pager-buttons">
+            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev>
+              <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
             </button>
-            <button type="button" class="tab" role="tab" id="tab-categories" data-tab="categories" aria-controls="panel-categories" aria-selected="false">
-                <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Categories
+            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>
+              Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
             </button>
-            <button type="button" class="tab" role="tab" id="tab-attention" data-tab="attention" aria-controls="panel-attention" aria-selected="false">
-                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs attention <span class="tab-count tab-count--warn" id="attentionCount">0</span>
-            </button>
+          </div>
         </div>
+        {% else %}
+        <p class="ai-note">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          <span>No forecast is saved yet. It needs at least {{ outlook.min_periods }} finished periods per instructor. Open <a href="{% url 'ai_admin_analytics' %}">AI Overview</a> and press "Generate AI analysis".</span>
+        </p>
+        {% endif %}
+      </div>
 
-
-        <!-- TAB: instructors (search, sort, pages) -->
-        <div class="tab-panel" role="tabpanel" id="panel-instructors" aria-labelledby="tab-instructors">
-            <div class="card-head">
-                <div class="card-title">
-                    <span class="card-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
-                    <div>
-                        <h3>Instructor performance</h3>
-                        <p class="card-sub">Average score from all evaluations, out of 5</p>
-                    </div>
-                </div>
-                {% if data %}
-                <div class="tools">
-                    <label class="search">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                        <input type="search" id="perfSearch" placeholder="Search instructor" aria-label="Search instructor">
-                    </label>
-                    <div class="control">
-                        <label for="perfSort">Sort by</label>
-                        <select id="perfSort" class="select">
-                            <option value="high">Highest rating</option>
-                            <option value="low">Lowest rating</option>
-                            <option value="name">Name (A to Z)</option>
-                            <option value="count">Most evaluations</option>
-                        </select>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-            {% if data %}
-            <div class="table-wrap">
-                <table class="data-table perf-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Instructor</th>
-                            <th scope="col">Overall rating</th>
-                            <th scope="col">Score in each category</th>
-                        </tr>
-                    </thead>
-                    <tbody id="perfBody">
-                    {% for item in data %}
-                        {% widthratio item.overall 1 100 as s100 %}
-                        <tr data-name="{{ item.teacher.first_name }} {{ item.teacher.last_name }}"
-                            data-overall="{{ item.overall|stringformat:'f' }}"
-                            data-count="{{ item.evaluation_count }}"
-                            data-chart="chart{{ forloop.counter }}">
-                            <td>
-                                <div class="person">
-                                    <div class="person-avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
-                                    <div>
-                                        <div class="person-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
-                                        <div class="person-role">Instructor</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="score-wrap">
-                                    {% if s100|add:'0' >= 450 %}
-                                        <span class="badge badge-high"><i class="bi bi-check-circle" aria-hidden="true"></i> {{ item.overall }} / 5</span>
-                                    {% elif s100|add:'0' >= 350 %}
-                                        <span class="badge badge-mid"><i class="bi bi-dash-circle" aria-hidden="true"></i> {{ item.overall }} / 5</span>
-                                    {% else %}
-                                        <span class="badge badge-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ item.overall }} / 5</span>
-                                    {% endif %}
-                                    <span class="score-sub">{{ item.evaluation_count }} evaluation{{ item.evaluation_count|pluralize }}</span>
-                                </div>
-                            </td>
-                            <td class="cell-chart">
-                                <div class="mini-chart">
-                                    <canvas id="chart{{ forloop.counter }}" role="img" aria-label="Bar chart of {{ item.teacher.first_name }} {{ item.teacher.last_name }}'s score in each category, out of 5"></canvas>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="empty" id="perfEmpty" hidden>
-                <i class="bi bi-search" aria-hidden="true"></i>
-                <h3>No instructor found</h3>
-                <p>Try a different name.</p>
-            </div>
-
-            <div class="pager" id="perfPager" hidden>
-                <span class="pager-info" data-pager-info aria-live="polite"></span>
-                <div class="pager-buttons">
-                    <button type="button" class="btn btn-ghost btn-sm" data-pager-prev><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
-                    <button type="button" class="btn btn-ghost btn-sm" data-pager-next>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-                </div>
-            </div>
-            <div class="card-foot" id="perfCount" aria-live="polite"></div>
-
-            {% else %}
-            <div class="empty">
-                <i class="bi bi-inbox" aria-hidden="true"></i>
-                <h3>No evaluation results yet</h3>
-                <p>Instructor scores will show here after students send their evaluations.</p>
-            </div>
-            {% endif %}
-        </div>
-
-
-        <!-- TAB: category averages for all instructors -->
-        <div class="tab-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories" hidden>
-            <div class="card-head">
-                <div class="card-title">
-                    <span class="card-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
-                    <div>
-                        <h3>Average score in each category</h3>
-                        <p class="card-sub">All instructors together, out of 5</p>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="chart-wrap chart-wrap--bars">
-                    <canvas id="overallChart" role="img" aria-label="Bar chart of the average score in each category for all instructors, out of 5"></canvas>
-                </div>
-                <p class="card-sub" id="chartMessage" hidden></p>
-                <ul class="legend">
-                    <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
-                    <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
-                    <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
-                </ul>
-            </div>
-        </div>
-
-
-        <!-- TAB: instructors who may need help -->
-        <div class="tab-panel" role="tabpanel" id="panel-attention" aria-labelledby="tab-attention" hidden>
-            <div class="card-head">
-                <div class="card-title">
-                    <span class="card-icon"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>
-                    <div>
-                        <h3>Instructors who may need support</h3>
-                        <p class="card-sub">Overall rating below 3.5, lowest first</p>
-                    </div>
-                </div>
-            </div>
-            <ul class="attention-list" id="attentionList"></ul>
-            <div class="empty" id="attentionEmpty" hidden>
-                <i class="bi bi-emoji-smile" aria-hidden="true"></i>
-                <h3>Everyone is doing well</h3>
-                <p>No instructor has an overall rating below 3.5.</p>
-            </div>
-        </div>
-
+      <div class="tab-panel card-body" role="tabpanel" id="panel-fc-trend" aria-labelledby="tab-fc-trend" hidden>
+        {% include "ai_insights/_line_chart.html" with chart=outlook.line_chart title="Average real score of each department in each finished period, with the AI forecast as a dashed line" %}
+      </div>
+      {% else %}
+      <div class="card-body">
+        <p class="ai-empty">No finished period has {{ dash.min_responses }} or more evaluations for an instructor yet, so there is nothing to draw.</p>
+      </div>
+      {% endif %}
     </section>
+  </div>
 
+  <!-- ===== VIEW 2: DEPARTMENTS ===== -->
+  <div class="dash-view" role="tabpanel" id="view-departments" aria-labelledby="nav-departments" hidden>
+    <section class="card" aria-labelledby="deptTitle">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="card-icon" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
+          <div>
+            <h3 id="deptTitle">Departments</h3>
+            <p class="card-sub">Instructors with at least {{ dash.min_responses }} evaluations are compared.</p>
+          </div>
+        </div>
+        {% if dash.departments %}
+        <div class="tools">
+          <label class="search"><i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" id="deptSearch" placeholder="Search department" aria-label="Search department" /></label>
+        </div>
+        {% endif %}
+      </div>
+      {% if dash.departments %}
+      <div class="table-wrap">
+        <table class="data-table dept-table">
+          <thead>
+            <tr>
+              <th scope="col">Department</th>
+              <th scope="col">Instructors</th>
+              <th scope="col">Highest average</th>
+              <th scope="col">Lowest average</th>
+            </tr>
+          </thead>
+          <tbody id="deptBody">
+            {% for d in dash.departments %}
+            <tr>
+              <th scope="row" data-label="Department">
+                <span class="person-name">{{ d.name }}</span>{% if d.code %}<span class="dept-code">{{ d.code }}</span>{% endif %}
+              </th>
+              <td data-label="Instructors">
+                <span class="dash-count">{{ d.instructors }}</span>
+              </td>
+              <td data-label="Highest average">
+                {% if d.best %}
+                <div class="dash-person">
+                  <span class="person-avatar dash-avatar" aria-hidden="true">{{ d.best.initials }}</span>
+                  <div>
+                    <div class="person-name">{{ d.best.name }}</div>
+                    <div class="person-role">
+                      <span class="badge badge-high">{{ d.best.overall|floatformat:2 }} / 5</span>
+                      {{ d.best.count }} evaluation{{ d.best.count|pluralize }}
+                    </div>
+                  </div>
+                </div>
+                {% else %}<span class="ai-muted">{% if d.instructors %}Not enough evaluations yet{% else %}No instructors{% endif %}</span>{% endif %}
+              </td>
+              <td data-label="Lowest average">
+                {% if d.poor %}
+                <div class="dash-person">
+                  <span class="person-avatar dash-avatar dash-avatar--low" aria-hidden="true">{{ d.poor.initials }}</span>
+                  <div>
+                    <div class="person-name">{{ d.poor.name }}</div>
+                    <div class="person-role">
+                      <span class="badge {% if d.poor.overall < 3.5 %}badge-low{% else %}badge-mid{% endif %}">{{ d.poor.overall|floatformat:2 }} / 5</span>
+                      {{ d.poor.count }} evaluation{{ d.poor.count|pluralize }}
+                    </div>
+                  </div>
+                </div>
+                {% elif d.only_one %}<span class="ai-muted">Only one instructor qualifies</span>
+                {% else %}<span class="ai-muted">Not enough evaluations yet</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="empty" id="deptEmpty" hidden>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <h3>No department found</h3>
+        <p>Try a different name.</p>
+      </div>
+      <div class="pager" id="deptPager" hidden>
+        <span class="pager-info" data-pager-info aria-live="polite"></span>
+        <div class="pager-buttons">
+          <button type="button" class="btn btn-ghost btn-sm" data-pager-prev>
+            <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" data-pager-next>
+            Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-foot" id="deptCount" aria-live="polite"></div>
+      {% else %}
+      <div class="empty">
+        <i class="bi bi-building" aria-hidden="true"></i>
+        <h3>No departments yet</h3>
+        <p>Add departments in Academics.</p>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <!-- ===== VIEW 3: INSTRUCTORS ===== -->
+  <div class="dash-view" role="tabpanel" id="view-instructors" aria-labelledby="nav-instructors" hidden>
+    <section class="card" aria-label="Instructor performance">
+      <div class="tabs" role="tablist" aria-label="Choose what to see">
+        <button type="button" class="tab" role="tab" id="tab-instructors" data-tab="instructors" aria-controls="panel-instructors" aria-selected="true">
+          <i class="bi bi-trophy" aria-hidden="true"></i> Ranking
+        </button>
+        <button type="button" class="tab" role="tab" id="tab-categories" data-tab="categories" aria-controls="panel-categories" aria-selected="false">
+          <i class="bi bi-bar-chart-line" aria-hidden="true"></i> Categories
+        </button>
+        <button type="button" class="tab" role="tab" id="tab-attention" data-tab="attention" aria-controls="panel-attention" aria-selected="false">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs attention
+          <span class="tab-count tab-count--warn" id="attentionCount">0</span>
+        </button>
+      </div>
+
+      <!-- Instructors -->
+      <div class="tab-panel" role="tabpanel" id="panel-instructors" aria-labelledby="tab-instructors">
+        <div class="card-head">
+          <p class="card-sub">Average of all evaluations in all periods, out of 5.</p>
+          {% if data %}
+          <div class="tools">
+            <label class="search">
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input type="search" id="perfSearch" placeholder="Search instructor" aria-label="Search instructor" />
+            </label>
+            <div class="control">
+              <label for="perfSort">Sort by</label>
+              <select id="perfSort" class="select">
+                <option value="high">Highest rating</option>
+                <option value="low">Lowest rating</option>
+                <option value="name">Name (A to Z)</option>
+                <option value="count">Most evaluations</option>
+              </select>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if data %}
+        <div class="table-wrap">
+          <table class="data-table perf-table">
+            <thead>
+              <tr>
+                <th scope="col">Instructor</th>
+                <th scope="col">Overall</th>
+                <th scope="col">Score by category</th>
+              </tr>
+            </thead>
+            <tbody id="perfBody">
+              {% for item in data %}
+              {% widthratio item.overall 1 100 as s100 %}
+              <tr data-name="{{ item.teacher.first_name }} {{ item.teacher.last_name }}" data-overall="{{ item.overall|stringformat:'f' }}" data-count="{{ item.evaluation_count }}" data-chart="chart{{ forloop.counter }}">
+                <td>
+                  <div class="person">
+                    <div class="person-avatar" aria-hidden="true">{{ item.teacher.first_name|first }}{{ item.teacher.last_name|first }}</div>
+                    <div class="person-name">{{ item.teacher.first_name }} {{ item.teacher.last_name }}</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="score-wrap">
+                    <span class="score-num">{{ item.overall|floatformat:2 }}<small> / 5</small></span>
+                    {% if s100|add:'0' >= 450 %}
+                    <span class="badge badge-high"><i class="bi bi-check-circle" aria-hidden="true"></i> Excellent</span>
+                    {% elif s100|add:'0' >= 350 %}
+                    <span class="badge badge-mid"><i class="bi bi-dash-circle" aria-hidden="true"></i> Good</span>
+                    {% else %}
+                    <span class="badge badge-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs support</span>
+                    {% endif %}
+                    <span class="score-sub">{{ item.evaluation_count }} evaluation{{ item.evaluation_count|pluralize }}</span>
+                  </div>
+                </td>
+                <td class="cell-chart">
+                  <div class="cat-bars" id="chart{{ forloop.counter }}" role="img" aria-label="Score in each category for {{ item.teacher.first_name }} {{ item.teacher.last_name }}, out of 5">
+                    <p class="mini-note">Loading scores…</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="empty" id="perfEmpty" hidden>
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <h3>No instructor found</h3>
+          <p>Try a different name.</p>
+        </div>
+
+        <div class="pager" id="perfPager" hidden>
+          <span class="pager-info" data-pager-info aria-live="polite"></span>
+          <div class="pager-buttons">
+            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev>
+              <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>
+              Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-foot" id="perfCount" aria-live="polite"></div>
+
+        {% else %}
+        <div class="empty">
+          <i class="bi bi-inbox" aria-hidden="true"></i>
+          <h3>No evaluation results yet</h3>
+          <p>Instructor scores will show here after students send their evaluations.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Categories -->
+      <div class="tab-panel" role="tabpanel" id="panel-categories" aria-labelledby="tab-categories" hidden>
+        <div class="card-head">
+          <p class="card-sub">Average of all instructors together, out of 5.</p>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap chart-wrap--bars">
+            <canvas id="overallChart" role="img" aria-label="Bar chart of the average score in each category for all instructors, out of 5"></canvas>
+          </div>
+          <p class="card-sub" id="chartMessage" hidden></p>
+          <ul class="legend">
+            <li><i class="key key--high" aria-hidden="true"></i> Excellent (4.5 to 5)</li>
+            <li><i class="key key--mid" aria-hidden="true"></i> Good (3.5 to 4.4)</li>
+            <li><i class="key key--low" aria-hidden="true"></i> Needs improvement (below 3.5)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Needs attention -->
+      <div class="tab-panel" role="tabpanel" id="panel-attention" aria-labelledby="tab-attention" hidden>
+        <div class="card-head">
+          <p class="card-sub">Overall rating below 3.5, lowest first.</p>
+        </div>
+        <ul class="attention-list" id="attentionList"></ul>
+        <div class="empty" id="attentionEmpty" hidden>
+          <i class="bi bi-emoji-smile" aria-hidden="true"></i>
+          <h3>Everyone is doing well</h3>
+          <p>No instructor has an overall rating below 3.5.</p>
+        </div>
+        <div class="pager" id="attentionPager" hidden>
+          <span class="pager-info" data-pager-info aria-live="polite"></span>
+          <div class="pager-buttons">
+            <button type="button" class="btn btn-ghost btn-sm" data-pager-prev>
+              <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" data-pager-next>
+              Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </div>
 {% endblock %}
-
-
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="{% static 'users/js/admin_common.js' %}"></script>
 <script>
-var COLOR = { high: '#1b2f6b', mid: '#5b78c4', low: '#b4443a', navy: '#13224f', muted: '#5b6585', grid: 'rgba(19, 34, 79, 0.08)' };
-var SHORT = ['Teaching', 'Communication', 'Classroom', 'Punctuality', 'Engagement'];
-var FULL  = ['Teaching Effectiveness', 'Communication Skills', 'Classroom Management', 'Punctuality', 'Student Engagement'];
+  var COLOR = {
+    high: "#1f3585",
+    mid: "#6f86c9",
+    low: "#b42318",
+    navy: "#13224f",
+    muted: "#6b7280",
+    grid: "rgba(19, 34, 79, 0.08)",
+  };
+  var SHORT = [
+    "Teaching",
+    "Communication",
+    "Classroom",
+    "Engagement",
+    "Professionalism",
+  ];
+  var FULL = [
+    "Teaching Competence",
+    "Communication and Clarity",
+    "Classroom Management",
+    "Student Engagement and Support",
+    "Professionalism and Reliability",
+  ];
 
-var chartData = {};        // chart id -> 5 scores (from /api/charts/)
-var miniCharts = {};       // chart id -> Chart object (made only when the row is on screen)
-var overallChart = null;
-var table = null;
+  var chartData = {}; // row id -> 5 scores (from /api/charts/)
+  var overallChart = null;
+  var table = null;
 
-Chart.defaults.font.family = '"Source Sans 3", system-ui, sans-serif';
-Chart.defaults.color = COLOR.muted;
-Chart.defaults.plugins.tooltip.backgroundColor = COLOR.navy;
-Chart.defaults.plugins.tooltip.padding = 10;
-Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.font.family = '"IBM Plex Sans", system-ui, sans-serif';
+  Chart.defaults.color = COLOR.muted;
+  Chart.defaults.plugins.tooltip.backgroundColor = COLOR.navy;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 6;
 
-function levelColor(v) { return v >= 4.5 ? COLOR.high : v >= 3.5 ? COLOR.mid : COLOR.low; }
+  function levelColor(v) {
+    return v >= 4.5 ? COLOR.high : v >= 3.5 ? COLOR.mid : COLOR.low;
+  }
+  function levelClass(v) {
+    return v >= 4.5 ? "high" : v >= 3.5 ? "mid" : "low";
+  }
 
+  /* ── Numbers count up when they come into view (skipped for reduced motion).
+        Uses its own attribute, data-countup, so it never touches the table rows
+        (those use data-count for the evaluation count). ── */
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || !("IntersectionObserver" in window)) return;
 
-/* ── Instructor table: search, sort, 5 rows per page ── */
-(function () {
-    var body = document.getElementById('perfBody');
+    function run(el) {
+      var raw = el.getAttribute("data-countup");
+      var end = parseFloat(raw);
+      if (isNaN(end)) return;
+      var decimals = (raw.split(".")[1] || "").length;
+      var suffix = el.getAttribute("data-suffix") || "";
+      var start = null;
+      var duration = 900;
+      function step(t) {
+        if (start === null) start = t;
+        var p = Math.min((t - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = (end * eased).toFixed(decimals) + suffix;
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) {
+            io.unobserve(en.target);
+            run(en.target);
+          }
+        });
+      },
+      { threshold: 0.4 },
+    );
+    document.querySelectorAll("[data-countup]").forEach(function (n) {
+      io.observe(n);
+    });
+  })();
+
+  /* ── Departments: search + 5 per page ── */
+  (function () {
+    var body = document.getElementById("deptBody");
     if (!body) return;
+    Admin.listTable({
+      tbody: body,
+      pageSize: 5,
+      search: document.getElementById("deptSearch"),
+      pager: document.getElementById("deptPager"),
+      count: document.getElementById("deptCount"),
+      empty: document.getElementById("deptEmpty"),
+    });
+  })();
 
-    function num(tr, key) { return parseFloat(tr.dataset[key]) || 0; }
+  /* ── Forecast cards: 6 per page ── */
+  (function () {
+    var list = document.getElementById("fcList");
+    if (!list) return;
+    Admin.listTable({
+      tbody: list,
+      pageSize: 6,
+      pager: document.getElementById("fcPager"),
+    });
+  })();
+
+  /* ── Instructor table: search, sort, 5 rows per page ── */
+  (function () {
+    var body = document.getElementById("perfBody");
+    if (!body) return;
+    function num(tr, key) {
+      return parseFloat(tr.dataset[key]) || 0;
+    }
 
     table = Admin.listTable({
-        tbody: body,
-        pageSize: 5,
-        search: document.getElementById('perfSearch'),
-        sort: document.getElementById('perfSort'),
-        sorters: {
-            high:  function (a, b) { return num(b, 'overall') - num(a, 'overall'); },
-            low:   function (a, b) { return num(a, 'overall') - num(b, 'overall'); },
-            name:  function (a, b) { return a.dataset.name.localeCompare(b.dataset.name); },
-            count: function (a, b) { return num(b, 'count') - num(a, 'count'); }
+      tbody: body,
+      pageSize: 5,
+      search: document.getElementById("perfSearch"),
+      sort: document.getElementById("perfSort"),
+      sorters: {
+        high: function (a, b) {
+          return num(b, "overall") - num(a, "overall");
         },
-        pager: document.getElementById('perfPager'),
-        count: document.getElementById('perfCount'),
-        empty: document.getElementById('perfEmpty'),
-        onRender: function (shown) { shown.forEach(drawMini); }
-    });
-})();
-
-
-/* ── Small bar chart inside a table row (made only when the row is shown) ── */
-function drawMini(tr) {
-    var id = tr.dataset.chart;
-    var canvas = document.getElementById(id);
-    var values = chartData[id];
-    if (!canvas || !values || miniCharts[id]) return;
-
-    miniCharts[id] = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: SHORT,
-            datasets: [{ data: values, backgroundColor: values.map(levelColor), borderRadius: 5, maxBarThickness: 28 }]
+        low: function (a, b) {
+          return num(a, "overall") - num(b, "overall");
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11 } } },
-                y: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: COLOR.grid }, border: { display: false } }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    displayColors: false,
-                    callbacks: {
-                        title: function (items) { return FULL[items[0].dataIndex]; },
-                        label: function (c) { return 'Score: ' + c.parsed.y.toFixed(2) + ' / 5'; }
-                    }
-                }
-            }
-        }
+        name: function (a, b) {
+          return a.dataset.name.localeCompare(b.dataset.name);
+        },
+        count: function (a, b) {
+          return num(b, "count") - num(a, "count");
+        },
+      },
+      pager: document.getElementById("perfPager"),
+      count: document.getElementById("perfCount"),
+      empty: document.getElementById("perfEmpty"),
+      onRender: function (shown) {
+        shown.forEach(drawBars);
+      },
     });
-}
+  })();
 
+  /* ── Five labelled bars per instructor (plain HTML, drawn when the row is shown) ── */
+  function drawBars(tr) {
+    var box = document.getElementById(tr.dataset.chart);
+    var values = chartData[tr.dataset.chart];
+    if (!box || !values || box.dataset.done) return;
+    box.dataset.done = "1";
+    box.textContent = "";
+    values.forEach(function (v, i) {
+      var row = document.createElement("div");
+      row.className = "cat-row";
+      row.title = FULL[i];
+      var name = document.createElement("span");
+      name.className = "cat-name";
+      name.textContent = SHORT[i];
+      var track = document.createElement("span");
+      track.className = "cat-track";
+      var fill = document.createElement("i");
+      fill.className = "cat-fill cat-fill--" + levelClass(v);
+      fill.style.width = Math.max(0, Math.min(100, (v / 5) * 100)) + "%";
+      fill.style.animationDelay = i * 70 + "ms";
+      track.appendChild(fill);
+      var val = document.createElement("b");
+      val.textContent = Number(v).toFixed(1);
+      row.appendChild(name);
+      row.appendChild(track);
+      row.appendChild(val);
+      box.appendChild(row);
+    });
+  }
 
-/* ── Average of every category, all instructors together ── */
-function drawOverall() {
-    var canvas = document.getElementById('overallChart');
-    var lists = Object.keys(chartData).map(function (k) { return chartData[k]; });
+  /* ── Average of every category, all instructors together ── */
+  function drawOverall() {
+    var canvas = document.getElementById("overallChart");
+    var lists = Object.keys(chartData).map(function (k) {
+      return chartData[k];
+    });
     if (!canvas || !lists.length) return;
 
     var averages = FULL.map(function (name, i) {
-        var nums = lists.map(function (v) { return v[i]; }).filter(function (v) { return typeof v === 'number'; });
-        return nums.length ? nums.reduce(function (a, b) { return a + b; }, 0) / nums.length : 0;
+      var nums = lists
+        .map(function (v) {
+          return v[i];
+        })
+        .filter(function (v) {
+          return typeof v === "number";
+        });
+      return nums.length
+        ? nums.reduce(function (a, b) {
+            return a + b;
+          }, 0) / nums.length
+        : 0;
     });
 
     var valueLabels = {
-        id: 'valueLabels',
-        afterDatasetsDraw: function (chart) {
-            var ctx = chart.ctx;
-            ctx.save();
-            ctx.font = '700 13px "Source Sans 3", sans-serif';
-            ctx.fillStyle = COLOR.navy;
-            ctx.textBaseline = 'middle';
-            chart.getDatasetMeta(0).data.forEach(function (bar, i) { ctx.fillText(averages[i].toFixed(2), bar.x + 8, bar.y); });
-            ctx.restore();
-        }
+      id: "valueLabels",
+      afterDatasetsDraw: function (chart) {
+        var ctx = chart.ctx;
+        ctx.save();
+        ctx.font = '600 13px "IBM Plex Sans", sans-serif';
+        ctx.fillStyle = COLOR.navy;
+        ctx.textBaseline = "middle";
+        chart.getDatasetMeta(0).data.forEach(function (bar, i) {
+          ctx.fillText(averages[i].toFixed(2), bar.x + 8, bar.y);
+        });
+        ctx.restore();
+      },
     };
 
     overallChart = new Chart(canvas, {
-        type: 'bar',
-        data: { labels: FULL, datasets: [{ data: averages, backgroundColor: averages.map(levelColor), borderRadius: 6, maxBarThickness: 28 }] },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { right: 44 } },
-            scales: {
-                x: { min: 0, max: 5, ticks: { stepSize: 1 }, grid: { color: COLOR.grid }, border: { display: false }, title: { display: true, text: 'Average score (out of 5)' } },
-                y: { grid: { display: false }, border: { display: false }, ticks: { color: COLOR.navy, font: { size: 13, weight: '600' } } }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { displayColors: false, callbacks: { label: function (c) { return 'Average: ' + c.parsed.x.toFixed(2) + ' / 5'; } } }
-            }
+      type: "bar",
+      data: {
+        labels: SHORT,
+        datasets: [
+          {
+            data: averages,
+            backgroundColor: averages.map(levelColor),
+            borderRadius: 4,
+            maxBarThickness: 26,
+          },
+        ],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        onResize: function (chart, size) {
+          // full names when there is room, short names on small screens
+          var want = size.width < 560 ? SHORT : FULL;
+          if (chart.data.labels !== want) {
+            chart.data.labels = want;
+            chart.update("none");
+          }
         },
-        plugins: [valueLabels]
+        animation: { duration: 800, easing: "easeOutCubic" },
+        layout: { padding: { right: 44 } },
+        scales: {
+          x: {
+            min: 0,
+            max: 5,
+            ticks: { stepSize: 1 },
+            grid: { color: COLOR.grid },
+            border: { display: false },
+            title: { display: true, text: "Average score (out of 5)" },
+          },
+          y: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: { color: COLOR.navy, font: { size: 13, weight: "500" } },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            displayColors: false,
+            callbacks: {
+              title: function (items) {
+                return FULL[items[0].dataIndex];
+              },
+              label: function (c) {
+                return "Average: " + c.parsed.x.toFixed(2) + " / 5";
+              },
+            },
+          },
+        },
+      },
+      plugins: [valueLabels],
     });
-}
+  }
 
-
-/* ── "Needs attention": instructors with an overall rating below 3.5 ── */
-(function () {
-    var body = document.getElementById('perfBody');
-    var list = document.getElementById('attentionList');
-    var empty = document.getElementById('attentionEmpty');
-    var badge = document.getElementById('attentionCount');
+  /* ── "Needs attention": overall rating below 3.5, 5 per page ── */
+  (function () {
+    var body = document.getElementById("perfBody");
+    var list = document.getElementById("attentionList");
+    var empty = document.getElementById("attentionEmpty");
+    var badge = document.getElementById("attentionCount");
     if (!list) return;
 
-    var low = body ? Array.prototype.slice.call(body.children).filter(function (tr) {
-        return parseFloat(tr.dataset.overall) < 3.5;
-    }).sort(function (a, b) { return parseFloat(a.dataset.overall) - parseFloat(b.dataset.overall); }) : [];
+    var low = body
+      ? Array.prototype.slice
+          .call(body.children)
+          .filter(function (tr) {
+            return parseFloat(tr.dataset.overall) < 3.5;
+          })
+          .sort(function (a, b) {
+            return (
+              parseFloat(a.dataset.overall) - parseFloat(b.dataset.overall)
+            );
+          })
+      : [];
 
     badge.textContent = low.length;
     empty.hidden = low.length > 0;
 
     low.forEach(function (tr) {
-        var li = document.createElement('li');
+      var li = document.createElement("li");
 
-        var who = document.createElement('div');
-        who.className = 'person';
-        var av = document.createElement('div');
-        av.className = 'person-avatar';
-        av.setAttribute('aria-hidden', 'true');
-        av.textContent = tr.querySelector('.person-avatar').textContent;
-        var name = document.createElement('div');
-        name.className = 'person-name';
-        name.textContent = tr.dataset.name;
-        who.appendChild(av);
-        who.appendChild(name);
+      var who = document.createElement("div");
+      who.className = "person";
+      var av = document.createElement("div");
+      av.className = "person-avatar";
+      av.setAttribute("aria-hidden", "true");
+      av.textContent = tr.querySelector(".person-avatar").textContent;
+      var name = document.createElement("div");
+      name.className = "person-name";
+      name.textContent = tr.dataset.name;
+      who.appendChild(av);
+      who.appendChild(name);
 
-        var meta = document.createElement('div');
-        meta.className = 'attention-meta';
-        var score = document.createElement('span');
-        score.className = 'badge badge-low';
-        score.textContent = parseFloat(tr.dataset.overall).toFixed(2) + ' / 5';
-        var count = document.createElement('span');
-        count.className = 'attention-count';
-        count.textContent = tr.dataset.count + ' evaluation' + (tr.dataset.count === '1' ? '' : 's');
-        meta.appendChild(score);
-        meta.appendChild(count);
+      var meta = document.createElement("div");
+      meta.className = "attention-meta";
+      var score = document.createElement("span");
+      score.className = "badge badge-low";
+      score.textContent = parseFloat(tr.dataset.overall).toFixed(2) + " / 5";
+      var count = document.createElement("span");
+      count.className = "attention-count";
+      count.textContent =
+        tr.dataset.count +
+        " evaluation" +
+        (tr.dataset.count === "1" ? "" : "s");
+      meta.appendChild(score);
+      meta.appendChild(count);
 
-        li.appendChild(who);
-        li.appendChild(meta);
-        list.appendChild(li);
+      li.appendChild(who);
+      li.appendChild(meta);
+      list.appendChild(li);
     });
-})();
 
+    if (low.length)
+      Admin.listTable({
+        tbody: list,
+        pageSize: 5,
+        pager: document.getElementById("attentionPager"),
+      });
+  })();
 
-/* ── Tabs ── */
-Admin.tabs(document.querySelector('.card[aria-label="Instructor performance"]'), function (key) {
-    if (key === 'instructors') {
-        if (table) table.refresh();
-        Object.keys(miniCharts).forEach(function (id) { miniCharts[id].resize(); });
+  /* ── Tabs ── */
+  Admin.tabs(document.querySelector('.card[aria-label="Department forecast"]'));
+  Admin.tabs(document.getElementById("dashNav"), function (key) {
+    if (key === "instructors") {
+      if (table) table.refresh();
+      if (overallChart) overallChart.resize();
     }
-    if (key === 'categories' && overallChart) overallChart.resize();
-});
+  });
+  Admin.tabs(
+    document.querySelector('.card[aria-label="Instructor performance"]'),
+    function (key) {
+      if (key === "instructors" && table) table.refresh();
+      if (key === "categories" && overallChart) overallChart.resize();
+    },
+  );
 
-
-/* ── Load the chart numbers from the server ── */
-(function () {
-    var message = document.getElementById('chartMessage');
-    fetch('/api/charts/')
-        .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-        .then(function (items) {
-            items.forEach(function (it) { chartData[it.id] = it.values; });
-            drawOverall();
-            if (table) table.refresh();       // draws the charts of the rows on screen
-        })
-        .catch(function () {
-            if (message) { message.textContent = 'The charts could not load. Please refresh the page.'; message.hidden = false; }
-            document.querySelectorAll('.mini-chart').forEach(function (box) {
-                var note = document.createElement('p');
-                note.className = 'mini-note';
-                note.textContent = 'Chart not available.';
-                box.appendChild(note);
-            });
+  /* ── Load the chart numbers from the server ── */
+  (function () {
+    var message = document.getElementById("chartMessage");
+    fetch("/api/charts/")
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (items) {
+        items.forEach(function (it) {
+          chartData[it.id] = it.values;
         });
-})();
+        drawOverall();
+        if (table) table.refresh(); // draws the bars of the rows on screen
+      })
+      .catch(function () {
+        if (message) {
+          message.textContent =
+            "The charts could not load. Please refresh the page.";
+          message.hidden = false;
+        }
+        document.querySelectorAll(".cat-bars").forEach(function (box) {
+          box.innerHTML = "";
+          var note = document.createElement("p");
+          note.className = "mini-note";
+          note.textContent = "Scores not available.";
+          box.appendChild(note);
+        });
+      });
+  })();
 </script>
 {% endblock %}

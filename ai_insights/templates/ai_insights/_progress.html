@@ -1,0 +1,8 @@
+{# ai_insights/_progress.html  Needs: ai.progress. How many finished periods the forecast has to learn from. #}
+{% if ai.progress %}
+<div class="ac-progress">
+    <div class="progress" role="progressbar" aria-label="Finished periods collected"
+         aria-valuemin="0" aria-valuemax="{{ ai.progress.need }}" aria-valuenow="{{ ai.progress.have }}"><span style="width: {{ ai.progress.percent }}%;"></span></div>
+    <p class="ac-hint">You have {{ ai.progress.have }} of {{ ai.progress.need }} finished periods with enough responses.</p>
+</div>
+{% endif %}

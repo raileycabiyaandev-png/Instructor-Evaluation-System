@@ -3,6 +3,7 @@ from . import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
+
     path('', views.user_login, name='login'),
 
     path('force-update/', views.force_update, name='force_update'),
@@ -22,21 +23,18 @@ urlpatterns = [
     path('instructors/activate/<int:pk>/', views.activate_instructor, name='activate_instructor'),
     path('delete-instructor/<int:pk>/', views.delete_instructor, name='delete_instructor'),
     path('delete-student/<int:pk>/', views.delete_student, name='delete_student'),
+    
     path('api/charts/', views.chart_api, name='chart_api'),
 
     path('instructor/results/', views.instructor_evaluation_results, name='instructor_evaluation_results'),
+    path('instructor/reports/', views.instructor_reports, name='instructor_reports'),
     path('instructor/qr/', views.instructor_qr, name='instructor_qr'),
 
-    path(
-        'student/update-profile/',
-        views.student_update_profile,
-        name='student_update_profile'
-    ),
+    path('student/update-profile/',views.student_update_profile, name='student_update_profile'),
     path("instructor/instructor_update_profile/", views.instructor_update_profile, name="faculty_update_profile"),
-    path(
-        'student/change-password/',
-        views.student_change_password,
-        name='student_change_password'
-    ),
+    path('instructor/profile/', views.instructor_profile, name='instructor_profile'),
+    path('student/change-password/',views.student_change_password, name='student_change_password'),
+
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+
 ]
